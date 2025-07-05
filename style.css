@@ -1,20 +1,60 @@
 /* style.css */
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700&display=swap');
+
 body {
+    font-family: 'Be Vietnam Pro', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background-color: #f3f4f6;
 }
 
-button {
-    transition: all 0.2s ease-in-out;
+/* --- Reusable Components --- */
+.btn {
+    @apply inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-150;
+}
+.btn:hover {
+    @apply transform -translate-y-0.5;
+}
+.btn:disabled {
+    @apply bg-gray-400 cursor-not-allowed transform-none;
+}
+.btn-sm {
+    @apply px-3 py-1.5 text-xs;
+}
+.btn-primary {
+    @apply text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500;
+}
+.btn-secondary {
+    @apply text-gray-700 bg-gray-200 hover:bg-gray-300 focus:ring-gray-500;
+}
+.btn-success {
+    @apply text-white bg-green-600 hover:bg-green-700 focus:ring-green-500;
+}
+.btn-danger {
+    @apply text-white bg-red-600 hover:bg-red-700 focus:ring-red-500;
+}
+.google-btn {
+    @apply w-full flex justify-center items-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50;
 }
 
-button:hover {
-    transform: translateY(-1px);
+.input-style {
+    @apply block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent;
 }
+.form-label {
+    @apply block text-sm font-medium text-gray-700;
+}
+.separator {
+    @apply my-4 flex items-center;
+}
+.separator::before, .separator::after {
+    @apply flex-grow border-t border-gray-300;
+}
+.separator::before { @apply mr-4; }
+.separator::after { @apply ml-4; }
 
 /* --- Tab Navigation --- */
 .tab-btn {
-    @apply whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300;
+    @apply flex items-center whitespace-nowrap py-4 px-2 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300;
 }
 .tab-btn.active {
     @apply border-indigo-500 text-indigo-600;
@@ -24,74 +64,99 @@ button:hover {
 .tab-pane {
     animation: fadeIn 0.5s;
 }
-
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-/* --- Shared Styles --- */
-.input-style {
-    @apply block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500;
-}
+/* --- Tables --- */
 .th-style {
     @apply py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider;
 }
-.login-prompt-view {
-    @apply text-center py-10;
+td {
+    @apply py-3 px-4 text-sm text-gray-600;
 }
 
 /* --- Modal --- */
 .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    padding: 1rem;
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 1000; padding: 1rem;
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.2s ease-out;
 }
 .modal-content {
-    background-color: white;
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    width: 90%;
-    max-width: 400px;
-    position: relative;
+    background-color: white; padding: 2rem; border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    width: 90%; max-width: 420px; position: relative;
+    animation: slideIn 0.3s ease-out;
 }
-.modal-content.modal-lg {
-    max-width: 800px;
+.modal-content.modal-lg { max-width: 800px; }
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 .modal-close-btn {
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    font-size: 1.8rem;
-    color: #9ca3af;
-    background: none;
-    border: none;
-    cursor: pointer;
+    position: absolute; top: 10px; right: 15px;
+    font-size: 1.8rem; color: #9ca3af; background: none;
+    border: none; cursor: pointer; line-height: 1;
 }
 
-/* --- Other --- */
-.disabled-content {
+/* --- Initial Loader --- */
+.loading-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: #ffffff;
+    display: flex; justify-content: center; align-items: center;
+    z-index: 9999;
+    transition: opacity 0.3s ease-in-out;
+}
+.spinner {
+    width: 48px; height: 48px;
+    border: 5px solid #f3f4f6;
+    border-bottom-color: #4f46e5;
+    border-radius: 50%;
+    display: inline-block;
+    box-sizing: border-box;
+    animation: rotation 1s linear infinite;
+}
+@keyframes rotation {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* --- Toast Notifications --- */
+#toast-container {
+    position: fixed; top: 20px; right: 20px; z-index: 1050;
+}
+.toast {
+    background-color: #fff; color: #333;
+    padding: 15px 20px; border-radius: 8px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    margin-bottom: 10px;
+    opacity: 0; transform: translateX(100%);
+    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    display: flex; align-items: center;
+}
+.toast.show {
+    opacity: 1; transform: translateX(0);
+}
+.toast--success { border-left: 5px solid #28a745; }
+.toast--error { border-left: 5px solid #dc3545; }
+.toast--info { border-left: 5px solid #17a2b8; }
+.toast-icon { margin-right: 10px; font-size: 1.2rem; }
+.toast--success .toast-icon { color: #28a745; }
+.toast--error .toast-icon { color: #dc3545; }
+.toast--info .toast-icon { color: #17a2b8; }
+
+/* --- Login/Disabled Placeholders --- */
+.login-prompt-view, .calculator-form-content, .materials-form-content, .saved-items-content {
     display: none;
 }
-.login-prompt-view {
-    display: block;
-}
-.google-btn {
-    @apply w-full flex justify-center items-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50;
-}
-.result-box div {
-    white-space: pre-wrap;
-    word-wrap: break-word;
+
+/* --- Result Box --- */
+.result-box #result-content {
+    white-space: pre-wrap; word-wrap: break-word;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    font-size: 0.9rem;
-    line-height: 1.6;
+    font-size: 0.9rem; line-height: 1.6;
 }

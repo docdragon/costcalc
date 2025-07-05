@@ -1,14 +1,13 @@
 // script.js
- const firebaseConfig = {
-    apiKey: "AIzaSyC_8Q8Girww42mI-8uwYsJaH5Vi41FT1eA",
-    authDomain: "tinh-gia-thanh-app-fbdc0.firebaseapp.com",
-    projectId: "tinh-gia-thanh-app-fbdc0",
-    storageBucket: "tinh-gia-thanh-app-fbdc0.firebasestorage.app",
-    messagingSenderId: "306099623121",
-    appId: "1:306099623121:web:157ce5827105998f3a61f0",
-    measurementId: "G-D8EHTN2SWE"
-  };
-const GEMINI_API_KEY = "AIzaSyCJzstBl8vuyzpbpm5q1YkNE_Bwmrn_AwQ";
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID"
+};
+const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY";
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -25,6 +24,7 @@ const logoutBtn = document.getElementById('logout-btn');
 const loginModal = document.getElementById('login-modal');
 const registerModal = document.getElementById('register-modal');
 const viewItemModal = document.getElementById('view-item-modal');
+const confirmModal = document.getElementById('confirm-modal');
 const loginForm = document.getElementById('login-form');
 const registerForm = document.getElementById('register-form');
 const loginError = document.getElementById('login-error');
@@ -36,7 +36,6 @@ const savedItemsTableBody = document.getElementById('saved-items-table-body');
 const calculateBtn = document.getElementById('calculate-btn');
 const saveItemBtn = document.getElementById('save-item-btn');
 const resultContainer = document.getElementById('result-content');
-const loadingSpinner = document.getElementById('loading-spinner');
 const addAccessoryBtn = document.getElementById('add-accessory-btn');
 const accessoriesList = document.getElementById('accessories-list');
 
@@ -66,6 +65,9 @@ onAuthStateChanged(auth, user => {
         clearLocalData();
     }
     updateUIVisibility(loggedIn, user);
+    // Hide initial loader once auth state is resolved
+    document.getElementById('initial-loader').style.opacity = '0';
+    setTimeout(() => document.getElementById('initial-loader').style.display = 'none', 300);
 });
 
 function listenForData() {
@@ -86,8 +88,12 @@ function updateUIVisibility(isLoggedIn, user) {
     document.getElementById('logged-out-view').classList.toggle('hidden', isLoggedIn);
     userEmailDisplay.textContent = isLoggedIn ? (user.displayName || user.email) : '';
     
-    document.querySelectorAll('.disabled-content').forEach(el => el.style.display = isLoggedIn ? 'block' : 'none');
-    document.querySelectorAll('.login-prompt-view').forEach(el => el.style.display = isLoggedIn ? 'none' : 'block');
+    document.querySelectorAll('.calculator-form-content, .materials-form-content, .saved-items-content').forEach(el => {
+        el.style.display = isLoggedIn ? 'block' : 'none';
+    });
+    document.querySelectorAll('.login-prompt-view').forEach(el => {
+        el.style.display = isLoggedIn ? 'none' : 'block';
+    });
 
     if (isLoggedIn) closeAllModals();
 }
@@ -96,14 +102,14 @@ function updateUIVisibility(isLoggedIn, user) {
 const tabs = document.getElementById('tabs');
 const tabContent = document.getElementById('tab-content');
 tabs.addEventListener('click', (e) => {
-    if (e.target.tagName === 'BUTTON') {
-        const tabName = e.target.dataset.tab;
+    const button = e.target.closest('button');
+    if (button) {
+        const tabName = button.dataset.tab;
         tabs.querySelector('.active').classList.remove('active');
-        e.target.classList.add('active');
+        button.classList.add('active');
         
         for (let pane of tabContent.children) {
             pane.classList.toggle('hidden', pane.id !== `${tabName}-tab`);
-            pane.classList.toggle('active', pane.id === `${tabName}-tab`);
         }
     }
 });
@@ -112,13 +118,51 @@ tabs.addEventListener('click', (e) => {
 function openModal(modal) { modal.classList.remove('hidden'); }
 function closeModal(modal) { modal.classList.add('hidden'); }
 function closeAllModals() {
-    [loginModal, registerModal, viewItemModal].forEach(closeModal);
+    [loginModal, registerModal, viewItemModal, confirmModal].forEach(closeModal);
 }
 document.getElementById('open-login-modal-btn').addEventListener('click', () => openModal(loginModal));
 document.getElementById('open-register-modal-btn').addEventListener('click', () => openModal(registerModal));
 document.querySelectorAll('.modal-close-btn, .modal-overlay').forEach(el => {
     el.addEventListener('click', (e) => { if (e.target === el) closeAllModals(); });
 });
+
+// --- Custom Confirm Modal ---
+const confirmOkBtn = document.getElementById('confirm-ok-btn');
+const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
+const confirmMessage = document.getElementById('confirm-message');
+
+function showConfirm(message) {
+    return new Promise((resolve) => {
+        confirmMessage.textContent = message;
+        openModal(confirmModal);
+
+        confirmOkBtn.onclick = () => {
+            closeModal(confirmModal);
+            resolve(true);
+        };
+        confirmCancelBtn.onclick = () => {
+            closeModal(confirmModal);
+            resolve(false);
+        };
+    });
+}
+
+// --- Toast Notification ---
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast toast--${type}`;
+    
+    const icons = { info: 'info-circle', success: 'check-circle', error: 'exclamation-triangle' };
+    toast.innerHTML = `<i class="fas fa-${icons[type]} toast-icon"></i> ${message}`;
+    
+    toastContainer.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        toast.addEventListener('transitionend', () => toast.remove());
+    }, 4000);
+}
 
 // --- Firebase Auth Actions ---
 loginForm.addEventListener('submit', async e => {
@@ -149,7 +193,7 @@ logoutBtn.addEventListener('click', () => signOut(auth));
 function listenForMaterials() {
     if (unsubscribeMaterials) unsubscribeMaterials(); 
     unsubscribeMaterials = onSnapshot(materialsCollectionRef, snapshot => {
-        clearLocalData();
+        localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [] };
         snapshot.docs.forEach(doc => {
             const material = { id: doc.id, ...doc.data() };
             if (localMaterials[material.type]) {
@@ -164,17 +208,17 @@ function listenForMaterials() {
 function renderMaterials(materials) {
     materialsTableBody.innerHTML = '';
     if (materials.length === 0) {
-        materialsTableBody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-gray-500">Chưa có vật tư nào.</td></tr>`;
+        materialsTableBody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-gray-400">Chưa có vật tư nào.</td></tr>`;
         return;
     }
     materials.forEach(m => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td class="py-3 px-4">${m.name}</td>
-            <td class="py-3 px-4"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">${m.type}</span></td>
-            <td class="py-3 px-4">${Number(m.price).toLocaleString('vi-VN')}đ / ${m.unit}</td>
-            <td class="py-3 px-4">${m.notes || ''}</td>
-            <td class="py-3 px-4 text-center">
+            <td>${m.name}</td>
+            <td><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">${m.type}</span></td>
+            <td>${Number(m.price).toLocaleString('vi-VN')}đ / ${m.unit}</td>
+            <td>${m.notes || ''}</td>
+            <td class="text-center">
                 <button class="edit-btn text-blue-500 hover:text-blue-700 mr-2" data-id="${m.id}"><i class="fas fa-edit"></i></button>
                 <button class="delete-btn text-red-500 hover:text-red-700" data-id="${m.id}"><i class="fas fa-trash"></i></button>
             </td>
@@ -197,19 +241,27 @@ materialForm.addEventListener('submit', async e => {
     try {
         if (id) {
             await updateDoc(doc(db, `users/${currentUserId}/materials`, id), materialData);
+            showToast('Cập nhật vật tư thành công!', 'success');
         } else {
             await addDoc(materialsCollectionRef, materialData);
+            showToast('Thêm vật tư thành công!', 'success');
         }
         resetMaterialForm();
-    } catch (error) { console.error("Error saving material: ", error); }
+    } catch (error) { 
+        showToast('Đã có lỗi xảy ra.', 'error');
+        console.error("Error saving material: ", error); 
+    }
 });
 
 materialsTableBody.addEventListener('click', async e => {
     const btn = e.target.closest('button');
     if (!currentUserId || !btn) return;
     const id = btn.dataset.id;
-    if (btn.classList.contains('delete-btn') && confirm('Bạn có chắc chắn muốn xóa?')) {
-        await deleteDoc(doc(db, `users/${currentUserId}/materials`, id));
+    if (btn.classList.contains('delete-btn')) {
+        if (await showConfirm('Bạn có chắc chắn muốn xóa vật tư này? Hành động này không thể hoàn tác.')) {
+            await deleteDoc(doc(db, `users/${currentUserId}/materials`, id));
+            showToast('Đã xóa vật tư.', 'info');
+        }
     } else if (btn.classList.contains('edit-btn')) {
         const allMaterials = Object.values(localMaterials).flat();
         const material = allMaterials.find(m => m.id === id);
@@ -270,8 +322,8 @@ function renderAddedAccessories() {
     accessoriesList.innerHTML = '';
     addedAccessories.forEach((acc, index) => {
         const li = document.createElement('li');
-        li.className = 'text-sm text-gray-600';
-        li.innerHTML = `${acc.quantity} ${acc.unit} ${acc.name} <button data-index="${index}" class="remove-acc-btn text-red-500 ml-2">&times;</button>`;
+        li.className = 'flex justify-between items-center text-sm text-gray-600 bg-gray-100 p-2 rounded';
+        li.innerHTML = `<span>${acc.quantity} ${acc.unit} ${acc.name}</span> <button data-index="${index}" class="remove-acc-btn text-red-400 hover:text-red-600">&times;</button>`;
         accessoriesList.appendChild(li);
     });
 }
@@ -292,8 +344,8 @@ calculateBtn.addEventListener('click', async () => {
     const edge = localMaterials['Cạnh'].find(m => m.id === edgeId);
     const description = document.getElementById('product-description').value;
     
-    if (!itemName) { alert('Vui lòng nhập tên sản phẩm.'); return; }
-    if (!wood) { alert('Vui lòng chọn loại ván chính.'); return; }
+    if (!itemName) { showToast('Vui lòng nhập tên sản phẩm.', 'error'); return; }
+    if (!wood) { showToast('Vui lòng chọn loại ván chính.', 'error'); return; }
 
     let materialsText = `* Ván chính: ${wood.name}\n`;
     if (edge) materialsText += `* Nẹp cạnh: ${edge.name}\n`;
@@ -303,26 +355,7 @@ calculateBtn.addEventListener('click', async () => {
 
     const fullMaterialsList = Object.values(localMaterials).flat().map(m => `- ${m.name}: ${Number(m.price).toLocaleString('vi-VN')}đ / ${m.unit}`).join('\n');
 
-    const prompt = `
-        Bạn là chuyên gia dự toán chi phí nội thất. Hãy phân tích và báo giá cho sản phẩm sau:
-
-        **Tên sản phẩm:** ${itemName}
-        **Kích thước:** ${dimensions}
-        **Danh sách vật tư được chọn:**
-        ${materialsText}
-        **Yêu cầu thêm:** ${description || 'Không có'}
-
-        **Nhiệm vụ:**
-        1.  **Tính toán sơ bộ lượng ván:** Dựa vào kích thước, ước tính cần bao nhiêu tấm ván (${wood.name}).
-        2.  **Tính toán sơ bộ lượng nẹp cạnh:** Dựa vào kích thước, ước tính cần bao nhiêu mét nẹp (${edge ? edge.name : 'không có'}).
-        3.  **Tạo bảng kê chi phí:** Dựa vào danh sách vật tư đầy đủ dưới đây, tạo bảng chi phí chi tiết cho các vật tư đã chọn (ván, cạnh, phụ kiện).
-        4.  **Tổng hợp chi phí & Gợi ý giá bán:** Tính tổng chi phí vật tư và đề xuất giá bán với mức lợi nhuận 30-50%.
-
-        **Danh sách vật tư đầy đủ (để tham khảo đơn giá):**
-        ${fullMaterialsList}
-
-        Trình bày kết quả rõ ràng, chuyên nghiệp.
-    `;
+    const prompt = `Bạn là chuyên gia dự toán chi phí nội thất. Hãy phân tích và báo giá cho sản phẩm sau:\n\n**Tên sản phẩm:** ${itemName}\n**Kích thước:** ${dimensions}\n**Danh sách vật tư được chọn:**\n${materialsText}\n**Yêu cầu thêm:** ${description || 'Không có'}\n\n**Nhiệm vụ:**\n1.  **Tính toán sơ bộ lượng ván:** Dựa vào kích thước, ước tính cần bao nhiêu tấm ván (${wood.name}).\n2.  **Tính toán sơ bộ lượng nẹp cạnh:** Dựa vào kích thước, ước tính cần bao nhiêu mét nẹp (${edge ? edge.name : 'không có'}).\n3.  **Tạo bảng kê chi phí:** Dựa vào danh sách vật tư đầy đủ dưới đây, tạo bảng chi phí chi tiết cho các vật tư đã chọn.\n4.  **Tổng hợp chi phí & Gợi ý giá bán:** Tính tổng chi phí vật tư và đề xuất giá bán với mức lợi nhuận 30-50%.\n\n**Danh sách vật tư đầy đủ (để tham khảo đơn giá):**\n${fullMaterialsList}\n\nTrình bày kết quả rõ ràng, chuyên nghiệp.`;
     
     const result = await callGeminiAPI(prompt, resultContainer);
     if (result) {
@@ -343,7 +376,7 @@ function listenForSavedItems() {
 function renderSavedItems(items) {
     savedItemsTableBody.innerHTML = '';
     if (items.length === 0) {
-        savedItemsTableBody.innerHTML = `<tr><td colspan="3" class="text-center p-4 text-gray-500">Chưa có hạng mục nào được lưu.</td></tr>`;
+        savedItemsTableBody.innerHTML = `<tr><td colspan="3" class="text-center p-4 text-gray-400">Chưa có hạng mục nào được lưu.</td></tr>`;
         return;
     }
     items.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
@@ -351,9 +384,9 @@ function renderSavedItems(items) {
         const tr = document.createElement('tr');
         const createdAtDate = item.createdAt?.toDate();
         tr.innerHTML = `
-            <td class="py-3 px-4">${item.name}</td>
-            <td class="py-3 px-4">${createdAtDate ? createdAtDate.toLocaleDateString('vi-VN') : 'N/A'}</td>
-            <td class="py-3 px-4 text-center">
+            <td>${item.name}</td>
+            <td>${createdAtDate ? createdAtDate.toLocaleDateString('vi-VN') : 'N/A'}</td>
+            <td class="text-center">
                 <button class="view-item-btn text-green-500 hover:text-green-700 mr-2" data-id="${item.id}"><i class="fas fa-eye"></i></button>
                 <button class="delete-item-btn text-red-500 hover:text-red-700" data-id="${item.id}"><i class="fas fa-trash"></i></button>
             </td>
@@ -365,14 +398,14 @@ function renderSavedItems(items) {
 saveItemBtn.addEventListener('click', async () => {
     if (!currentUserId || !lastGeminiResult) return;
     const itemName = document.getElementById('item-name').value.trim();
-    if (!itemName) { alert('Vui lòng nhập tên sản phẩm để lưu.'); return; }
+    if (!itemName) { showToast('Vui lòng nhập tên sản phẩm để lưu.', 'error'); return; }
     try {
         await addDoc(savedItemsCollectionRef, {
             name: itemName,
             geminiResult: lastGeminiResult,
             createdAt: serverTimestamp()
         });
-        alert(`Đã lưu thành công hạng mục "${itemName}"!`);
+        showToast(`Đã lưu thành công hạng mục "${itemName}"!`, 'success');
         lastGeminiResult = null;
         saveItemBtn.disabled = true;
     } catch (error) { console.error("Error saving item:", error); }
@@ -382,8 +415,11 @@ savedItemsTableBody.addEventListener('click', async e => {
     const btn = e.target.closest('button');
     if (!currentUserId || !btn) return;
     const id = btn.dataset.id;
-    if (btn.classList.contains('delete-item-btn') && confirm('Bạn có chắc chắn muốn xóa?')) {
-        await deleteDoc(doc(db, `users/${currentUserId}/savedItems`, id));
+    if (btn.classList.contains('delete-item-btn')) {
+        if (await showConfirm('Bạn có chắc chắn muốn xóa hạng mục này?')) {
+            await deleteDoc(doc(db, `users/${currentUserId}/savedItems`, id));
+            showToast('Đã xóa hạng mục.', 'info');
+        }
     } else if (btn.classList.contains('view-item-btn')) {
         const item = localSavedItems.find(i => i.id === id);
         if (item) {
@@ -396,8 +432,8 @@ savedItemsTableBody.addEventListener('click', async e => {
 
 // --- Gemini API Call ---
 async function callGeminiAPI(prompt, resultEl) {
-    resultEl.textContent = '';
-    loadingSpinner.style.display = 'block';
+    const spinner = `<div class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75"><div class="spinner"></div></div>`;
+    resultEl.innerHTML = spinner;
     saveItemBtn.disabled = true;
     lastGeminiResult = null;
     try {
@@ -414,7 +450,5 @@ async function callGeminiAPI(prompt, resultEl) {
     } catch (error) {
         resultEl.textContent = `Lỗi khi gọi Gemini: ${error.message}`;
         return null;
-    } finally {
-        loadingSpinner.style.display = 'none';
     }
 }
