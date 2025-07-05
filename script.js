@@ -1,5 +1,5 @@
 // script.js
- const firebaseConfig = {
+const firebaseConfig = {
     apiKey: "AIzaSyC_8Q8Girww42mI-8uwYsJaH5Vi41FT1eA",
     authDomain: "tinh-gia-thanh-app-fbdc0.firebaseapp.com",
     projectId: "tinh-gia-thanh-app-fbdc0",
