@@ -1,9 +1,10 @@
 
+
 // script.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { GoogleGenAI } from "https://unpkg.com/@google/genai@2.2.0/dist/index.mjs";
+import { GoogleGenAI } from "https://esm.sh/@google/genai";
 
 // --- Cấu hình Firebase ---
 // !!! QUAN TRỌNG: Điền lại thông tin cấu hình Firebase của bạn vào đây.
@@ -18,20 +19,13 @@ const firebaseConfig = {
 };
 
 // --- Cấu hình Gemini AI ---
-// !!! QUAN TRỌNG: Thay thế chuỗi bên dưới bằng khóa API của bạn từ Google AI Studio.
-const API_KEY = "AIzaSyCJzstBl8vuyzpbpm5q1YkNE_Bwmrn_AwQ";
 let ai = null;
-
-// Chỉ khởi tạo AI client nếu API key đã được điền và không phải là placeholder.
-if (API_KEY && API_KEY !== "AIzaSyCJzstBl8vuyzpbpm5q1YkNE_Bwmrn_AwQ") {
-    try {
-        ai = new GoogleGenAI({ apiKey: API_KEY });
-    } catch(e) {
-        console.error("Lỗi khi khởi tạo Gemini AI Client:", e);
-        ai = null;
-    }
-} else {
-    console.warn("Chưa cấu hình khóa API cho Gemini. Các tính năng AI sẽ bị vô hiệu hóa.");
+try {
+    // API key is handled by the execution environment (e.g., as a secret).
+    ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+} catch(e) {
+    console.error("Lỗi khi khởi tạo Gemini AI Client:", e);
+    // The `callGeminiAPI` function will handle the case where `ai` is null.
 }
 
 const app = initializeApp(firebaseConfig);
@@ -525,7 +519,7 @@ savedItemsTableBody.addEventListener('click', async e => {
 // --- Gemini API Call (Client-side) ---
 async function callGeminiAPI(prompt, resultEl, image) {
     if (!ai) {
-        const errorMessage = "Lỗi cấu hình: Khóa API cho Gemini chưa được thiết lập. Vui lòng điền khóa API vào file script.js.";
+        const errorMessage = "Lỗi: Không thể kết nối đến dịch vụ AI. Vui lòng thử lại sau.";
         resultEl.textContent = errorMessage;
         showToast(errorMessage, 'error');
         return null;
