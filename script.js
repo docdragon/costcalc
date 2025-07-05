@@ -1,8 +1,9 @@
+
 // script.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { GoogleGenAI } from "https://cdn.jsdelivr.net/npm/@google/genai@2.2.0/dist/index.mjs";
+import { GoogleGenAI } from "https://unpkg.com/@google/genai@2.2.0/dist/index.mjs";
 
 // --- Cấu hình Firebase ---
 // !!! QUAN TRỌNG: Điền lại thông tin cấu hình Firebase của bạn vào đây.
@@ -21,7 +22,7 @@ const firebaseConfig = {
 const API_KEY = "AIzaSyCJzstBl8vuyzpbpm5q1YkNE_Bwmrn_AwQ";
 let ai = null;
 
-// Chỉ khởi tạo AI client nếu API key đã được điền.
+// Chỉ khởi tạo AI client nếu API key đã được điền và không phải là placeholder.
 if (API_KEY && API_KEY !== "AIzaSyCJzstBl8vuyzpbpm5q1YkNE_Bwmrn_AwQ") {
     try {
         ai = new GoogleGenAI({ apiKey: API_KEY });
