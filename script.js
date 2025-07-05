@@ -2,7 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { GoogleGenAI } from "https://esm.sh/@google/genai";
+// The GoogleGenAI import is no longer needed on the client-side.
 
 // --- Cấu hình Firebase ---
 // !!! QUAN TRỌNG: Điền lại thông tin cấu hình Firebase của bạn vào đây.
@@ -16,18 +16,7 @@ const firebaseConfig = {
     measurementId: "G-D8EHTN2SWE"
 };
 
-// --- Cấu hình Gemini AI ---
-let ai = null;
-// The API key MUST be provided by the execution environment (e.g., as a secret).
-// In a browser environment, `process` is not defined. Your hosting platform
-// or a build step must make the API_KEY available.
-if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-    ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-} else {
-    console.error("Lỗi: Biến môi trường API_KEY không được tìm thấy. Vui lòng đảm bảo nó được đặt trong môi trường thực thi của bạn.");
-    // The `callGeminiAPI` function will handle the case where `ai` is null and show an error to the user.
-}
-
+// Gemini AI client is no longer initialized here.
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -517,15 +506,8 @@ savedItemsTableBody.addEventListener('click', async e => {
     }
 });
 
-// --- Gemini API Call (Client-side) ---
+// --- Gemini API Call (Client-side via Serverless Function) ---
 async function callGeminiAPI(prompt, resultEl, image) {
-    if (!ai) {
-        const errorMessage = "Lỗi: Không thể kết nối đến dịch vụ AI. Vui lòng kiểm tra lại API Key và thử lại sau.";
-        resultEl.textContent = errorMessage;
-        showToast(errorMessage, 'error');
-        return null;
-    }
-
     const spinner = `<div class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75"><div class="spinner"></div></div>`;
     resultEl.innerHTML = spinner;
     saveItemBtn.disabled = true;
@@ -533,42 +515,28 @@ async function callGeminiAPI(prompt, resultEl, image) {
     priceSummaryContainer.classList.add('hidden');
 
     try {
-        const parts = [];
-        if (image && image.data && image.mimeType) {
-            parts.push({
-                inlineData: {
-                    mimeType: image.mimeType,
-                    data: image.data,
-                },
-            });
-        }
-        parts.push({ text: prompt });
-
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-preview-04-17',
-            contents: { parts: parts },
+        const response = await fetch('/api/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ prompt, image }),
         });
 
-        // --- Phân tích phản hồi từ Gemini ---
-        let jsonStr = response.text.trim();
-        const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
-        const match = jsonStr.match(fenceRegex);
-        if (match && match[2]) {
-            jsonStr = match[2].trim();
-        }
+        const resultData = await response.json();
 
-        try {
-            const parsedData = JSON.parse(jsonStr);
-            return parsedData;
-        } catch (parseError) {
-             console.error("Lỗi phân tích JSON từ Gemini:", parseError);
-             console.error("Văn bản gốc từ Gemini:", response.text);
-             throw new Error(`Phản hồi của AI không phải là JSON hợp lệ. Nội dung: ${response.text}`);
+        if (!response.ok) {
+            throw new Error(resultData.error || `Lỗi máy chủ: ${response.status}`);
         }
+        
+        return resultData;
 
     } catch (error) {
-        console.error("Lỗi khi gọi API Gemini:", error);
-        resultEl.textContent = `Lỗi khi gọi API: ${error.message}`;
+        console.error("Lỗi khi gọi API:", error);
+        const errorMessage = error.message.includes("API key not valid") 
+            ? "Lỗi: API Key không hợp lệ. Vui lòng kiểm tra lại trên Vercel."
+            : `Lỗi khi gọi API: ${error.message}`;
+        resultEl.textContent = errorMessage;
         showToast('Đã xảy ra lỗi khi phân tích. Vui lòng thử lại.', 'error');
         return null;
     }
