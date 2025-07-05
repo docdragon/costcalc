@@ -33,58 +33,172 @@
     </header>
 
     <div class="container mx-auto p-4 md:p-8">
-        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Cột 1: Quản lý Vật tư & Hạng mục đã lưu -->
-            <section class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
-                <h2 class="text-2xl font-semibold mb-4 text-gray-700 border-b pb-2">Quản lý Vật tư</h2>
-                <div id="materials-content" class="disabled-content">
-                    <form id="material-form" class="space-y-4">
-                        <input type="hidden" id="material-id">
-                        <div>
-                            <label for="material-name" class="block text-sm font-medium text-gray-700">Tên vật tư</label>
-                            <input type="text" id="material-name" placeholder="Vd: Ván MDF An Cường 17mm" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label for="material-price" class="block text-sm font-medium text-gray-700">Đơn giá</label>
-                                <input type="number" id="material-price" placeholder="Vd: 550000" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+        <!-- Tab Navigation -->
+        <div class="mb-6">
+            <div class="border-b border-gray-200">
+                <nav id="tabs" class="-mb-px flex space-x-6" aria-label="Tabs">
+                    <button data-tab="calculator" class="tab-btn active">Bảng tính giá</button>
+                    <button data-tab="materials" class="tab-btn">Quản lý Vật tư</button>
+                    <button data-tab="saved" class="tab-btn">Hạng mục đã lưu</button>
+                    <button data-tab="creative" class="tab-btn">Công cụ Sáng tạo</button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Tab Content -->
+        <main id="tab-content">
+            <!-- Tab 1: Bảng tính giá -->
+            <div id="calculator-tab" class="tab-pane active">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
+                        <h2 class="text-2xl font-semibold mb-4 text-gray-700 border-b pb-2">Thông tin Sản phẩm</h2>
+                        <div id="calculator-content" class="disabled-content">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label for="item-length" class="block text-sm font-medium text-gray-700">Dài (mm)</label>
+                                    <input type="number" id="item-length" class="mt-1 input-style" placeholder="Vd: 1200">
+                                </div>
+                                <div>
+                                    <label for="item-width" class="block text-sm font-medium text-gray-700">Rộng (mm)</label>
+                                    <input type="number" id="item-width" class="mt-1 input-style" placeholder="Vd: 600">
+                                </div>
+                                <div>
+                                    <label for="item-height" class="block text-sm font-medium text-gray-700">Cao (mm)</label>
+                                    <input type="number" id="item-height" class="mt-1 input-style" placeholder="Vd: 750">
+                                </div>
                             </div>
-                            <div>
-                                <label for="material-unit" class="block text-sm font-medium text-gray-700">Đơn vị tính</label>
-                                <input type="text" id="material-unit" placeholder="Vd: tấm, md, cái" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            <div class="mt-4">
+                                <label for="item-name" class="block text-sm font-medium text-gray-700">Tên sản phẩm / hạng mục</label>
+                                <input type="text" id="item-name" class="mt-1 input-style" placeholder="Vd: Bàn làm việc chân sắt">
+                            </div>
+                            <div class="mt-4">
+                                <label class="block text-sm font-medium text-gray-700">Vật liệu chính</label>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
+                                    <div>
+                                        <label for="material-wood" class="text-xs text-gray-600">Ván</label>
+                                        <select id="material-wood" class="input-style"></select>
+                                    </div>
+                                    <div>
+                                        <label for="material-edge" class="text-xs text-gray-600">Nẹp cạnh</label>
+                                        <select id="material-edge" class="input-style"></select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <label for="material-accessories" class="block text-sm font-medium text-gray-700">Phụ kiện & Vật tư khác</label>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <select id="material-accessories" class="input-style"></select>
+                                    <input type="number" id="accessory-quantity" class="input-style w-24" placeholder="SL" value="1">
+                                    <button id="add-accessory-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded">Thêm</button>
+                                </div>
+                                <ul id="accessories-list" class="mt-2 list-disc list-inside"></ul>
+                            </div>
+                             <div class="mt-4">
+                                <label for="product-description" class="block text-sm font-medium text-gray-700">Mô tả & Yêu cầu thêm</label>
+                                <textarea id="product-description" rows="3" class="mt-1 input-style" placeholder="Vd: Chân sắt sơn tĩnh điện, có 1 hộc kéo..."></textarea>
                             </div>
                         </div>
-                        <div>
-                            <label for="material-notes" class="block text-sm font-medium text-gray-700">Ghi chú</label>
-                            <input type="text" id="material-notes" placeholder="Vd: 1220x2440mm, chống ẩm" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                        </div>
-                        <div class="flex items-center space-x-4">
-                            <button type="submit" id="submit-button" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                                <i class="fas fa-plus mr-2"></i> Thêm Vật tư
-                            </button>
-                            <button type="button" id="cancel-edit-button" class="w-full hidden justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                               <i class="fas fa-times mr-2"></i> Hủy
-                            </button>
-                        </div>
-                    </form>
-                    <div class="mt-8">
-                        <h3 class="text-xl font-semibold mb-4 text-gray-700">Danh sách Vật tư</h3>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full bg-white">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="th-style">Tên Vật tư</th>
-                                        <th class="th-style">Đơn giá</th>
-                                        <th class="th-style">Ghi chú</th>
-                                        <th class="th-style text-center">Hành động</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="materials-table-body" class="divide-y divide-gray-200"></tbody>
-                            </table>
+                         <div id="calculator-login-prompt" class="login-prompt-view">
+                            <i class="fas fa-lock fa-3x text-gray-400 mb-4"></i>
+                            <h3 class="text-xl font-semibold text-gray-700">Vui lòng đăng nhập</h3>
+                            <p class="text-gray-500 mt-2">Đăng nhập để sử dụng chức năng tính toán.</p>
                         </div>
                     </div>
-                    <div class="mt-10 border-t pt-6">
-                        <h3 class="text-xl font-semibold mb-4 text-gray-700">Các Hạng mục đã lưu</h3>
+                    <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-md sticky top-24">
+                        <h2 class="text-2xl font-semibold mb-4 text-gray-700 border-b pb-2">Kết quả Phân tích</h2>
+                        <div class="flex items-center space-x-2 mt-4">
+                            <button id="calculate-btn" class="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">
+                                <i class="fas fa-cogs mr-2"></i> Phân tích
+                            </button>
+                            <button id="save-item-btn" class="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400" disabled>
+                                <i class="fas fa-save mr-2"></i> Lưu lại
+                            </button>
+                        </div>
+                        <div id="result-container" class="mt-4 result-box">
+                            <div id="loading-spinner" class="hidden text-center p-4">
+                                <i class="fas fa-spinner fa-spin fa-2x text-indigo-600"></i>
+                            </div>
+                            <div id="result-content" class="p-4 bg-gray-50 rounded-md min-h-[150px] text-gray-800"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: Quản lý Vật tư -->
+            <div id="materials-tab" class="tab-pane hidden">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                     <div id="materials-content" class="disabled-content">
+                        <form id="material-form" class="space-y-4 md:w-2/3 mx-auto">
+                            <h3 class="text-xl font-semibold text-center">Thêm / Sửa Vật tư</h3>
+                            <input type="hidden" id="material-id">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="material-name" class="block text-sm font-medium text-gray-700">Tên vật tư</label>
+                                    <input type="text" id="material-name" placeholder="Vd: Ván MDF An Cường 17mm" required class="mt-1 input-style">
+                                </div>
+                                <div>
+                                    <label for="material-type" class="block text-sm font-medium text-gray-700">Loại vật tư</label>
+                                    <select id="material-type" class="mt-1 input-style">
+                                        <option value="Ván">Ván</option>
+                                        <option value="Cạnh">Cạnh</option>
+                                        <option value="Phụ kiện">Phụ kiện</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="material-price" class="block text-sm font-medium text-gray-700">Đơn giá</label>
+                                    <input type="number" id="material-price" placeholder="Vd: 550000" required class="mt-1 input-style">
+                                </div>
+                                <div>
+                                    <label for="material-unit" class="block text-sm font-medium text-gray-700">Đơn vị tính</label>
+                                    <input type="text" id="material-unit" placeholder="Vd: tấm, mét, cái" required class="mt-1 input-style">
+                                </div>
+                            </div>
+                            <div>
+                                <label for="material-notes" class="block text-sm font-medium text-gray-700">Ghi chú</label>
+                                <input type="text" id="material-notes" placeholder="Vd: 1220x2440mm, chống ẩm" class="mt-1 input-style">
+                            </div>
+                            <div class="flex items-center space-x-4 pt-2">
+                                <button type="submit" id="submit-button" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                                    <i class="fas fa-plus mr-2"></i> Thêm Vật tư
+                                </button>
+                                <button type="button" id="cancel-edit-button" class="w-full hidden justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                                   <i class="fas fa-times mr-2"></i> Hủy
+                                </button>
+                            </div>
+                        </form>
+                        <div class="mt-10 border-t pt-6">
+                            <h3 class="text-xl font-semibold mb-4 text-gray-700">Danh sách Vật tư</h3>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full bg-white">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="th-style">Tên</th>
+                                            <th class="th-style">Loại</th>
+                                            <th class="th-style">Đơn giá</th>
+                                            <th class="th-style">Ghi chú</th>
+                                            <th class="th-style text-center">Hành động</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="materials-table-body" class="divide-y divide-gray-200"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="materials-login-prompt" class="login-prompt-view">
+                        <i class="fas fa-lock fa-3x text-gray-400 mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-700">Vui lòng đăng nhập</h3>
+                        <p class="text-gray-500 mt-2">Đăng nhập để quản lý kho vật tư của bạn.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 3: Hạng mục đã lưu -->
+            <div id="saved-tab" class="tab-pane hidden">
+                 <div class="bg-white p-6 rounded-lg shadow-md">
+                     <div id="saved-content" class="disabled-content">
+                        <h2 class="text-2xl font-semibold mb-4 text-gray-700">Các Hạng mục đã lưu</h2>
                         <div class="overflow-x-auto">
                             <table class="min-w-full bg-white">
                                 <thead class="bg-gray-50">
@@ -98,60 +212,32 @@
                             </table>
                         </div>
                     </div>
-                </div>
-                <div id="login-prompt" class="text-center py-10">
-                    <i class="fas fa-lock fa-3x text-gray-400 mb-4"></i>
-                    <h3 class="text-xl font-semibold text-gray-700">Vui lòng đăng nhập</h3>
-                    <p class="text-gray-500 mt-2">Đăng nhập để quản lý và lưu trữ dữ liệu của bạn.</p>
-                </div>
-            </section>
+                    <div id="saved-login-prompt" class="login-prompt-view">
+                        <i class="fas fa-lock fa-3x text-gray-400 mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-700">Vui lòng đăng nhập</h3>
+                        <p class="text-gray-500 mt-2">Đăng nhập để xem các hạng mục đã lưu.</p>
+                    </div>
+                 </div>
+            </div>
 
-            <!-- Cột 2: Tính toán & Sáng tạo -->
-            <section class="bg-white p-6 rounded-lg shadow-md space-y-8 sticky top-24">
-                <div>
-                    <h2 class="text-2xl font-semibold mb-4 text-gray-700 border-b pb-2">Phân tích & Lưu trữ</h2>
-                    <div>
-                        <label for="item-name" class="block text-sm font-medium text-gray-700">Tên sản phẩm / hạng mục</label>
-                        <input type="text" id="item-name" class="mt-1 block w-full input-style" placeholder="Vd: Tủ bếp nhà chị Lan">
-                    </div>
-                    <div class="mt-4">
-                        <label for="product-description" class="block text-sm font-medium text-gray-700">Mô tả sản phẩm cần tính giá</label>
-                        <textarea id="product-description" rows="4" class="mt-1 block w-full input-style" placeholder="Vd: Tủ bếp trên dài 3m, cao 0.8m, sâu 0.35m..."></textarea>
-                    </div>
-                    <div class="flex items-center space-x-2 mt-4">
-                        <button id="calculate-btn" class="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">
-                            <i class="fas fa-cogs mr-2"></i> Phân tích
-                        </button>
-                        <button id="save-item-btn" class="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400" disabled>
-                            <i class="fas fa-save mr-2"></i> Lưu lại
-                        </button>
-                    </div>
-                    <div id="result-container" class="mt-4 result-box">
-                        <div id="loading-spinner" class="hidden text-center p-4">
-                            <i class="fas fa-spinner fa-spin fa-2x text-indigo-600"></i>
-                            <p class="mt-2 text-sm text-gray-600">Gemini đang phân tích...</p>
-                        </div>
-                        <div id="result-content" class="p-4 bg-gray-50 rounded-md min-h-[80px] text-gray-800">
-                           Kết quả phân tích chi phí sẽ hiển thị ở đây.
-                        </div>
-                    </div>
-                </div>
-                <div class="border-t pt-6">
+            <!-- Tab 4: Công cụ Sáng tạo -->
+            <div id="creative-tab" class="tab-pane hidden">
+                <div class="bg-white p-6 rounded-lg shadow-md md:w-2/3 mx-auto">
                     <h2 class="text-2xl font-semibold mb-4 text-gray-700">Công cụ Sáng tạo ✨</h2>
-                    <div class="creative-tool">
+                     <div class="creative-tool">
                         <label for="idea-keywords" class="block text-sm font-medium text-gray-700">Gợi ý Tên & Mô tả</label>
-                        <input type="text" id="idea-keywords" class="mt-1 block w-full input-style" placeholder="Vd: bàn làm việc tối giản">
+                        <input type="text" id="idea-keywords" class="mt-1 input-style" placeholder="Vd: bàn làm việc tối giản">
                         <button id="suggest-name-btn" class="mt-2 w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-pink-500 hover:bg-pink-600">
                             <i class="fas fa-lightbulb mr-2"></i> Lấy ý tưởng
                         </button>
                         <div id="suggest-name-result" class="p-4 bg-gray-50 rounded-md min-h-[80px] text-gray-800 mt-2"></div>
                     </div>
                 </div>
-            </section>
+            </div>
         </main>
     </div>
 
-    <!-- Modal Đăng nhập -->
+    <!-- Modals -->
     <div id="login-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="modal-close-btn">&times;</button>
@@ -162,20 +248,12 @@
                 <p id="login-error" class="text-red-500 text-sm mb-4 text-center"></p>
                 <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-700">Đăng nhập</button>
             </form>
-            <!-- Nâng cấp: Đăng nhập bằng Google -->
             <div class="my-4 flex items-center">
-                <div class="flex-grow border-t border-gray-300"></div>
-                <span class="flex-shrink mx-4 text-gray-400 text-sm">HOẶC</span>
-                <div class="flex-grow border-t border-gray-300"></div>
+                <div class="flex-grow border-t border-gray-300"></div><span class="flex-shrink mx-4 text-gray-400 text-sm">HOẶC</span><div class="flex-grow border-t border-gray-300"></div>
             </div>
-            <button type="button" id="google-login-btn" class="w-full google-btn">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google icon" class="w-5 h-5 mr-3">
-                Đăng nhập với Google
-            </button>
+            <button type="button" id="google-login-btn" class="w-full google-btn"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google icon" class="w-5 h-5 mr-3">Đăng nhập với Google</button>
         </div>
     </div>
-
-    <!-- Modal Đăng ký -->
     <div id="register-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="modal-close-btn">&times;</button>
@@ -188,8 +266,6 @@
             </form>
         </div>
     </div>
-    
-    <!-- Modal xem chi tiết hạng mục đã lưu -->
     <div id="view-item-modal" class="modal-overlay hidden">
         <div class="modal-content modal-lg">
             <button class="modal-close-btn">&times;</button>
