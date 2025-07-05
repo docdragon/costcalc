@@ -41,9 +41,9 @@ body {
     .main-card { grid-column: span 2 / span 2; }
     .sidebar-card { position: sticky; top: 6rem; }
 }
-.grid-2-col { display: grid; grid-template-columns: repeat(1, 1fr); gap: 1rem; }
+.grid-2-col { display: grid; grid-template-columns: repeat(1, 1fr); gap: 1.25rem; }
 @media (min-width: 768px) { .grid-2-col { grid-template-columns: repeat(2, 1fr); } }
-.grid-3-col { display: grid; grid-template-columns: repeat(1, 1fr); gap: 1rem; }
+.grid-3-col { display: grid; grid-template-columns: repeat(1, 1fr); gap: 1.25rem; }
 @media (min-width: 768px) { .grid-3-col { grid-template-columns: repeat(3, 1fr); } }
 
 /* --- Header --- */
@@ -77,11 +77,13 @@ body {
 }
 
 /* --- Forms --- */
-.form-group { margin-top: 1rem; }
-.form-label { display: block; margin-bottom: 0.25rem; font-size: 0.875rem; font-weight: 500; color: var(--text-dark); }
+.form-group { margin-top: 1.25rem; }
+.form-label { display: block; margin-bottom: 0.5rem; font-size: 0.875rem; font-weight: 500; color: var(--text-dark); }
 .sub-label { font-size: 0.75rem; color: var(--text-light); }
 .input-style {
-    display: block; width: 100%; padding: 0.5rem 0.75rem;
+    display: block; width: 100%;
+    box-sizing: border-box;
+    padding: 0.6rem 0.8rem;
     background-color: var(--card-background);
     border: 1px solid var(--border-color);
     border-radius: 0.375rem;
@@ -93,16 +95,17 @@ body {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px var(--ring-color);
 }
-.button-group { display: flex; gap: 0.5rem; margin-top: 1rem; }
+.button-group { display: flex; gap: 0.75rem; margin-top: 1.5rem; }
 .full-width { width: 100%; }
 .material-form { border-bottom: 1px solid var(--border-color); padding-bottom: 2rem; margin-bottom: 2rem; }
-.form-title { font-size: 1.25rem; font-weight: 600; text-align: center; }
+.material-form > * + * { margin-top: 1rem; } /* Sửa lỗi các ô dính liền */
+.form-title { font-size: 1.25rem; font-weight: 600; text-align: center; margin-bottom: 1rem; }
 
 /* --- Accessory Adder --- */
 .accessory-adder { display: flex; align-items: center; gap: 0.5rem; }
 .accessory-qty { width: 4rem; text-align: center; }
 .accessory-add-btn { height: 2.5rem; flex-shrink: 0; }
-.accessory-list { margin-top: 0.75rem; list-style-type: none; padding: 0; space-y: 0.25rem; }
+.accessory-list { margin-top: 0.75rem; list-style-type: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
 .accessory-list li {
     display: flex; justify-content: space-between; align-items: center;
     font-size: 0.875rem; color: var(--text-light);
@@ -123,7 +126,7 @@ body {
 .btn i { margin-right: 0.5rem; }
 .btn:focus { outline: none; box-shadow: 0 0 0 3px var(--ring-color); }
 .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
-.btn:disabled { background-color: #9ca3af; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn:disabled { background-color: #9ca3af; color: white; cursor: not-allowed; transform: none; box-shadow: none; }
 .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.75rem; }
 .btn-primary { color: white; background-color: var(--primary-color); border-color: var(--primary-color); }
 .btn-primary:hover { background-color: var(--primary-hover); }
@@ -229,6 +232,17 @@ tbody tr:last-child td { border-bottom: none; }
 .error-message { color: var(--danger-color); font-size: 0.875rem; text-align: center; height: 1.25rem; margin-bottom: 1rem; }
 .confirm-text { color: var(--text-light); margin-bottom: 1.5rem; }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 0.75rem; }
+.separator {
+    margin-top: 1rem; margin-bottom: 1rem;
+    display: flex; align-items: center;
+    color: #9ca3af; font-size: 0.75rem;
+}
+.separator::before, .separator::after {
+    content: ''; flex-grow: 1;
+    border-bottom: 1px solid var(--secondary-color);
+}
+.separator::before { margin-right: 0.5rem; }
+.separator::after { margin-left: 0.5rem; }
 
 /* --- Initial Loader --- */
 .loading-overlay {
