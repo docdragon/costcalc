@@ -1,18 +1,19 @@
 // api/analyze.js
 import { GoogleGenAI } from "@google/genai";
 
-// Hàm handler chính cho Serverless Function
+// Main handler for the Vercel Serverless Function
 export default async function handler(req, res) {
-    // Chỉ cho phép phương thức POST
+    // Only allow POST method
     if (req.method !== 'POST') {
         res.setHeader('Allow', ['POST']);
-        return res.status(405).end(`Method ${req.method} Not Allowed`);
+        return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
     }
 
-    // Lấy khóa API từ biến môi trường của Vercel
+    // Get API key from Vercel environment variables
     const apiKey = process.env.API_KEY;
     if (!apiKey) {
-        return res.status(500).json({ error: 'API key is not configured on the server.' });
+        console.error('API_KEY not found in environment variables.');
+        return res.status(500).json({ error: 'Server configuration error: API key is missing.' });
     }
 
     const ai = new GoogleGenAI({ apiKey });
@@ -24,7 +25,7 @@ export default async function handler(req, res) {
              return res.status(400).json({ error: 'Prompt is required.' });
         }
 
-        // Xây dựng các phần của yêu cầu
+        // Build the parts for the multimodal request
         const parts = [];
         if (image && image.data && image.mimeType) {
             parts.push({
@@ -36,19 +37,36 @@ export default async function handler(req, res) {
         }
         parts.push({ text: prompt });
 
-        // Tạo yêu cầu với cấu trúc 'contents' đã được sửa lỗi
-        const request = {
+        // Generate content using the simplified and correct structure
+        const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-preview-04-17',
-            contents: [{ parts: parts }], // SỬA LỖI: `contents` phải là một mảng các đối tượng Content
-        };
+            contents: { parts: parts }, // Correct structure for single-turn multimodal
+        });
         
-        const response = await ai.models.generateContent(request);
+        // --- Response Parsing Logic ---
+        // The server will now handle the parsing, making the client's job easier.
+        let jsonStr = response.text.trim();
+        const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
+        const match = jsonStr.match(fenceRegex);
+        if (match && match[2]) {
+            jsonStr = match[2].trim();
+        }
 
-        // Gửi kết quả về cho client
-        res.status(200).json({ text: response.text });
+        try {
+            const parsedData = JSON.parse(jsonStr);
+            // Send the clean, parsed JSON object to the client
+            return res.status(200).json(parsedData);
+        } catch (parseError) {
+            console.error("Failed to parse Gemini's response as JSON:", parseError);
+            console.error("Original text from Gemini:", response.text);
+            return res.status(500).json({ 
+                error: 'AI response was not valid JSON.',
+                details: `Could not parse the following text: ${response.text}`
+            });
+        }
 
     } catch (error) {
         console.error('Error calling Gemini API:', error);
-        res.status(500).json({ error: 'Failed to call Gemini API.', details: error.message });
+        return res.status(500).json({ error: 'Failed to call Gemini API.', details: error.message });
     }
 }

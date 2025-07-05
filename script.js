@@ -1,4 +1,5 @@
 
+
 // script.js
 // Firebase imports are kept as they are.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -522,25 +523,23 @@ async function callGeminiAPI(prompt, resultEl, image) {
             body: JSON.stringify({ prompt, image }),
         });
 
-        const data = await response.json();
+        // The server now returns a parsed JSON object directly.
+        const parsedResult = await response.json();
 
+        // Check for errors sent from our own API proxy
         if (!response.ok) {
-            throw new Error(data.error || 'Unknown error from server');
+            // 'parsedResult.error' and 'parsedResult.details' come from our serverless function's error handling
+            const errorMessage = parsedResult.error || 'An unknown error occurred on the server.';
+            const errorDetails = parsedResult.details ? `\nDetails: ${parsedResult.details}` : '';
+            throw new Error(`${errorMessage}${errorDetails}`);
         }
         
-        let jsonStr = data.text.trim();
-        
-        const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
-        const match = jsonStr.match(fenceRegex);
-        if (match && match[2]) {
-            jsonStr = match[2].trim();
-        }
-
-        const parsedResult = JSON.parse(jsonStr);
+        // The result is already a clean JSON object, no need to parse it here.
         return parsedResult;
 
     } catch (error) {
         console.error("API Call Error:", error);
+        // Display a more informative error message.
         resultEl.textContent = `Lỗi khi gọi API: ${error.message}`;
         showToast('Đã xảy ra lỗi khi phân tích. Vui lòng thử lại.', 'error');
         return null;
