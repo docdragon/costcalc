@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công Cụ Tính Giá Thành & Sáng Tạo Sản Phẩm</title>
+    <!-- Tải Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tải Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Liên kết tới file CSS tùy chỉnh -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">Công Cụ Tính Giá & Sáng Tạo Sản Phẩm</h1>
+            <p class="text-gray-600 mt-2">Dành cho Nội thất gỗ & Bảng hiệu quảng cáo</p>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+            <!-- Cột 1: Quản lý Vật tư -->
+            <section class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-700 border-b pb-2">Quản lý Vật tư</h2>
+                <form id="material-form" class="space-y-4">
+                    <input type="hidden" id="material-id">
+                    <div>
+                        <label for="material-name" class="block text-sm font-medium text-gray-700">Tên vật tư</label>
+                        <input type="text" id="material-name" placeholder="Vd: Ván MDF An Cường 17mm" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="material-price" class="block text-sm font-medium text-gray-700">Đơn giá</label>
+                            <input type="number" id="material-price" placeholder="Vd: 550000" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label for="material-unit" class="block text-sm font-medium text-gray-700">Đơn vị tính</label>
+                            <input type="text" id="material-unit" placeholder="Vd: tấm, md, cái" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="material-notes" class="block text-sm font-medium text-gray-700">Ghi chú (Kích thước, loại...)</label>
+                        <input type="text" id="material-notes" placeholder="Vd: 1220x2440mm, chống ẩm" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button type="submit" id="submit-button" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <i class="fas fa-plus mr-2"></i> Thêm Vật tư
+                        </button>
+                        <button type="button" id="cancel-edit-button" class="w-full hidden justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                           <i class="fas fa-times mr-2"></i> Hủy
+                        </button>
+                    </div>
+                </form>
+
+                <div class="mt-8">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-700">Danh sách Vật tư</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên Vật tư</th>
+                                    <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Đơn giá</th>
+                                    <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ghi chú</th>
+                                    <th class="py-3 px-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="materials-table-body" class="divide-y divide-gray-200">
+                                <!-- Dữ liệu vật tư sẽ được chèn vào đây bởi JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Cột 2: Tính toán & Sáng tạo -->
+            <section class="bg-white p-6 rounded-lg shadow-md space-y-8">
+                <!-- Tính năng 1: Phân tích chi phí -->
+                <div>
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-700 border-b pb-2">Phân tích Chi phí</h2>
+                    <div>
+                        <label for="product-description" class="block text-sm font-medium text-gray-700">Mô tả sản phẩm cần tính giá</label>
+                        <textarea id="product-description" rows="4" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="Vd: Tủ bếp trên dài 3m, cao 0.8m, sâu 0.35m, sử dụng ván MDF An Cường 17mm. Cánh tủ phủ Acrylic."></textarea>
+                    </div>
+                    <button id="calculate-btn" class="mt-4 w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                        <i class="fas fa-cogs mr-2"></i> Phân tích với Gemini
+                    </button>
+                    <div id="result-container" class="mt-4 result-box">
+                        <div id="loading-spinner" class="hidden text-center p-4">
+                            <i class="fas fa-spinner fa-spin fa-2x text-indigo-600"></i>
+                            <p class="mt-2 text-sm text-gray-600">Gemini đang phân tích...</p>
+                        </div>
+                        <div id="result-content" class="p-4 bg-gray-50 rounded-md min-h-[80px] text-gray-800">
+                           Kết quả phân tích chi phí sẽ hiển thị ở đây.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tính năng 2: Công cụ Sáng tạo -->
+                <div class="border-t pt-6">
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-700">Công cụ Sáng tạo ✨</h2>
+                    
+                    <!-- Gợi ý Tên & Mô tả -->
+                    <div class="creative-tool">
+                        <label for="idea-keywords" class="block text-sm font-medium text-gray-700">✨ Gợi ý Tên & Mô tả Sản phẩm</label>
+                        <input type="text" id="idea-keywords" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500" placeholder="Nhập từ khóa, vd: bàn làm việc tối giản, kệ tivi gỗ sồi">
+                        <button id="suggest-name-btn" class="mt-2 w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-pink-500 hover:bg-pink-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500">
+                            <i class="fas fa-lightbulb mr-2"></i> Lấy ý tưởng
+                        </button>
+                        <div id="suggest-name-result-container" class="mt-2 result-box">
+                             <div id="suggest-name-loading" class="hidden text-center p-4">
+                                <i class="fas fa-spinner fa-spin fa-2x text-pink-500"></i>
+                            </div>
+                            <div id="suggest-name-result" class="p-4 bg-gray-50 rounded-md min-h-[80px] text-gray-800">
+                                Ý tưởng tên & mô tả sẽ ở đây.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tư vấn Thiết kế -->
+                     <div class="creative-tool mt-6">
+                        <label for="design-keywords" class="block text-sm font-medium text-gray-700">✨ Tư vấn Thiết kế & Xu hướng</label>
+                        <input type="text" id="design-keywords" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500" placeholder="Nhập yêu cầu, vd: phòng khách nhỏ, phong cách scandinavian">
+                        <button id="consult-design-btn" class="mt-2 w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                            <i class="fas fa-palette mr-2"></i> Nhận tư vấn
+                        </button>
+                        <div id="consult-design-result-container" class="mt-2 result-box">
+                             <div id="consult-design-loading" class="hidden text-center p-4">
+                                <i class="fas fa-spinner fa-spin fa-2x text-purple-600"></i>
+                            </div>
+                            <div id="consult-design-result" class="p-4 bg-gray-50 rounded-md min-h-[80px] text-gray-800">
+                                Gợi ý thiết kế sẽ ở đây.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="text-center mt-12 py-4 border-t">
+            <p class="text-gray-600">Được tạo bởi Gemini & bạn</p>
+            <p class="text-sm text-gray-500">UserID của bạn (dùng để định danh dữ liệu): <span id="user-id-display" class="font-mono"></span></p>
+        </footer>
+    </div>
+
+    <!-- Tải Firebase SDK -->
+    <script type="module" src="script.js"></script>
+
+</body>
+</html>
