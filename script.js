@@ -2,7 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { GoogleGenAI } from "https://esm.sh/@google/genai@2.2.0";
+import { GoogleGenAI } from "https://cdn.jsdelivr.net/npm/@google/genai/dist/index.mjs";
 
 // --- Cấu hình Firebase ---
 const firebaseConfig = {
@@ -18,11 +18,17 @@ const firebaseConfig = {
 // --- Cấu hình Gemini AI ---
 // !!! QUAN TRỌNG: Thay thế chuỗi bên dưới bằng khóa API của bạn từ Google AI Studio.
 const API_KEY = "AIzaSyCJzstBl8vuyzpbpm5q1YkNE_Bwmrn_AwQ";
-let ai;
+let ai = null;
+
+// Chỉ khởi tạo AI client nếu API key đã được điền.
 if (API_KEY && API_KEY !== "AIzaSyCJzstBl8vuyzpbpm5q1YkNE_Bwmrn_AwQ") {
-    ai = new GoogleGenAI({ apiKey: API_KEY });
+    try {
+        ai = new GoogleGenAI({ apiKey: API_KEY });
+    } catch(e) {
+        console.error("Lỗi khi khởi tạo Gemini AI Client:", e);
+        ai = null;
+    }
 } else {
-    ai = null;
     console.warn("Chưa cấu hình khóa API cho Gemini. Các tính năng AI sẽ bị vô hiệu hóa.");
 }
 
@@ -517,7 +523,7 @@ savedItemsTableBody.addEventListener('click', async e => {
 // --- Gemini API Call (Client-side) ---
 async function callGeminiAPI(prompt, resultEl, image) {
     if (!ai) {
-        const errorMessage = "Lỗi cấu hình: Khóa API cho Gemini chưa được thiết lập. Vui lòng kiểm tra và điền khóa API vào file script.js.";
+        const errorMessage = "Lỗi cấu hình: Khóa API cho Gemini chưa được thiết lập. Vui lòng điền khóa API vào file script.js.";
         resultEl.textContent = errorMessage;
         showToast(errorMessage, 'error');
         return null;
