@@ -17,9 +17,9 @@ const firebaseConfig = {
 
 // --- Cấu hình Gemini AI ---
 // !!! QUAN TRỌNG: Thay thế chuỗi bên dưới bằng khóa API của bạn từ Google AI Studio.
-const API_KEY = "YOUR_GOOGLE_AI_API_KEY_HERE";
+const API_KEY = "AIzaSyCJzstBl8vuyzpbpm5q1YkNE_Bwmrn_AwQ";
 let ai;
-if (API_KEY && API_KEY !== "YOUR_GOOGLE_AI_API_KEY_HERE") {
+if (API_KEY && API_KEY !== "AIzaSyCJzstBl8vuyzpbpm5q1YkNE_Bwmrn_AwQ") {
     ai = new GoogleGenAI({ apiKey: API_KEY });
 } else {
     ai = null;
