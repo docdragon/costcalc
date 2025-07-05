@@ -1,13 +1,14 @@
 // script.js
-const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
-};
-const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY";
+ const firebaseConfig = {
+    apiKey: "AIzaSyC_8Q8Girww42mI-8uwYsJaH5Vi41FT1eA",
+    authDomain: "tinh-gia-thanh-app-fbdc0.firebaseapp.com",
+    projectId: "tinh-gia-thanh-app-fbdc0",
+    storageBucket: "tinh-gia-thanh-app-fbdc0.firebasestorage.app",
+    messagingSenderId: "306099623121",
+    appId: "1:306099623121:web:157ce5827105998f3a61f0",
+    measurementId: "G-D8EHTN2SWE"
+  };
+const GEMINI_API_KEY = "AIzaSyCJzstBl8vuyzpbpm5q1YkNE_Bwmrn_AwQ";
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
