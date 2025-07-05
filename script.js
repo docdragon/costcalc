@@ -1,4 +1,9 @@
 // script.js
+import { GoogleGenAI } from "@google/genai";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
 const firebaseConfig = {
     apiKey: "AIzaSyC_8Q8Girww42mI-8uwYsJaH5Vi41FT1eA",
     authDomain: "tinh-gia-thanh-app-fbdc0.firebaseapp.com",
@@ -8,15 +13,11 @@ const firebaseConfig = {
     appId: "1:306099623121:web:157ce5827105998f3a61f0",
     measurementId: "G-D8EHTN2SWE"
   };
-const GEMINI_API_KEY = "AIzaSyCJzstBl8vuyzpbpm5q1YkNE_Bwmrn_AwQ";
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+const ai = new GoogleGenAI({apiKey: process.env.API_KEY});
 
 // --- DOM Elements ---
 const loggedInView = document.getElementById('logged-in-view');
@@ -43,6 +44,13 @@ const priceSummaryContainer = document.getElementById('price-summary-container')
 const totalCostValue = document.getElementById('total-cost-value');
 const suggestedPriceValue = document.getElementById('suggested-price-value');
 const estimatedProfitValue = document.getElementById('estimated-profit-value');
+const imageUploader = document.getElementById('image-uploader');
+const imageInput = document.getElementById('image-input');
+const imageUploadPrompt = document.getElementById('image-upload-prompt');
+const imagePreviewContainer = document.getElementById('image-preview-container');
+const imagePreview = document.getElementById('image-preview');
+const removeImageBtn = document.getElementById('remove-image-btn');
+
 
 // --- Global State ---
 let currentUserId = null;
@@ -54,6 +62,7 @@ let localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [] };
 let localSavedItems = [];
 let lastGeminiResult = null;
 let addedAccessories = [];
+let uploadedImage = null;
 
 // --- Auth & UI State Management ---
 onAuthStateChanged(auth, user => {
@@ -291,6 +300,57 @@ function resetMaterialForm() {
 }
 document.getElementById('cancel-edit-button').addEventListener('click', resetMaterialForm);
 
+
+// --- Image Upload Logic ---
+imageUploader.addEventListener('click', () => imageInput.click());
+imageUploader.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    imageUploader.style.borderColor = 'var(--primary-color)';
+});
+imageUploader.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    imageUploader.style.borderColor = 'var(--border-color)';
+});
+imageUploader.addEventListener('drop', (e) => {
+    e.preventDefault();
+    imageUploader.style.borderColor = 'var(--border-color)';
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        handleImageFile(files[0]);
+    }
+});
+imageInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+        handleImageFile(e.target.files[0]);
+    }
+});
+removeImageBtn.addEventListener('click', (e) => {
+    e.stopPropagation(); // prevent triggering the uploader click
+    uploadedImage = null;
+    imageInput.value = ''; // Reset file input
+    imagePreview.src = '#';
+    imagePreviewContainer.classList.add('hidden');
+    imageUploadPrompt.classList.remove('hidden');
+});
+
+function handleImageFile(file) {
+    if (!file.type.startsWith('image/')) {
+        showToast('Vui lòng chọn một file ảnh.', 'error');
+        return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+        uploadedImage = {
+            mimeType: file.type,
+            data: reader.result.split(',')[1] // Get base64 part
+        };
+        imagePreview.src = reader.result;
+        imageUploadPrompt.classList.add('hidden');
+        imagePreviewContainer.classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+}
+
 // --- Calculator Tab Logic ---
 function populateSelects() {
     const selects = {
@@ -360,9 +420,9 @@ calculateBtn.addEventListener('click', async () => {
 
     const fullMaterialsList = Object.values(localMaterials).flat().map(m => `- ${m.name}: ${Number(m.price).toLocaleString('vi-VN')}đ / ${m.unit}`).join('\n');
 
-    const prompt = `Bạn là chuyên gia dự toán chi phí và định giá sản phẩm nội thất. Hãy phân tích và báo giá cho sản phẩm sau:\n\n**Tên sản phẩm:** ${itemName}\n**Kích thước:** ${dimensions}\n**Danh sách vật tư được chọn:**\n${materialsText}\n**Yêu cầu thêm:** ${description || 'Không có'}\n\n**Nhiệm vụ:**\n1.  **Phân tích chi tiết:** Thực hiện các bước tính toán ván, cạnh, tạo bảng kê chi phí. Toàn bộ phần phân tích này sẽ được đặt trong một trường JSON.\n2.  **Trích xuất tổng chi phí:** Xác định con số TỔNG CHI PHÍ VẬT TƯ cuối cùng và đặt nó vào một trường JSON riêng.\n3.  **Đề xuất giá bán:** Dựa trên tổng chi phí, độ phức tạp, và giá thị trường, hãy đề xuất một mức GIÁ BÁN HỢP LÝ (thường có lợi nhuận từ 40-60%) và đặt nó vào một trường JSON riêng.\n4.  **Tính lợi nhuận:** Tính toán LỢI NHUẬN DỰ KIẾN (Giá bán - Tổng chi phí) và đặt nó vào một trường JSON riêng.\n\n**Yêu cầu định dạng đầu ra:**\nHãy trả về một đối tượng JSON duy nhất, không có bất kỳ văn bản nào khác bên ngoài. JSON phải có cấu trúc như sau:\n{\n  "analysisText": "Toàn bộ bài phân tích chi tiết của bạn ở đây...",\n  "totalCost": <con_số_tổng_chi_phí_vật_tư>,\n  "suggestedSellingPrice": <con_số_giá_bán_hợp_lý>,\n  "estimatedProfit": <con_số_lợi_nhuận_dự_kiến>\n}\n\n**Danh sách vật tư đầy đủ (để tham khảo đơn giá):**\n${fullMaterialsList}`;
+    const prompt = `Bạn là chuyên gia dự toán chi phí và định giá sản phẩm nội thất. Hãy phân tích và báo giá cho sản phẩm sau, dựa vào mô tả và hình ảnh được cung cấp (nếu có):\n\n**Tên sản phẩm:** ${itemName}\n**Kích thước:** ${dimensions}\n**Danh sách vật tư được chọn:**\n${materialsText}\n**Yêu cầu thêm:** ${description || 'Không có'}\n\n**Nhiệm vụ:**\n1.  **Phân tích chi tiết:** Dựa vào cả hình ảnh và mô tả, hãy ước tính lượng vật tư cần thiết (ván, cạnh). Tạo bảng kê chi phí chi tiết. Toàn bộ phần phân tích này sẽ được đặt trong một trường JSON.\n2.  **Trích xuất tổng chi phí:** Xác định con số TỔNG CHI PHÍ VẬT TƯ cuối cùng và đặt nó vào một trường JSON riêng.\n3.  **Đề xuất giá bán:** Dựa trên tổng chi phí, độ phức tạp (suy ra từ hình ảnh và mô tả), và giá thị trường, hãy đề xuất một mức GIÁ BÁN HỢP LÝ (thường có lợi nhuận từ 40-60%) và đặt nó vào một trường JSON riêng.\n4.  **Tính lợi nhuận:** Tính toán LỢI NHUẬN DỰ KIẾN (Giá bán - Tổng chi phí) và đặt nó vào một trường JSON riêng.\n\n**Yêu cầu định dạng đầu ra:**\nHãy trả về một đối tượng JSON duy nhất, không có bất kỳ văn bản nào khác bên ngoài. JSON phải có cấu trúc như sau:\n{\n  "analysisText": "Toàn bộ bài phân tích chi tiết của bạn ở đây, bao gồm cả bảng kê chi phí...",\n  "totalCost": <con_số_tổng_chi_phí_vật_tư>,\n  "suggestedSellingPrice": <con_số_giá_bán_hợp_lý>,\n  "estimatedProfit": <con_số_lợi_nhuận_dự_kiến>\n}\n\n**Danh sách vật tư đầy đủ (để tham khảo đơn giá):**\n${fullMaterialsList}`;
     
-    const resultObject = await callGeminiAPI(prompt, resultContainer);
+    const resultObject = await callGeminiAPI(prompt, resultContainer, uploadedImage);
     if (resultObject) {
         lastGeminiResult = resultObject.analysisText;
         
@@ -444,28 +504,45 @@ savedItemsTableBody.addEventListener('click', async e => {
 });
 
 // --- Gemini API Call ---
-async function callGeminiAPI(prompt, resultEl) {
+async function callGeminiAPI(prompt, resultEl, image) {
     const spinner = `<div class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75"><div class="spinner"></div></div>`;
     resultEl.innerHTML = spinner;
     saveItemBtn.disabled = true;
     lastGeminiResult = null;
     priceSummaryContainer.classList.add('hidden');
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-        });
-        if (!response.ok) throw new Error((await response.json()).error.message);
-        const data = await response.json();
-        const resultText = data.candidates[0].content.parts[0].text;
-        
-        const cleanedJsonString = resultText.replace(/```json/g, '').replace(/```/g, '').trim();
-        const parsedResult = JSON.parse(cleanedJsonString);
+        const parts = [];
+        if (image) {
+            parts.push({
+                inlineData: {
+                    mimeType: image.mimeType,
+                    data: image.data,
+                },
+            });
+        }
+        parts.push({ text: prompt });
 
+        const request = {
+            model: 'gemini-2.5-flash-preview-04-17',
+            contents: { parts: parts },
+        };
+        
+        const response = await ai.models.generateContent(request);
+        let jsonStr = response.text.trim();
+        
+        const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
+        const match = jsonStr.match(fenceRegex);
+        if (match && match[2]) {
+            jsonStr = match[2].trim();
+        }
+
+        const parsedResult = JSON.parse(jsonStr);
         return parsedResult;
+
     } catch (error) {
-        resultEl.textContent = `Lỗi khi gọi hoặc phân tích JSON từ Gemini: ${error.message}`;
+        console.error("Gemini API Error:", error);
+        resultEl.textContent = `Lỗi khi gọi API Gemini: ${error.message}`;
+        showToast('Đã xảy ra lỗi khi phân tích. Vui lòng thử lại.', 'error');
         return null;
     }
 }

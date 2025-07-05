@@ -7,6 +7,13 @@
     <!-- KHÔNG CẦN TAILWIND CDN NỮA -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+<script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://esm.sh/@google/genai@^1.8.0"
+  }
+}
+</script>
 </head>
 <body>
 
@@ -77,6 +84,21 @@
                                     <button id="add-accessory-btn" class="btn btn-secondary accessory-add-btn"><i class="fas fa-plus"></i></button>
                                 </div>
                                 <ul id="accessories-list" class="accessory-list"></ul>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Ảnh minh họa sản phẩm (Tùy chọn)</label>
+                                <div id="image-uploader" class="image-uploader">
+                                    <div id="image-upload-prompt" class="image-upload-prompt">
+                                        <i class="fas fa-image"></i>
+                                        <p>Kéo và thả hoặc nhấn để tải ảnh lên</p>
+                                        <span>Hỗ trợ PNG, JPG, WEBP</span>
+                                    </div>
+                                    <div id="image-preview-container" class="hidden">
+                                        <img id="image-preview" src="#" alt="Xem trước sản phẩm">
+                                        <button id="remove-image-btn" class="remove-image-btn">&times;</button>
+                                    </div>
+                                </div>
+                                <input type="file" id="image-input" class="hidden" accept="image/png, image/jpeg, image/webp">
                             </div>
                              <div class="form-group"><label for="product-description" class="form-label">Mô tả & Yêu cầu thêm</label><textarea id="product-description" rows="3" class="input-style" placeholder="Vd: Chân sắt sơn tĩnh điện, có 1 hộc kéo..."></textarea></div>
                         </div>
