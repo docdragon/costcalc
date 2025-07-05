@@ -83,7 +83,6 @@
                             </table>
                         </div>
                     </div>
-                    <!-- Nâng cấp: Khu vực các hạng mục đã lưu -->
                     <div class="mt-10 border-t pt-6">
                         <h3 class="text-xl font-semibold mb-4 text-gray-700">Các Hạng mục đã lưu</h3>
                         <div class="overflow-x-auto">
@@ -111,20 +110,18 @@
             <section class="bg-white p-6 rounded-lg shadow-md space-y-8 sticky top-24">
                 <div>
                     <h2 class="text-2xl font-semibold mb-4 text-gray-700 border-b pb-2">Phân tích & Lưu trữ</h2>
-                    <!-- Nâng cấp: Thêm tên hạng mục -->
                     <div>
                         <label for="item-name" class="block text-sm font-medium text-gray-700">Tên sản phẩm / hạng mục</label>
                         <input type="text" id="item-name" class="mt-1 block w-full input-style" placeholder="Vd: Tủ bếp nhà chị Lan">
                     </div>
                     <div class="mt-4">
                         <label for="product-description" class="block text-sm font-medium text-gray-700">Mô tả sản phẩm cần tính giá</label>
-                        <textarea id="product-description" rows="4" class="mt-1 block w-full input-style" placeholder="Vd: Tủ bếp trên dài 3m, cao 0.8m, sâu 0.35m, sử dụng ván MDF An Cường 17mm. Cánh tủ phủ Acrylic."></textarea>
+                        <textarea id="product-description" rows="4" class="mt-1 block w-full input-style" placeholder="Vd: Tủ bếp trên dài 3m, cao 0.8m, sâu 0.35m..."></textarea>
                     </div>
                     <div class="flex items-center space-x-2 mt-4">
                         <button id="calculate-btn" class="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">
                             <i class="fas fa-cogs mr-2"></i> Phân tích
                         </button>
-                        <!-- Nâng cấp: Nút lưu kết quả -->
                         <button id="save-item-btn" class="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400" disabled>
                             <i class="fas fa-save mr-2"></i> Lưu lại
                         </button>
@@ -154,7 +151,7 @@
         </main>
     </div>
 
-    <!-- Modals (Không thay đổi) -->
+    <!-- Modal Đăng nhập -->
     <div id="login-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="modal-close-btn">&times;</button>
@@ -165,8 +162,20 @@
                 <p id="login-error" class="text-red-500 text-sm mb-4 text-center"></p>
                 <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-700">Đăng nhập</button>
             </form>
+            <!-- Nâng cấp: Đăng nhập bằng Google -->
+            <div class="my-4 flex items-center">
+                <div class="flex-grow border-t border-gray-300"></div>
+                <span class="flex-shrink mx-4 text-gray-400 text-sm">HOẶC</span>
+                <div class="flex-grow border-t border-gray-300"></div>
+            </div>
+            <button type="button" id="google-login-btn" class="w-full google-btn">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google icon" class="w-5 h-5 mr-3">
+                Đăng nhập với Google
+            </button>
         </div>
     </div>
+
+    <!-- Modal Đăng ký -->
     <div id="register-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="modal-close-btn">&times;</button>
@@ -179,7 +188,8 @@
             </form>
         </div>
     </div>
-    <!-- Nâng cấp: Modal xem chi tiết hạng mục đã lưu -->
+    
+    <!-- Modal xem chi tiết hạng mục đã lưu -->
     <div id="view-item-modal" class="modal-overlay hidden">
         <div class="modal-content modal-lg">
             <button class="modal-close-btn">&times;</button>
