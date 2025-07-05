@@ -1,4 +1,3 @@
-
 // api/analyze.js
 import { GoogleGenAI } from "@google/genai";
 
@@ -37,10 +36,10 @@ export default async function handler(req, res) {
         }
         parts.push({ text: prompt });
 
-        // Tạo yêu cầu
+        // Tạo yêu cầu với cấu trúc 'contents' đã được sửa lỗi
         const request = {
             model: 'gemini-2.5-flash-preview-04-17',
-            contents: { parts: parts },
+            contents: [{ parts: parts }], // SỬA LỖI: `contents` phải là một mảng các đối tượng Content
         };
         
         const response = await ai.models.generateContent(request);
