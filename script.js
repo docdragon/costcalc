@@ -51,7 +51,10 @@ const imagePreview = document.getElementById('image-preview');
 const removeImageBtn = document.getElementById('remove-image-btn');
 const costBreakdownContainer = document.getElementById('cost-breakdown-container');
 const tabs = document.getElementById('tabs');
-
+const chatForm = document.getElementById('chat-form');
+const chatInput = document.getElementById('chat-input');
+const sendChatBtn = document.getElementById('send-chat-btn');
+const chatMessagesContainer = document.getElementById('chat-messages');
 
 // --- Global State ---
 let currentUserId = null;
@@ -64,6 +67,8 @@ let localSavedItems = [];
 let lastGeminiResult = null;
 let addedAccessories = [];
 let uploadedImage = null;
+let chatHistory = [];
+let isAwaitingChatResponse = false;
 
 // --- Sample Data for New Users ---
 const sampleMaterials = [
@@ -106,6 +111,7 @@ onAuthStateChanged(auth, async (user) => {
         materialsCollectionRef = collection(db, `users/${currentUserId}/materials`);
         savedItemsCollectionRef = collection(db, `users/${currentUserId}/savedItems`);
         await checkAndAddSampleData(currentUserId);
+        initializeChat();
         listenForData();
     } else {
         currentUserId = null;
@@ -126,6 +132,8 @@ function listenForData() {
 function clearLocalData() {
     localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [] };
     localSavedItems = [];
+    chatHistory = [];
+    chatMessagesContainer.innerHTML = '';
     renderMaterials([]);
     renderSavedItems([]);
     populateSelects();
@@ -136,7 +144,7 @@ function updateUIVisibility(isLoggedIn, user) {
     document.getElementById('logged-out-view').classList.toggle('hidden', isLoggedIn);
     userEmailDisplay.textContent = isLoggedIn ? (user.displayName || user.email) : '';
     
-    document.querySelectorAll('.calculator-form-content, .materials-form-content, .saved-items-content').forEach(el => {
+    document.querySelectorAll('.calculator-form-content, .materials-form-content, .saved-items-content, .assistant-content').forEach(el => {
         el.style.display = isLoggedIn ? 'block' : 'none';
     });
     document.querySelectorAll('.login-prompt-view').forEach(el => {
@@ -450,7 +458,7 @@ calculateBtn.addEventListener('click', async () => {
     addedAccessories.forEach(acc => { materialsText += `* ${acc.name}: ${acc.quantity} ${acc.unit}\n`; });
     const fullMaterialsList = Object.values(localMaterials).flat().map(m => `- ${m.name}: ${Number(m.price).toLocaleString('vi-VN')}đ / ${m.unit}`).join('\n');
 
-    const prompt = `Bạn là chuyên gia dự toán chi phí và định giá sản phẩm nội thất. Hãy phân tích và báo giá cho sản phẩm sau, dựa vào mô tả và hình ảnh được cung cấp (nếu có):\n\n**Tên sản phẩm:** ${itemName}\n**Kích thước:** ${dimensions}\n**Danh sách vật tư được chọn:**\n${materialsText}\n**Yêu cầu thêm:** ${description || 'Không có'}\n\n**Nhiệm vụ:**\n1.  **Phân tích chi tiết (analysisText):** Diễn giải logic tính toán, giải thích các hạng mục và đưa ra các tư vấn hữu ích. Toàn bộ phần này sẽ được đặt trong trường JSON "analysisText".\n2.  **Bóc tách chi phí (costBreakdown):** Dựa trên phân tích, tạo một mảng các đối tượng JSON. Mỗi đối tượng đại diện cho một loại vật tư sử dụng và phải có các trường: "item" (tên vật tư), "quantity" (số lượng ước tính, dạng chuỗi có kèm đơn vị, vd: "1.5 tấm"), "unitCost" (đơn giá, dạng số), và "totalCost" (thành tiền, dạng số). Đặt mảng này vào trường "costBreakdown".\n3.  **Tổng chi phí (totalCost):** Xác định con số TỔNG CHI PHÍ VẬT TƯ cuối cùng và đặt nó vào trường "totalCost".\n4.  **Giá bán đề xuất (suggestedSellingPrice):** Dựa trên tổng chi phí, độ phức tạp, và giá thị trường, hãy đề xuất một mức GIÁ BÁN HỢP LÝ (với tỷ suất lợi nhuận mục tiêu khoảng ${profitMargin}%) và đặt nó vào trường "suggestedSellingPrice".\n5.  **Lợi nhuận dự kiến (estimatedProfit):** Tính toán LỢI NHUẬN DỰ KIẾN (Giá bán - Tổng chi phí) và đặt nó vào trường "estimatedProfit".\n\n**Yêu cầu định dạng đầu ra:**\nHãy trả về một đối tượng JSON duy nhất, không có bất kỳ văn bản nào khác bên ngoài. JSON phải có cấu trúc như sau:\n{\n  "analysisText": "Toàn bộ bài phân tích chi tiết của bạn ở đây...",\n  "costBreakdown": [ { "item": "Ván MDF", "quantity": "1.5 tấm", "unitCost": 550000, "totalCost": 825000 } ],\n  "totalCost": <con_số_tổng_chi_phí_vật_tư>,\n  "suggestedSellingPrice": <con_số_giá_bán_hợp_lý>,\n  "estimatedProfit": <con_số_lợi_nhuận_dự_kiến>\n}\n\n**Danh sách vật tư đầy đủ (để tham khảo đơn giá):**\n${fullMaterialsList}`;
+    const prompt = `Bạn là chuyên gia dự toán chi phí và định giá sản phẩm nội thất. Hãy phân tích và báo giá cho sản phẩm sau, dựa vào mô tả và hình ảnh được cung cấp (nếu có). Toàn bộ cuộc trò chuyện trước đó (nếu có) là những quy tắc và hướng dẫn của người dùng, hãy tuân thủ chúng:\n\n**Tên sản phẩm:** ${itemName}\n**Kích thước:** ${dimensions}\n**Danh sách vật tư được chọn:**\n${materialsText}\n**Yêu cầu thêm:** ${description || 'Không có'}\n\n**Nhiệm vụ:**\n1.  **Phân tích chi tiết (analysisText):** Diễn giải logic tính toán, giải thích các hạng mục và đưa ra các tư vấn hữu ích. Toàn bộ phần này sẽ được đặt trong trường JSON "analysisText".\n2.  **Bóc tách chi phí (costBreakdown):** Dựa trên phân tích, tạo một mảng các đối tượng JSON. Mỗi đối tượng đại diện cho một loại vật tư sử dụng và phải có các trường: "item" (tên vật tư), "quantity" (số lượng ước tính, dạng chuỗi có kèm đơn vị, vd: "1.5 tấm"), "unitCost" (đơn giá, dạng số), và "totalCost" (thành tiền, dạng số). Đặt mảng này vào trường "costBreakdown".\n3.  **Tổng chi phí (totalCost):** Xác định con số TỔNG CHI PHÍ VẬT TƯ cuối cùng và đặt nó vào trường "totalCost".\n4.  **Giá bán đề xuất (suggestedSellingPrice):** Dựa trên tổng chi phí, độ phức tạp, và giá thị trường, hãy đề xuất một mức GIÁ BÁN HỢP LÝ (với tỷ suất lợi nhuận mục tiêu khoảng ${profitMargin}%) và đặt nó vào trường "suggestedSellingPrice".\n5.  **Lợi nhuận dự kiến (estimatedProfit):** Tính toán LỢI NHUẬN DỰ KIẾN (Giá bán - Tổng chi phí) và đặt nó vào trường "estimatedProfit".\n\n**Yêu cầu định dạng đầu ra:**\nHãy trả về một đối tượng JSON duy nhất, không có bất kỳ văn bản nào khác bên ngoài. JSON phải có cấu trúc như sau:\n{\n  "analysisText": "Toàn bộ bài phân tích chi tiết của bạn ở đây...",\n  "costBreakdown": [ { "item": "Ván MDF", "quantity": "1.5 tấm", "unitCost": 550000, "totalCost": 825000 } ],\n  "totalCost": <con_số_tổng_chi_phí_vật_tư>,\n  "suggestedSellingPrice": <con_số_giá_bán_hợp_lý>,\n  "estimatedProfit": <con_số_lợi_nhuận_dự_kiến>\n}\n\n**Danh sách vật tư đầy đủ (để tham khảo đơn giá):**\n${fullMaterialsList}`;
     
     const resultObject = await callGeminiAPI(prompt, uploadedImage);
     if (resultObject) {
@@ -458,7 +466,7 @@ calculateBtn.addEventListener('click', async () => {
         
         totalCostValue.textContent = `${Number(resultObject.totalCost || 0).toLocaleString('vi-VN')}đ`;
         suggestedPriceValue.textContent = `${Number(resultObject.suggestedSellingPrice || 0).toLocaleString('vi-VN')}đ`;
-        estimatedProfitValue.textContent = `${Number(resultObject.estimatedProfit || 0).toLocaleString('vi-VN')}đ`;
+        estimatedProfitValue.textContent = `${Number(resultObject.suggestedProfit || 0).toLocaleString('vi-VN')}đ`;
         priceSummaryContainer.classList.remove('hidden');
         
         if (resultObject.costBreakdown && Array.isArray(resultObject.costBreakdown)) {
@@ -588,6 +596,84 @@ savedItemsTableBody.addEventListener('click', async e => {
     }
 });
 
+// --- AI Assistant Chat Logic ---
+function initializeChat() {
+    chatHistory = [];
+    chatMessagesContainer.innerHTML = '';
+    renderChatMessage('Xin chào! Tôi là Trợ lý AI của bạn. Hãy dạy tôi cách bạn tính giá, hoặc hỏi tôi bất cứ điều gì. Những gì bạn nói sẽ được dùng làm ngữ cảnh cho các lần tính toán sau. Lưu ý: cuộc trò chuyện sẽ được đặt lại khi bạn đăng xuất.', 'system');
+}
+
+function renderChatMessage(message, role) {
+    const messageWrapper = document.createElement('div');
+    messageWrapper.className = `chat-message ${role}`;
+
+    let content;
+    if (role === 'typing') {
+        content = `
+            <div class="icon"><i class="fas fa-robot"></i></div>
+            <div class="message-content typing-indicator">
+                <span></span><span></span><span></span>
+            </div>
+        `;
+    } else if (role === 'system') {
+        content = `<p>${message}</p>`;
+    } else {
+        const iconClass = role === 'user' ? 'fa-user' : 'fa-robot';
+        content = `
+            <div class="icon"><i class="fas ${iconClass}"></i></div>
+            <div class="message-content">${message}</div>
+        `;
+    }
+    
+    messageWrapper.innerHTML = content;
+    chatMessagesContainer.appendChild(messageWrapper);
+    chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+    return messageWrapper;
+}
+
+chatForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const userMessage = chatInput.value.trim();
+    if (!userMessage || isAwaitingChatResponse) return;
+
+    isAwaitingChatResponse = true;
+    chatInput.value = '';
+    chatInput.disabled = true;
+    sendChatBtn.disabled = true;
+
+    chatHistory.push({ role: 'user', parts: [{ text: userMessage }] });
+    renderChatMessage(userMessage, 'user');
+    const typingIndicator = renderChatMessage('', 'typing');
+
+    try {
+        const response = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chatHistory: chatHistory,
+                newChatMessage: userMessage
+            }),
+        });
+
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || `Lỗi máy chủ: ${response.status}`);
+        
+        const modelResponse = result.text;
+        chatHistory.push({ role: 'model', parts: [{ text: modelResponse }] });
+        typingIndicator.remove();
+        renderChatMessage(modelResponse, 'model');
+
+    } catch (error) {
+        typingIndicator.remove();
+        renderChatMessage(`Lỗi: ${error.message}`, 'system');
+    } finally {
+        isAwaitingChatResponse = false;
+        chatInput.disabled = false;
+        sendChatBtn.disabled = false;
+        chatInput.focus();
+    }
+});
+
 // --- Gemini API Call (Client-side via Serverless Function) ---
 async function callGeminiAPI(prompt, image) {
     const spinner = `<div class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75"><div class="spinner"></div></div>`;
@@ -601,7 +687,7 @@ async function callGeminiAPI(prompt, image) {
         const response = await fetch('/api/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt, image }),
+            body: JSON.stringify({ prompt, image, chatHistory }), // Include chat history here
         });
 
         const resultData = await response.json();

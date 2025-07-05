@@ -13,50 +13,60 @@ export default async function handler(request, response) {
     }
 
     const ai = new GoogleGenAI({ apiKey });
+    const model = 'gemini-2.5-flash-preview-04-17';
 
     try {
-        const { prompt, image } = request.body;
-        
-        if (!prompt) {
-             return response.status(400).json({ error: 'Prompt is required.' });
-        }
-        
-        const parts = [];
-        if (image && image.data && image.mimeType) {
-            parts.push({
-                inlineData: {
-                    mimeType: image.mimeType,
-                    data: image.data,
-                },
-            });
-        }
-        parts.push({ text: prompt });
-        
-        const genAIResponse = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-preview-04-17',
-            contents: { parts: parts },
-            config: {
-                responseMimeType: "application/json",
-            }
-        });
+        const { prompt, image, chatHistory, newChatMessage } = request.body;
 
-        // The response from Gemini should already be JSON text because of responseMimeType
-        let jsonStr = genAIResponse.text.trim();
-        const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
-        const match = jsonStr.match(fenceRegex);
-        if (match && match[2]) {
-            jsonStr = match[2].trim();
+        // --- Handle Chat Request ---
+        if (newChatMessage) {
+            // We receive the full history and the new message separately to avoid duplication
+            const chat = ai.chats.create({ model, history: chatHistory.slice(0, -1) }); // History without the latest user message
+            const result = await chat.sendMessage({ message: newChatMessage });
+            return response.status(200).json({ text: result.text });
         }
-        
-        try {
-            const parsedData = JSON.parse(jsonStr);
-            // Send the parsed data back to the client
-            response.status(200).json(parsedData);
-        } catch(parseError) {
-            console.error("Serverless function: Failed to parse JSON from Gemini response.", parseError);
-            console.error("Original text from Gemini:", jsonStr);
-            return response.status(500).json({ error: `Phản hồi từ AI không phải là JSON hợp lệ. Nội dung: ${jsonStr}`});
+
+        // --- Handle Calculator Request ---
+        if (prompt) {
+            const calcChat = ai.chats.create({
+                model,
+                history: chatHistory || [],
+                config: { responseMimeType: "application/json" }
+            });
+
+            const promptParts = [];
+            if (image && image.data && image.mimeType) {
+                promptParts.push({
+                    inlineData: {
+                        mimeType: image.mimeType,
+                        data: image.data,
+                    },
+                });
+            }
+            promptParts.push({ text: prompt });
+
+            const genAIResponse = await calcChat.sendMessage({ parts: promptParts });
+
+            // The response from Gemini should already be JSON text because of responseMimeType
+            let jsonStr = genAIResponse.text.trim();
+            const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
+            const match = jsonStr.match(fenceRegex);
+            if (match && match[2]) {
+                jsonStr = match[2].trim();
+            }
+            
+            try {
+                const parsedData = JSON.parse(jsonStr);
+                // Send the parsed data back to the client
+                return response.status(200).json(parsedData);
+            } catch(parseError) {
+                console.error("Serverless function: Failed to parse JSON from Gemini response.", parseError);
+                console.error("Original text from Gemini:", jsonStr);
+                return response.status(500).json({ error: `Phản hồi từ AI không phải là JSON hợp lệ. Nội dung: ${jsonStr}`});
+            }
         }
+
+        return response.status(400).json({ error: 'Invalid request. Missing "prompt" or "newChatMessage".' });
 
     } catch (error) {
         console.error("Error in serverless function:", error);

@@ -51,6 +51,7 @@
             <nav id="tabs" class="tabs-nav">
                 <button data-tab="calculator" class="tab-btn active"><i class="fas fa-magic"></i>Bảng tính giá</button>
                 <button data-tab="materials" class="tab-btn"><i class="fas fa-boxes"></i>Quản lý Vật tư</button>
+                <button data-tab="assistant" class="tab-btn"><i class="fas fa-robot"></i>Trợ lý AI</button>
                 <button data-tab="saved" class="tab-btn"><i class="fas fa-history"></i>Hạng mục đã lưu</button>
             </nav>
         </div>
@@ -164,8 +165,29 @@
                     <div class="login-prompt-view"><i class="fas fa-lock icon-prompt"></i><h3>Vui lòng đăng nhập</h3><p>Đăng nhập để quản lý kho vật tư của bạn.</p></div>
                 </div>
             </div>
+            
+            <!-- Tab 3: AI Assistant -->
+            <div id="assistant-tab" class="tab-pane hidden">
+                <div class="card">
+                     <div class="content-wrapper assistant-content">
+                        <h2 class="card-header">Trò chuyện với Trợ lý AI</h2>
+                        <div class="chat-container">
+                            <div id="chat-messages" class="chat-messages">
+                                <!-- Chat messages will be rendered here -->
+                            </div>
+                            <form id="chat-form" class="chat-input-area">
+                                <input type="text" id="chat-input" class="input-style chat-input" placeholder="Dạy AI hoặc đặt câu hỏi ở đây..." autocomplete="off">
+                                <button id="send-chat-btn" type="submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane mr-2"></i> Gửi
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="login-prompt-view"><i class="fas fa-lock icon-prompt"></i><h3>Vui lòng đăng nhập</h3><p>Đăng nhập để trò chuyện và dạy Trợ lý AI.</p></div>
+                </div>
+            </div>
 
-            <!-- Tab 3: Hạng mục đã lưu -->
+            <!-- Tab 4: Hạng mục đã lưu -->
             <div id="saved-tab" class="tab-pane hidden">
                  <div class="card">
                      <div class="content-wrapper saved-items-content">
