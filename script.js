@@ -39,8 +39,10 @@ const saveItemBtn = document.getElementById('save-item-btn');
 const resultContainer = document.getElementById('result-content');
 const addAccessoryBtn = document.getElementById('add-accessory-btn');
 const accessoriesList = document.getElementById('accessories-list');
-const totalCostContainer = document.getElementById('total-cost-container');
+const priceSummaryContainer = document.getElementById('price-summary-container');
 const totalCostValue = document.getElementById('total-cost-value');
+const suggestedPriceValue = document.getElementById('suggested-price-value');
+const estimatedProfitValue = document.getElementById('estimated-profit-value');
 
 // --- Global State ---
 let currentUserId = null;
@@ -358,14 +360,16 @@ calculateBtn.addEventListener('click', async () => {
 
     const fullMaterialsList = Object.values(localMaterials).flat().map(m => `- ${m.name}: ${Number(m.price).toLocaleString('vi-VN')}đ / ${m.unit}`).join('\n');
 
-    const prompt = `Bạn là chuyên gia dự toán chi phí nội thất. Hãy phân tích và báo giá cho sản phẩm sau:\n\n**Tên sản phẩm:** ${itemName}\n**Kích thước:** ${dimensions}\n**Danh sách vật tư được chọn:**\n${materialsText}\n**Yêu cầu thêm:** ${description || 'Không có'}\n\n**Nhiệm vụ:**\n1.  **Phân tích chi tiết:** Thực hiện các bước tính toán ván, cạnh, tạo bảng kê chi phí, và gợi ý giá bán. Toàn bộ phần phân tích này sẽ được đặt trong một trường JSON.\n2.  **Trích xuất tổng chi phí:** Xác định con số TỔNG CHI PHÍ VẬT TƯ cuối cùng và đặt nó vào một trường JSON riêng.\n\n**Yêu cầu định dạng đầu ra:**\nHãy trả về một đối tượng JSON duy nhất, không có bất kỳ văn bản nào khác bên ngoài. JSON phải có cấu trúc như sau:\n{\n  "analysisText": "Toàn bộ bài phân tích chi tiết của bạn ở đây...",\n  "totalCost": <con_số_tổng_chi_phí_vật_tư>\n}\n\n**Danh sách vật tư đầy đủ (để tham khảo đơn giá):**\n${fullMaterialsList}`;
+    const prompt = `Bạn là chuyên gia dự toán chi phí và định giá sản phẩm nội thất. Hãy phân tích và báo giá cho sản phẩm sau:\n\n**Tên sản phẩm:** ${itemName}\n**Kích thước:** ${dimensions}\n**Danh sách vật tư được chọn:**\n${materialsText}\n**Yêu cầu thêm:** ${description || 'Không có'}\n\n**Nhiệm vụ:**\n1.  **Phân tích chi tiết:** Thực hiện các bước tính toán ván, cạnh, tạo bảng kê chi phí. Toàn bộ phần phân tích này sẽ được đặt trong một trường JSON.\n2.  **Trích xuất tổng chi phí:** Xác định con số TỔNG CHI PHÍ VẬT TƯ cuối cùng và đặt nó vào một trường JSON riêng.\n3.  **Đề xuất giá bán:** Dựa trên tổng chi phí, độ phức tạp, và giá thị trường, hãy đề xuất một mức GIÁ BÁN HỢP LÝ (thường có lợi nhuận từ 40-60%) và đặt nó vào một trường JSON riêng.\n4.  **Tính lợi nhuận:** Tính toán LỢI NHUẬN DỰ KIẾN (Giá bán - Tổng chi phí) và đặt nó vào một trường JSON riêng.\n\n**Yêu cầu định dạng đầu ra:**\nHãy trả về một đối tượng JSON duy nhất, không có bất kỳ văn bản nào khác bên ngoài. JSON phải có cấu trúc như sau:\n{\n  "analysisText": "Toàn bộ bài phân tích chi tiết của bạn ở đây...",\n  "totalCost": <con_số_tổng_chi_phí_vật_tư>,\n  "suggestedSellingPrice": <con_số_giá_bán_hợp_lý>,\n  "estimatedProfit": <con_số_lợi_nhuận_dự_kiến>\n}\n\n**Danh sách vật tư đầy đủ (để tham khảo đơn giá):**\n${fullMaterialsList}`;
     
     const resultObject = await callGeminiAPI(prompt, resultContainer);
     if (resultObject) {
-        lastGeminiResult = resultObject.analysisText; // Save the text part for viewing later
+        lastGeminiResult = resultObject.analysisText;
         
         totalCostValue.textContent = `${Number(resultObject.totalCost || 0).toLocaleString('vi-VN')}đ`;
-        totalCostContainer.classList.remove('hidden');
+        suggestedPriceValue.textContent = `${Number(resultObject.suggestedSellingPrice || 0).toLocaleString('vi-VN')}đ`;
+        estimatedProfitValue.textContent = `${Number(resultObject.estimatedProfit || 0).toLocaleString('vi-VN')}đ`;
+        priceSummaryContainer.classList.remove('hidden');
         
         resultContainer.textContent = resultObject.analysisText;
         
@@ -445,7 +449,7 @@ async function callGeminiAPI(prompt, resultEl) {
     resultEl.innerHTML = spinner;
     saveItemBtn.disabled = true;
     lastGeminiResult = null;
-    totalCostContainer.classList.add('hidden');
+    priceSummaryContainer.classList.add('hidden');
     try {
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
