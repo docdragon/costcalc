@@ -1,5 +1,3 @@
-
-
 // script.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -20,13 +18,16 @@ const firebaseConfig = {
 
 // --- Cấu hình Gemini AI ---
 let ai = null;
-try {
-    // API key is handled by the execution environment (e.g., as a secret).
+// The API key MUST be provided by the execution environment (e.g., as a secret).
+// In a browser environment, `process` is not defined. Your hosting platform
+// or a build step must make the API_KEY available.
+if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
     ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-} catch(e) {
-    console.error("Lỗi khi khởi tạo Gemini AI Client:", e);
-    // The `callGeminiAPI` function will handle the case where `ai` is null.
+} else {
+    console.error("Lỗi: Biến môi trường API_KEY không được tìm thấy. Vui lòng đảm bảo nó được đặt trong môi trường thực thi của bạn.");
+    // The `callGeminiAPI` function will handle the case where `ai` is null and show an error to the user.
 }
+
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -519,7 +520,7 @@ savedItemsTableBody.addEventListener('click', async e => {
 // --- Gemini API Call (Client-side) ---
 async function callGeminiAPI(prompt, resultEl, image) {
     if (!ai) {
-        const errorMessage = "Lỗi: Không thể kết nối đến dịch vụ AI. Vui lòng thử lại sau.";
+        const errorMessage = "Lỗi: Không thể kết nối đến dịch vụ AI. Vui lòng kiểm tra lại API Key và thử lại sau.";
         resultEl.textContent = errorMessage;
         showToast(errorMessage, 'error');
         return null;
