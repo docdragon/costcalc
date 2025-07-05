@@ -37,14 +37,13 @@ export default async function handler(req, res) {
         }
         parts.push({ text: prompt });
 
-        // Generate content using the simplified and correct structure
+        // Generate content using the correct array structure for 'contents'
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-preview-04-17',
-            contents: { parts: parts }, // Correct structure for single-turn multimodal
+            contents: [{ parts: parts }], // CORRECT: 'contents' must be an array
         });
         
         // --- Response Parsing Logic ---
-        // The server will now handle the parsing, making the client's job easier.
         let jsonStr = response.text.trim();
         const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
         const match = jsonStr.match(fenceRegex);
