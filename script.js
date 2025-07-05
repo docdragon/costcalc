@@ -1,14 +1,10 @@
-
-
 // script.js
-// Firebase imports are kept as they are.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { GoogleGenAI } from "@google/genai";
 
-// NOTE: The GoogleGenAI import is NO LONGER NEEDED here because the client doesn't call the API directly.
-// import { GoogleGenAI } from "https://esm.sh/@google/genai@^1.8.0";
-
+// --- Cấu hình Firebase ---
 const firebaseConfig = {
     apiKey: "AIzaSyC_8Q8Girww42mI-8uwYsJaH5Vi41FT1eA",
     authDomain: "tinh-gia-thanh-app-fbdc0.firebaseapp.com",
@@ -18,6 +14,17 @@ const firebaseConfig = {
     appId: "1:306099623121:web:157ce5827105998f3a61f0",
     measurementId: "G-D8EHTN2SWE"
 };
+
+// --- Cấu hình Gemini AI ---
+// !!! QUAN TRỌNG: Thay thế chuỗi bên dưới bằng khóa API của bạn từ Google AI Studio.
+const API_KEY = "YOUR_GOOGLE_AI_API_KEY_HERE";
+let ai;
+if (API_KEY && API_KEY !== "YOUR_GOOGLE_AI_API_KEY_HERE") {
+    ai = new GoogleGenAI({ apiKey: API_KEY });
+} else {
+    ai = null;
+    console.warn("Chưa cấu hình khóa API cho Gemini. Các tính năng AI sẽ bị vô hiệu hóa.");
+}
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -507,39 +514,57 @@ savedItemsTableBody.addEventListener('click', async e => {
     }
 });
 
-// --- Gemini API Call (now via our proxy) ---
+// --- Gemini API Call (Client-side) ---
 async function callGeminiAPI(prompt, resultEl, image) {
+    if (!ai) {
+        const errorMessage = "Lỗi cấu hình: Khóa API cho Gemini chưa được thiết lập. Vui lòng kiểm tra và điền khóa API vào file script.js.";
+        resultEl.textContent = errorMessage;
+        showToast(errorMessage, 'error');
+        return null;
+    }
+
     const spinner = `<div class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75"><div class="spinner"></div></div>`;
     resultEl.innerHTML = spinner;
     saveItemBtn.disabled = true;
     lastGeminiResult = null;
     priceSummaryContainer.classList.add('hidden');
+
     try {
-        const response = await fetch('/api/analyze', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ prompt, image }),
+        const parts = [];
+        if (image && image.data && image.mimeType) {
+            parts.push({
+                inlineData: {
+                    mimeType: image.mimeType,
+                    data: image.data,
+                },
+            });
+        }
+        parts.push({ text: prompt });
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-preview-04-17',
+            contents: { parts: parts },
         });
 
-        // The server now returns a parsed JSON object directly.
-        const parsedResult = await response.json();
-
-        // Check for errors sent from our own API proxy
-        if (!response.ok) {
-            // 'parsedResult.error' and 'parsedResult.details' come from our serverless function's error handling
-            const errorMessage = parsedResult.error || 'An unknown error occurred on the server.';
-            const errorDetails = parsedResult.details ? `\nDetails: ${parsedResult.details}` : '';
-            throw new Error(`${errorMessage}${errorDetails}`);
+        // --- Phân tích phản hồi từ Gemini ---
+        let jsonStr = response.text.trim();
+        const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
+        const match = jsonStr.match(fenceRegex);
+        if (match && match[2]) {
+            jsonStr = match[2].trim();
         }
-        
-        // The result is already a clean JSON object, no need to parse it here.
-        return parsedResult;
+
+        try {
+            const parsedData = JSON.parse(jsonStr);
+            return parsedData;
+        } catch (parseError) {
+             console.error("Lỗi phân tích JSON từ Gemini:", parseError);
+             console.error("Văn bản gốc từ Gemini:", response.text);
+             throw new Error(`Phản hồi của AI không phải là JSON hợp lệ. Nội dung: ${response.text}`);
+        }
 
     } catch (error) {
-        console.error("API Call Error:", error);
-        // Display a more informative error message.
+        console.error("Lỗi khi gọi API Gemini:", error);
         resultEl.textContent = `Lỗi khi gọi API: ${error.message}`;
         showToast('Đã xảy ra lỗi khi phân tích. Vui lòng thử lại.', 'error');
         return null;

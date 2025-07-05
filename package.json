@@ -1,8 +1,0 @@
-{
-  "name": "coscalc-vercel-app",
-  "version": "1.0.0",
-  "private": true,
-  "dependencies": {
-    "@google/genai": "^2.2.0"
-  }
-}
