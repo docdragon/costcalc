@@ -39,6 +39,8 @@ const saveItemBtn = document.getElementById('save-item-btn');
 const resultContainer = document.getElementById('result-content');
 const addAccessoryBtn = document.getElementById('add-accessory-btn');
 const accessoriesList = document.getElementById('accessories-list');
+const totalCostContainer = document.getElementById('total-cost-container');
+const totalCostValue = document.getElementById('total-cost-value');
 
 // --- Global State ---
 let currentUserId = null;
@@ -356,11 +358,17 @@ calculateBtn.addEventListener('click', async () => {
 
     const fullMaterialsList = Object.values(localMaterials).flat().map(m => `- ${m.name}: ${Number(m.price).toLocaleString('vi-VN')}đ / ${m.unit}`).join('\n');
 
-    const prompt = `Bạn là chuyên gia dự toán chi phí nội thất. Hãy phân tích và báo giá cho sản phẩm sau:\n\n**Tên sản phẩm:** ${itemName}\n**Kích thước:** ${dimensions}\n**Danh sách vật tư được chọn:**\n${materialsText}\n**Yêu cầu thêm:** ${description || 'Không có'}\n\n**Nhiệm vụ:**\n1.  **Tính toán sơ bộ lượng ván:** Dựa vào kích thước, ước tính cần bao nhiêu tấm ván (${wood.name}).\n2.  **Tính toán sơ bộ lượng nẹp cạnh:** Dựa vào kích thước, ước tính cần bao nhiêu mét nẹp (${edge ? edge.name : 'không có'}).\n3.  **Tạo bảng kê chi phí:** Dựa vào danh sách vật tư đầy đủ dưới đây, tạo bảng chi phí chi tiết cho các vật tư đã chọn.\n4.  **Tổng hợp chi phí & Gợi ý giá bán:** Tính tổng chi phí vật tư và đề xuất giá bán với mức lợi nhuận 30-50%.\n\n**Danh sách vật tư đầy đủ (để tham khảo đơn giá):**\n${fullMaterialsList}\n\nTrình bày kết quả rõ ràng, chuyên nghiệp.`;
+    const prompt = `Bạn là chuyên gia dự toán chi phí nội thất. Hãy phân tích và báo giá cho sản phẩm sau:\n\n**Tên sản phẩm:** ${itemName}\n**Kích thước:** ${dimensions}\n**Danh sách vật tư được chọn:**\n${materialsText}\n**Yêu cầu thêm:** ${description || 'Không có'}\n\n**Nhiệm vụ:**\n1.  **Phân tích chi tiết:** Thực hiện các bước tính toán ván, cạnh, tạo bảng kê chi phí, và gợi ý giá bán. Toàn bộ phần phân tích này sẽ được đặt trong một trường JSON.\n2.  **Trích xuất tổng chi phí:** Xác định con số TỔNG CHI PHÍ VẬT TƯ cuối cùng và đặt nó vào một trường JSON riêng.\n\n**Yêu cầu định dạng đầu ra:**\nHãy trả về một đối tượng JSON duy nhất, không có bất kỳ văn bản nào khác bên ngoài. JSON phải có cấu trúc như sau:\n{\n  "analysisText": "Toàn bộ bài phân tích chi tiết của bạn ở đây...",\n  "totalCost": <con_số_tổng_chi_phí_vật_tư>\n}\n\n**Danh sách vật tư đầy đủ (để tham khảo đơn giá):**\n${fullMaterialsList}`;
     
-    const result = await callGeminiAPI(prompt, resultContainer);
-    if (result) {
-        lastGeminiResult = result;
+    const resultObject = await callGeminiAPI(prompt, resultContainer);
+    if (resultObject) {
+        lastGeminiResult = resultObject.analysisText; // Save the text part for viewing later
+        
+        totalCostValue.textContent = `${Number(resultObject.totalCost || 0).toLocaleString('vi-VN')}đ`;
+        totalCostContainer.classList.remove('hidden');
+        
+        resultContainer.textContent = resultObject.analysisText;
+        
         saveItemBtn.disabled = false;
     }
 });
@@ -437,6 +445,7 @@ async function callGeminiAPI(prompt, resultEl) {
     resultEl.innerHTML = spinner;
     saveItemBtn.disabled = true;
     lastGeminiResult = null;
+    totalCostContainer.classList.add('hidden');
     try {
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
@@ -446,10 +455,13 @@ async function callGeminiAPI(prompt, resultEl) {
         if (!response.ok) throw new Error((await response.json()).error.message);
         const data = await response.json();
         const resultText = data.candidates[0].content.parts[0].text;
-        resultEl.textContent = resultText;
-        return resultText;
+        
+        const cleanedJsonString = resultText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsedResult = JSON.parse(cleanedJsonString);
+
+        return parsedResult;
     } catch (error) {
-        resultEl.textContent = `Lỗi khi gọi Gemini: ${error.message}`;
+        resultEl.textContent = `Lỗi khi gọi hoặc phân tích JSON từ Gemini: ${error.message}`;
         return null;
     }
 }
