@@ -15,7 +15,7 @@
 
 // QUAN TRỌNG: DÁN API KEY CỦA GEMINI VÀO ĐÂY
 // Bạn có thể lấy key này từ Google AI Studio
-const GEMINI_API_KEY = "AIzaSyDcjHTszyase9hG0DHikYMXY96ve7k5EfY";
+const GEMINI_API_KEY = "AIzaSyCJzstBl8vuyzpbpm5q1YkNE_Bwmrn_AwQ";
 
 // --- KHÔNG CHỈNH SỬA CODE BÊN DƯỚI TRỪ KHI BẠN BIẾT MÌNH ĐANG LÀM GÌ ---
 
