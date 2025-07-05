@@ -1,11 +1,9 @@
 // script.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, getDocs, query, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-// The GoogleGenAI import is no longer needed on the client-side.
 
 // --- Cấu hình Firebase ---
-// !!! QUAN TRỌNG: Điền lại thông tin cấu hình Firebase của bạn vào đây.
 const firebaseConfig = {
     apiKey: "AIzaSyC_8Q8Girww42mI-8uwYsJaH5Vi41FT1eA",
     authDomain: "tinh-gia-thanh-app-fbdc0.firebaseapp.com",
@@ -15,8 +13,6 @@ const firebaseConfig = {
     appId: "1:306099623121:web:157ce5827105998f3a61f0",
     measurementId: "G-D8EHTN2SWE"
 };
-
-// Gemini AI client is no longer initialized here.
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -53,6 +49,8 @@ const imageUploadPrompt = document.getElementById('image-upload-prompt');
 const imagePreviewContainer = document.getElementById('image-preview-container');
 const imagePreview = document.getElementById('image-preview');
 const removeImageBtn = document.getElementById('remove-image-btn');
+const costBreakdownContainer = document.getElementById('cost-breakdown-container');
+const tabs = document.getElementById('tabs');
 
 
 // --- Global State ---
@@ -67,13 +65,47 @@ let lastGeminiResult = null;
 let addedAccessories = [];
 let uploadedImage = null;
 
+// --- Sample Data for New Users ---
+const sampleMaterials = [
+    { name: 'Ván MDF An Cường chống ẩm 17mm', type: 'Ván', price: 550000, unit: 'tấm', notes: 'Khổ 1220x2440mm' },
+    { name: 'Ván HDF siêu chống ẩm 17mm', type: 'Ván', price: 780000, unit: 'tấm', notes: 'Khổ 1220x2440mm' },
+    { name: 'Nẹp chỉ PVC An Cường 1mm', type: 'Cạnh', price: 5000, unit: 'mét', notes: 'Cùng màu ván' },
+    { name: 'Bản lề hơi Ivan giảm chấn', type: 'Phụ kiện', price: 15000, unit: 'cái', notes: 'Loại thẳng' },
+    { name: 'Ray bi 3 tầng', type: 'Phụ kiện', price: 45000, unit: 'cặp', notes: 'Dài 45cm' },
+];
+
+async function addSampleData(userId) {
+    const materialsRef = collection(db, `users/${userId}/materials`);
+    for (const material of sampleMaterials) {
+        await addDoc(materialsRef, material);
+    }
+}
+
+async function checkAndAddSampleData(userId) {
+    try {
+        const materialsRef = collection(db, `users/${userId}/materials`);
+        const q = query(materialsRef, limit(1));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            console.log("No materials found for user, adding sample data.");
+            await addSampleData(userId);
+            showToast('Đã thêm dữ liệu vật tư mẫu cho bạn!', 'info');
+        }
+    } catch (error) {
+        console.error("Error checking/adding sample data:", error);
+    }
+}
+
+
 // --- Auth & UI State Management ---
-onAuthStateChanged(auth, user => {
+onAuthStateChanged(auth, async (user) => {
     const loggedIn = !!user;
     if (loggedIn) {
         currentUserId = user.uid;
         materialsCollectionRef = collection(db, `users/${currentUserId}/materials`);
         savedItemsCollectionRef = collection(db, `users/${currentUserId}/savedItems`);
+        await checkAndAddSampleData(currentUserId);
         listenForData();
     } else {
         currentUserId = null;
@@ -82,7 +114,6 @@ onAuthStateChanged(auth, user => {
         clearLocalData();
     }
     updateUIVisibility(loggedIn, user);
-    // Hide initial loader once auth state is resolved
     document.getElementById('initial-loader').style.opacity = '0';
     setTimeout(() => document.getElementById('initial-loader').style.display = 'none', 300);
 });
@@ -116,7 +147,6 @@ function updateUIVisibility(isLoggedIn, user) {
 }
 
 // --- Tab Navigation ---
-const tabs = document.getElementById('tabs');
 const tabContent = document.getElementById('tab-content');
 tabs.addEventListener('click', (e) => {
     const button = e.target.closest('button');
@@ -225,7 +255,7 @@ function listenForMaterials() {
 function renderMaterials(materials) {
     materialsTableBody.innerHTML = '';
     if (materials.length === 0) {
-        materialsTableBody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-gray-400">Chưa có vật tư nào.</td></tr>`;
+        materialsTableBody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-gray-400">Chưa có vật tư nào. Bắt đầu bằng cách thêm vật tư ở trên.</td></tr>`;
         return;
     }
     materials.forEach(m => {
@@ -306,47 +336,28 @@ document.getElementById('cancel-edit-button').addEventListener('click', resetMat
 
 // --- Image Upload Logic ---
 imageUploader.addEventListener('click', () => imageInput.click());
-imageUploader.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    imageUploader.style.borderColor = 'var(--primary-color)';
-});
-imageUploader.addEventListener('dragleave', (e) => {
-    e.preventDefault();
-    imageUploader.style.borderColor = 'var(--border-color)';
-});
+imageUploader.addEventListener('dragover', (e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--primary-color)'; });
+imageUploader.addEventListener('dragleave', (e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--border-color)'; });
 imageUploader.addEventListener('drop', (e) => {
     e.preventDefault();
-    imageUploader.style.borderColor = 'var(--border-color)';
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-        handleImageFile(files[0]);
-    }
+    e.currentTarget.style.borderColor = 'var(--border-color)';
+    if (e.dataTransfer.files.length > 0) handleImageFile(e.dataTransfer.files[0]);
 });
-imageInput.addEventListener('change', (e) => {
-    if (e.target.files.length > 0) {
-        handleImageFile(e.target.files[0]);
-    }
-});
+imageInput.addEventListener('change', (e) => { if (e.target.files.length > 0) handleImageFile(e.target.files[0]); });
 removeImageBtn.addEventListener('click', (e) => {
-    e.stopPropagation(); // prevent triggering the uploader click
+    e.stopPropagation();
     uploadedImage = null;
-    imageInput.value = ''; // Reset file input
+    imageInput.value = '';
     imagePreview.src = '#';
     imagePreviewContainer.classList.add('hidden');
     imageUploadPrompt.classList.remove('hidden');
 });
 
 function handleImageFile(file) {
-    if (!file.type.startsWith('image/')) {
-        showToast('Vui lòng chọn một file ảnh.', 'error');
-        return;
-    }
+    if (!file.type.startsWith('image/')) { showToast('Vui lòng chọn một file ảnh.', 'error'); return; }
     const reader = new FileReader();
     reader.onloadend = () => {
-        uploadedImage = {
-            mimeType: file.type,
-            data: reader.result.split(',')[1] // Get base64 part
-        };
+        uploadedImage = { mimeType: file.type, data: reader.result.split(',')[1] };
         imagePreview.src = reader.result;
         imageUploadPrompt.classList.add('hidden');
         imagePreviewContainer.classList.remove('hidden');
@@ -356,17 +367,11 @@ function handleImageFile(file) {
 
 // --- Calculator Tab Logic ---
 function populateSelects() {
-    const selects = {
-        'material-wood': 'Ván',
-        'material-edge': 'Cạnh',
-        'material-accessories': 'Phụ kiện'
-    };
+    const selects = { 'material-wood': 'Ván', 'material-edge': 'Cạnh', 'material-accessories': 'Phụ kiện' };
     for (const [selectId, type] of Object.entries(selects)) {
         const selectEl = document.getElementById(selectId);
         selectEl.innerHTML = '<option value="">-- Chọn --</option>';
-        localMaterials[type].forEach(m => {
-            selectEl.innerHTML += `<option value="${m.id}">${m.name}</option>`;
-        });
+        localMaterials[type].forEach(m => { selectEl.innerHTML += `<option value="${m.id}">${m.name}</option>`; });
     }
 }
 
@@ -375,7 +380,6 @@ addAccessoryBtn.addEventListener('click', () => {
     const quantityInput = document.getElementById('accessory-quantity');
     const selectedId = accessorySelect.value;
     const quantity = parseInt(quantityInput.value) || 1;
-
     if (!selectedId) return;
     const accessory = localMaterials['Phụ kiện'].find(a => a.id === selectedId);
     if (accessory) {
@@ -390,7 +394,6 @@ function renderAddedAccessories() {
     accessoriesList.innerHTML = '';
     addedAccessories.forEach((acc, index) => {
         const li = document.createElement('li');
-        li.className = 'flex justify-between items-center text-sm text-gray-600 bg-gray-100 p-2 rounded';
         li.innerHTML = `<span>${acc.quantity} ${acc.unit} ${acc.name}</span> <button data-index="${index}" class="remove-acc-btn text-red-400 hover:text-red-600">&times;</button>`;
         accessoriesList.appendChild(li);
     });
@@ -403,6 +406,32 @@ accessoriesList.addEventListener('click', e => {
     }
 });
 
+function renderCostBreakdown(breakdownData) {
+    if (!breakdownData || breakdownData.length === 0) { costBreakdownContainer.innerHTML = ''; return; }
+    let tableHTML = `
+        <h3 class="result-box-header">Bảng Kê Chi Phí Vật Tư Ước Tính</h3>
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead><tr>
+                    <th class="th-style">Hạng mục</th>
+                    <th class="th-style text-center">Số lượng</th>
+                    <th class="th-style text-right">Đơn giá</th>
+                    <th class="th-style text-right">Thành tiền</th>
+                </tr></thead>
+                <tbody>`;
+    breakdownData.forEach(item => {
+        tableHTML += `
+            <tr>
+                <td>${item.item || 'N/A'}</td>
+                <td class="text-center">${item.quantity || 'N/A'}</td>
+                <td class="text-right">${Number(item.unitCost || 0).toLocaleString('vi-VN')}đ</td>
+                <td class="text-right font-semibold">${Number(item.totalCost || 0).toLocaleString('vi-VN')}đ</td>
+            </tr>`;
+    });
+    tableHTML += `</tbody></table></div>`;
+    costBreakdownContainer.innerHTML = tableHTML;
+}
+
 calculateBtn.addEventListener('click', async () => {
     const itemName = document.getElementById('item-name').value;
     const dimensions = `Dài ${document.getElementById('item-length').value || 0}mm x Rộng ${document.getElementById('item-width').value || 0}mm x Cao ${document.getElementById('item-height').value || 0}mm`;
@@ -411,31 +440,31 @@ calculateBtn.addEventListener('click', async () => {
     const wood = localMaterials['Ván'].find(m => m.id === woodId);
     const edge = localMaterials['Cạnh'].find(m => m.id === edgeId);
     const description = document.getElementById('product-description').value;
+    const profitMargin = document.getElementById('profit-margin').value || 50;
     
     if (!itemName) { showToast('Vui lòng nhập tên sản phẩm.', 'error'); return; }
     if (!wood) { showToast('Vui lòng chọn loại ván chính.', 'error'); return; }
 
     let materialsText = `* Ván chính: ${wood.name}\n`;
     if (edge) materialsText += `* Nẹp cạnh: ${edge.name}\n`;
-    addedAccessories.forEach(acc => {
-        materialsText += `* ${acc.name}: ${acc.quantity} ${acc.unit}\n`;
-    });
-
+    addedAccessories.forEach(acc => { materialsText += `* ${acc.name}: ${acc.quantity} ${acc.unit}\n`; });
     const fullMaterialsList = Object.values(localMaterials).flat().map(m => `- ${m.name}: ${Number(m.price).toLocaleString('vi-VN')}đ / ${m.unit}`).join('\n');
 
-    const prompt = `Bạn là chuyên gia dự toán chi phí và định giá sản phẩm nội thất. Hãy phân tích và báo giá cho sản phẩm sau, dựa vào mô tả và hình ảnh được cung cấp (nếu có):\n\n**Tên sản phẩm:** ${itemName}\n**Kích thước:** ${dimensions}\n**Danh sách vật tư được chọn:**\n${materialsText}\n**Yêu cầu thêm:** ${description || 'Không có'}\n\n**Nhiệm vụ:**\n1.  **Phân tích chi tiết:** Dựa vào cả hình ảnh và mô tả, hãy ước tính lượng vật tư cần thiết (ván, cạnh). Tạo bảng kê chi phí chi tiết. Toàn bộ phần phân tích này sẽ được đặt trong một trường JSON.\n2.  **Trích xuất tổng chi phí:** Xác định con số TỔNG CHI PHÍ VẬT TƯ cuối cùng và đặt nó vào một trường JSON riêng.\n3.  **Đề xuất giá bán:** Dựa trên tổng chi phí, độ phức tạp (suy ra từ hình ảnh và mô tả), và giá thị trường, hãy đề xuất một mức GIÁ BÁN HỢP LÝ (thường có lợi nhuận từ 40-60%) và đặt nó vào một trường JSON riêng.\n4.  **Tính lợi nhuận:** Tính toán LỢI NHUẬN DỰ KIẾN (Giá bán - Tổng chi phí) và đặt nó vào một trường JSON riêng.\n\n**Yêu cầu định dạng đầu ra:**\nHãy trả về một đối tượng JSON duy nhất, không có bất kỳ văn bản nào khác bên ngoài. JSON phải có cấu trúc như sau:\n{\n  "analysisText": "Toàn bộ bài phân tích chi tiết của bạn ở đây, bao gồm cả bảng kê chi phí...",\n  "totalCost": <con_số_tổng_chi_phí_vật_tư>,\n  "suggestedSellingPrice": <con_số_giá_bán_hợp_lý>,\n  "estimatedProfit": <con_số_lợi_nhuận_dự_kiến>\n}\n\n**Danh sách vật tư đầy đủ (để tham khảo đơn giá):**\n${fullMaterialsList}`;
+    const prompt = `Bạn là chuyên gia dự toán chi phí và định giá sản phẩm nội thất. Hãy phân tích và báo giá cho sản phẩm sau, dựa vào mô tả và hình ảnh được cung cấp (nếu có):\n\n**Tên sản phẩm:** ${itemName}\n**Kích thước:** ${dimensions}\n**Danh sách vật tư được chọn:**\n${materialsText}\n**Yêu cầu thêm:** ${description || 'Không có'}\n\n**Nhiệm vụ:**\n1.  **Phân tích chi tiết (analysisText):** Diễn giải logic tính toán, giải thích các hạng mục và đưa ra các tư vấn hữu ích. Toàn bộ phần này sẽ được đặt trong trường JSON "analysisText".\n2.  **Bóc tách chi phí (costBreakdown):** Dựa trên phân tích, tạo một mảng các đối tượng JSON. Mỗi đối tượng đại diện cho một loại vật tư sử dụng và phải có các trường: "item" (tên vật tư), "quantity" (số lượng ước tính, dạng chuỗi có kèm đơn vị, vd: "1.5 tấm"), "unitCost" (đơn giá, dạng số), và "totalCost" (thành tiền, dạng số). Đặt mảng này vào trường "costBreakdown".\n3.  **Tổng chi phí (totalCost):** Xác định con số TỔNG CHI PHÍ VẬT TƯ cuối cùng và đặt nó vào trường "totalCost".\n4.  **Giá bán đề xuất (suggestedSellingPrice):** Dựa trên tổng chi phí, độ phức tạp, và giá thị trường, hãy đề xuất một mức GIÁ BÁN HỢP LÝ (với tỷ suất lợi nhuận mục tiêu khoảng ${profitMargin}%) và đặt nó vào trường "suggestedSellingPrice".\n5.  **Lợi nhuận dự kiến (estimatedProfit):** Tính toán LỢI NHUẬN DỰ KIẾN (Giá bán - Tổng chi phí) và đặt nó vào trường "estimatedProfit".\n\n**Yêu cầu định dạng đầu ra:**\nHãy trả về một đối tượng JSON duy nhất, không có bất kỳ văn bản nào khác bên ngoài. JSON phải có cấu trúc như sau:\n{\n  "analysisText": "Toàn bộ bài phân tích chi tiết của bạn ở đây...",\n  "costBreakdown": [ { "item": "Ván MDF", "quantity": "1.5 tấm", "unitCost": 550000, "totalCost": 825000 } ],\n  "totalCost": <con_số_tổng_chi_phí_vật_tư>,\n  "suggestedSellingPrice": <con_số_giá_bán_hợp_lý>,\n  "estimatedProfit": <con_số_lợi_nhuận_dự_kiến>\n}\n\n**Danh sách vật tư đầy đủ (để tham khảo đơn giá):**\n${fullMaterialsList}`;
     
-    const resultObject = await callGeminiAPI(prompt, resultContainer, uploadedImage);
+    const resultObject = await callGeminiAPI(prompt, uploadedImage);
     if (resultObject) {
-        lastGeminiResult = resultObject.analysisText;
+        lastGeminiResult = resultObject;
         
         totalCostValue.textContent = `${Number(resultObject.totalCost || 0).toLocaleString('vi-VN')}đ`;
         suggestedPriceValue.textContent = `${Number(resultObject.suggestedSellingPrice || 0).toLocaleString('vi-VN')}đ`;
         estimatedProfitValue.textContent = `${Number(resultObject.estimatedProfit || 0).toLocaleString('vi-VN')}đ`;
         priceSummaryContainer.classList.remove('hidden');
         
+        if (resultObject.costBreakdown && Array.isArray(resultObject.costBreakdown)) {
+            renderCostBreakdown(resultObject.costBreakdown);
+        }
         resultContainer.textContent = resultObject.analysisText;
-        
         saveItemBtn.disabled = false;
     }
 });
@@ -463,8 +492,9 @@ function renderSavedItems(items) {
             <td>${item.name}</td>
             <td>${createdAtDate ? createdAtDate.toLocaleDateString('vi-VN') : 'N/A'}</td>
             <td class="text-center">
-                <button class="view-item-btn text-green-500 hover:text-green-700 mr-2" data-id="${item.id}"><i class="fas fa-eye"></i></button>
-                <button class="delete-item-btn text-red-500 hover:text-red-700" data-id="${item.id}"><i class="fas fa-trash"></i></button>
+                <button class="copy-item-btn text-blue-500 hover:text-blue-700 mr-2" data-id="${item.id}" title="Dùng làm mẫu"><i class="fas fa-copy"></i></button>
+                <button class="view-item-btn text-green-500 hover:text-green-700 mr-2" data-id="${item.id}" title="Xem chi tiết"><i class="fas fa-eye"></i></button>
+                <button class="delete-item-btn text-red-500 hover:text-red-700" data-id="${item.id}" title="Xóa"><i class="fas fa-trash"></i></button>
             </td>
         `;
         savedItemsTableBody.appendChild(tr);
@@ -475,41 +505,94 @@ saveItemBtn.addEventListener('click', async () => {
     if (!currentUserId || !lastGeminiResult) return;
     const itemName = document.getElementById('item-name').value.trim();
     if (!itemName) { showToast('Vui lòng nhập tên sản phẩm để lưu.', 'error'); return; }
+
+    const formData = {
+        name: document.getElementById('item-name').value,
+        length: document.getElementById('item-length').value,
+        width: document.getElementById('item-width').value,
+        height: document.getElementById('item-height').value,
+        woodId: document.getElementById('material-wood').value,
+        edgeId: document.getElementById('material-edge').value,
+        accessories: addedAccessories,
+        description: document.getElementById('product-description').value,
+        profitMargin: document.getElementById('profit-margin').value,
+    };
+
     try {
         await addDoc(savedItemsCollectionRef, {
             name: itemName,
-            geminiResult: lastGeminiResult,
+            formData: formData,
+            geminiAnalysis: {
+                analysisText: lastGeminiResult.analysisText,
+                costBreakdown: lastGeminiResult.costBreakdown || [],
+                totalCost: lastGeminiResult.totalCost || 0,
+                suggestedSellingPrice: lastGeminiResult.suggestedSellingPrice || 0,
+                estimatedProfit: lastGeminiResult.estimatedProfit || 0
+            },
             createdAt: serverTimestamp()
         });
         showToast(`Đã lưu thành công hạng mục "${itemName}"!`, 'success');
         lastGeminiResult = null;
         saveItemBtn.disabled = true;
-    } catch (error) { console.error("Error saving item:", error); }
+    } catch (error) { 
+        showToast('Lỗi khi lưu hạng mục.', 'error');
+        console.error("Error saving item:", error); 
+    }
 });
 
 savedItemsTableBody.addEventListener('click', async e => {
     const btn = e.target.closest('button');
     if (!currentUserId || !btn) return;
     const id = btn.dataset.id;
+
     if (btn.classList.contains('delete-item-btn')) {
         if (await showConfirm('Bạn có chắc chắn muốn xóa hạng mục này?')) {
             await deleteDoc(doc(db, `users/${currentUserId}/savedItems`, id));
             showToast('Đã xóa hạng mục.', 'info');
         }
+    } else if (btn.classList.contains('copy-item-btn')) {
+        const item = localSavedItems.find(i => i.id === id);
+        if (item && item.formData) {
+            tabs.querySelector('button[data-tab="calculator"]').click();
+            
+            document.getElementById('item-name').value = item.formData.name || '';
+            document.getElementById('item-length').value = item.formData.length || '';
+            document.getElementById('item-width').value = item.formData.width || '';
+            document.getElementById('item-height').value = item.formData.height || '';
+            document.getElementById('material-wood').value = item.formData.woodId || '';
+            document.getElementById('material-edge').value = item.formData.edgeId || '';
+            document.getElementById('product-description').value = item.formData.description || '';
+            document.getElementById('profit-margin').value = item.formData.profitMargin || '50';
+
+            addedAccessories = item.formData.accessories ? [...item.formData.accessories] : [];
+            renderAddedAccessories();
+
+            resultContainer.innerHTML = '';
+            priceSummaryContainer.classList.add('hidden');
+            costBreakdownContainer.innerHTML = '';
+            saveItemBtn.disabled = true;
+
+            showToast('Đã tải thông tin. Sẵn sàng để chỉnh sửa!', 'success');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            showToast('Không thể tải dữ liệu mẫu cho hạng mục này.', 'error');
+        }
     } else if (btn.classList.contains('view-item-btn')) {
         const item = localSavedItems.find(i => i.id === id);
         if (item) {
             document.getElementById('view-item-title').textContent = item.name;
-            document.getElementById('view-item-content').textContent = item.geminiResult;
+            const analysisText = (item.geminiAnalysis && item.geminiAnalysis.analysisText) || item.geminiResult || "Không có nội dung chi tiết.";
+            document.getElementById('view-item-content').textContent = analysisText;
             openModal(viewItemModal);
         }
     }
 });
 
 // --- Gemini API Call (Client-side via Serverless Function) ---
-async function callGeminiAPI(prompt, resultEl, image) {
+async function callGeminiAPI(prompt, image) {
     const spinner = `<div class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75"><div class="spinner"></div></div>`;
-    resultEl.innerHTML = spinner;
+    resultContainer.innerHTML = spinner;
+    costBreakdownContainer.innerHTML = '';
     saveItemBtn.disabled = true;
     lastGeminiResult = null;
     priceSummaryContainer.classList.add('hidden');
@@ -517,26 +600,19 @@ async function callGeminiAPI(prompt, resultEl, image) {
     try {
         const response = await fetch('/api/generate', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt, image }),
         });
 
         const resultData = await response.json();
-
-        if (!response.ok) {
-            throw new Error(resultData.error || `Lỗi máy chủ: ${response.status}`);
-        }
-        
+        if (!response.ok) throw new Error(resultData.error || `Lỗi máy chủ: ${response.status}`);
         return resultData;
-
     } catch (error) {
         console.error("Lỗi khi gọi API:", error);
         const errorMessage = error.message.includes("API key not valid") 
             ? "Lỗi: API Key không hợp lệ. Vui lòng kiểm tra lại trên Vercel."
             : `Lỗi khi gọi API: ${error.message}`;
-        resultEl.textContent = errorMessage;
+        resultContainer.textContent = errorMessage;
         showToast('Đã xảy ra lỗi khi phân tích. Vui lòng thử lại.', 'error');
         return null;
     }
