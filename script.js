@@ -1,8 +1,12 @@
+
 // script.js
-import { GoogleGenAI } from "https://esm.sh/@google/genai@^1.8.0";
+// Firebase imports are kept as they are.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+// NOTE: The GoogleGenAI import is NO LONGER NEEDED here because the client doesn't call the API directly.
+// import { GoogleGenAI } from "https://esm.sh/@google/genai@^1.8.0";
 
 const firebaseConfig = {
     apiKey: "AIzaSyC_8Q8Girww42mI-8uwYsJaH5Vi41FT1eA",
@@ -12,12 +16,11 @@ const firebaseConfig = {
     messagingSenderId: "306099623121",
     appId: "1:306099623121:web:157ce5827105998f3a61f0",
     measurementId: "G-D8EHTN2SWE"
-  };
+};
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-const ai = new GoogleGenAI({apiKey: process.env.API_KEY});
 
 // --- DOM Elements ---
 const loggedInView = document.getElementById('logged-in-view');
@@ -503,7 +506,7 @@ savedItemsTableBody.addEventListener('click', async e => {
     }
 });
 
-// --- Gemini API Call ---
+// --- Gemini API Call (now via our proxy) ---
 async function callGeminiAPI(prompt, resultEl, image) {
     const spinner = `<div class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75"><div class="spinner"></div></div>`;
     resultEl.innerHTML = spinner;
@@ -511,24 +514,21 @@ async function callGeminiAPI(prompt, resultEl, image) {
     lastGeminiResult = null;
     priceSummaryContainer.classList.add('hidden');
     try {
-        const parts = [];
-        if (image) {
-            parts.push({
-                inlineData: {
-                    mimeType: image.mimeType,
-                    data: image.data,
-                },
-            });
-        }
-        parts.push({ text: prompt });
+        const response = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ prompt, image }),
+        });
 
-        const request = {
-            model: 'gemini-2.5-flash-preview-04-17',
-            contents: { parts: parts },
-        };
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Unknown error from server');
+        }
         
-        const response = await ai.models.generateContent(request);
-        let jsonStr = response.text.trim();
+        let jsonStr = data.text.trim();
         
         const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
         const match = jsonStr.match(fenceRegex);
@@ -540,8 +540,8 @@ async function callGeminiAPI(prompt, resultEl, image) {
         return parsedResult;
 
     } catch (error) {
-        console.error("Gemini API Error:", error);
-        resultEl.textContent = `Lỗi khi gọi API Gemini: ${error.message}`;
+        console.error("API Call Error:", error);
+        resultEl.textContent = `Lỗi khi gọi API: ${error.message}`;
         showToast('Đã xảy ra lỗi khi phân tích. Vui lòng thử lại.', 'error');
         return null;
     }
