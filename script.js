@@ -1,32 +1,17 @@
 // script.js
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, getDocs, query, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { 
+    db, auth, collection, onSnapshot, addDoc, doc, updateDoc, 
+    deleteDoc, serverTimestamp, getDocs, query, limit, onAuthStateChanged, 
+    signOut 
+} from './firebase.js';
 
-// --- Cấu hình Firebase ---
-const firebaseConfig = {
-    apiKey: "AIzaSyC_8Q8Girww42mI-8uwYsJaH5Vi41FT1eA",
-    authDomain: "tinh-gia-thanh-app-fbdc0.firebaseapp.com",
-    projectId: "tinh-gia-thanh-app-fbdc0",
-    storageBucket: "tinh-gia-thanh-app-fbdc0.firebasestorage.app",
-    messagingSenderId: "306099623121",
-    appId: "1:306099623121:web:157ce5827105998f3a61f0",
-    measurementId: "G-D8EHTN2SWE"
-};
+import { 
+    openModal, showConfirm, showToast, updateUIVisibility, 
+    initializeImageUploader, initializeTabs, initializeModals 
+} from './ui.js';
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
-
-// --- DOM Elements ---
-const loggedInView = document.getElementById('logged-in-view');
-const userEmailDisplay = document.getElementById('user-email-display');
+// --- DOM Elements (Feature-specific) ---
 const logoutBtn = document.getElementById('logout-btn');
-const loginModal = document.getElementById('login-modal');
-const viewItemModal = document.getElementById('view-item-modal');
-const confirmModal = document.getElementById('confirm-modal');
-const loginError = document.getElementById('login-error');
-const googleLoginBtn = document.getElementById('google-login-btn');
 const materialForm = document.getElementById('material-form');
 const materialsTableBody = document.getElementById('materials-table-body');
 const savedItemsTableBody = document.getElementById('saved-items-table-body');
@@ -39,18 +24,13 @@ const priceSummaryContainer = document.getElementById('price-summary-container')
 const totalCostValue = document.getElementById('total-cost-value');
 const suggestedPriceValue = document.getElementById('suggested-price-value');
 const estimatedProfitValue = document.getElementById('estimated-profit-value');
-const imageUploader = document.getElementById('image-uploader');
-const imageInput = document.getElementById('image-input');
-const imageUploadPrompt = document.getElementById('image-upload-prompt');
-const imagePreviewContainer = document.getElementById('image-preview-container');
-const imagePreview = document.getElementById('image-preview');
-const removeImageBtn = document.getElementById('remove-image-btn');
 const costBreakdownContainer = document.getElementById('cost-breakdown-container');
-const tabs = document.getElementById('tabs');
 const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input');
 const sendChatBtn = document.getElementById('send-chat-btn');
 const chatMessagesContainer = document.getElementById('chat-messages');
+const viewItemModal = document.getElementById('view-item-modal');
+
 
 // --- Global State ---
 let currentUserId = null;
@@ -102,7 +82,7 @@ async function checkAndAddSampleData(userId) {
 }
 
 
-// --- Auth & UI State Management ---
+// --- Auth & App Initialization ---
 onAuthStateChanged(auth, async (user) => {
     const loggedIn = !!user;
     if (loggedIn) {
@@ -138,97 +118,6 @@ function clearLocalData() {
     populateSelects();
     updateClientSideCosts();
 }
-
-function updateUIVisibility(isLoggedIn, user) {
-    loggedInView.classList.toggle('hidden', !isLoggedIn);
-    document.getElementById('logged-out-view').classList.toggle('hidden', isLoggedIn);
-    userEmailDisplay.textContent = isLoggedIn ? (user.displayName || user.email) : '';
-    
-    document.querySelectorAll('.calculator-form-content, .materials-form-content, .saved-items-content, .assistant-content').forEach(el => {
-        el.style.display = isLoggedIn ? 'block' : 'none';
-    });
-    document.querySelectorAll('.login-prompt-view').forEach(el => {
-        el.style.display = isLoggedIn ? 'none' : 'block';
-    });
-
-    if (isLoggedIn) closeAllModals();
-}
-
-// --- Tab Navigation ---
-const tabContent = document.getElementById('tab-content');
-tabs.addEventListener('click', (e) => {
-    const button = e.target.closest('button');
-    if (button) {
-        const tabName = button.dataset.tab;
-        tabs.querySelector('.active').classList.remove('active');
-        button.classList.add('active');
-        
-        for (let pane of tabContent.children) {
-            pane.classList.toggle('hidden', pane.id !== `${tabName}-tab`);
-        }
-    }
-});
-
-// --- Modal Handling ---
-function openModal(modal) { modal.classList.remove('hidden'); }
-function closeModal(modal) { modal.classList.add('hidden'); }
-function closeAllModals() {
-    [loginModal, viewItemModal, confirmModal].forEach(closeModal);
-}
-document.getElementById('open-login-modal-btn').addEventListener('click', () => openModal(loginModal));
-document.querySelectorAll('.modal-close-btn, .modal-overlay').forEach(el => {
-    el.addEventListener('click', (e) => { if (e.target === el) closeAllModals(); });
-});
-
-// --- Custom Confirm Modal ---
-const confirmOkBtn = document.getElementById('confirm-ok-btn');
-const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
-const confirmMessage = document.getElementById('confirm-message');
-
-function showConfirm(message) {
-    return new Promise((resolve) => {
-        confirmMessage.textContent = message;
-        openModal(confirmModal);
-
-        confirmOkBtn.onclick = () => {
-            closeModal(confirmModal);
-            resolve(true);
-        };
-        confirmCancelBtn.onclick = () => {
-            closeModal(confirmModal);
-            resolve(false);
-        };
-    });
-}
-
-// --- Toast Notification ---
-function showToast(message, type = 'info') {
-    const toastContainer = document.getElementById('toast-container');
-    const toast = document.createElement('div');
-    toast.className = `toast toast--${type}`;
-    
-    const icons = { info: 'info-circle', success: 'check-circle', error: 'exclamation-triangle' };
-    toast.innerHTML = `<i class="fas fa-${icons[type]} toast-icon"></i> ${message}`;
-    
-    toastContainer.appendChild(toast);
-    setTimeout(() => toast.classList.add('show'), 10);
-    setTimeout(() => {
-        toast.classList.remove('show');
-        toast.addEventListener('transitionend', () => toast.remove());
-    }, 4000);
-}
-
-// --- Firebase Auth Actions ---
-googleLoginBtn.addEventListener('click', async () => {
-    loginError.textContent = '';
-    try {
-        await signInWithPopup(auth, new GoogleAuthProvider());
-        // onAuthStateChanged will handle closing the modal and UI updates
-    } catch (error) {
-        console.error("Google Sign-In Error:", error);
-        loginError.textContent = "Không thể đăng nhập với Google. Vui lòng thử lại.";
-    }
-});
 
 logoutBtn.addEventListener('click', () => signOut(auth));
 
@@ -330,37 +219,6 @@ function resetMaterialForm() {
 document.getElementById('cancel-edit-button').addEventListener('click', resetMaterialForm);
 
 
-// --- Image Upload Logic ---
-imageUploader.addEventListener('click', () => imageInput.click());
-imageUploader.addEventListener('dragover', (e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--primary-color)'; });
-imageUploader.addEventListener('dragleave', (e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--border-color)'; });
-imageUploader.addEventListener('drop', (e) => {
-    e.preventDefault();
-    e.currentTarget.style.borderColor = 'var(--border-color)';
-    if (e.dataTransfer.files.length > 0) handleImageFile(e.dataTransfer.files[0]);
-});
-imageInput.addEventListener('change', (e) => { if (e.target.files.length > 0) handleImageFile(e.target.files[0]); });
-removeImageBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    uploadedImage = null;
-    imageInput.value = '';
-    imagePreview.src = '#';
-    imagePreviewContainer.classList.add('hidden');
-    imageUploadPrompt.classList.remove('hidden');
-});
-
-function handleImageFile(file) {
-    if (!file.type.startsWith('image/')) { showToast('Vui lòng chọn một file ảnh.', 'error'); return; }
-    const reader = new FileReader();
-    reader.onloadend = () => {
-        uploadedImage = { mimeType: file.type, data: reader.result.split(',')[1] };
-        imagePreview.src = reader.result;
-        imageUploadPrompt.classList.add('hidden');
-        imagePreviewContainer.classList.remove('hidden');
-    };
-    reader.readAsDataURL(file);
-}
-
 // --- Calculator Tab Logic ---
 function populateSelects() {
     const selects = { 
@@ -393,7 +251,6 @@ addAccessoryBtn.addEventListener('click', () => {
 
     const accessory = localMaterials['Phụ kiện'].find(a => a.id === selectedId);
     if (accessory) {
-        // Check if accessory already exists to avoid duplicates, just update quantity if so
         const existingAccessory = addedAccessories.find(a => a.id === selectedId);
         if(existingAccessory){
             existingAccessory.quantity += quantity;
@@ -441,7 +298,6 @@ accessoriesList.addEventListener('click', e => {
 });
 
 function updateClientSideCosts() {
-    // 1. Gather data
     const length = parseFloat(document.getElementById('item-length').value) || 0;
     const width = parseFloat(document.getElementById('item-width').value) || 0;
     const height = parseFloat(document.getElementById('item-height').value) || 0;
@@ -458,25 +314,22 @@ function updateClientSideCosts() {
     let totalCost = 0;
     const breakdown = [];
 
-    // 2. Calculate
-    // Wood
     if (wood && length > 0 && width > 0 && height > 0) {
         let mainCarcassArea = 0;
-        // The back panel is always calculated as L*H, separated from the main body logic.
         const backPanelArea = length * height; 
 
         switch (itemType) {
-            case 'tu-bep-duoi': // bottom, 2 sides, 1 shelf. Back is calculated separately.
+            case 'tu-bep-duoi':
                 mainCarcassArea = (length * width) + (2 * width * height) + (length * height);
                 break;
-            case 'tu-bep-tren': // top, bottom, 2 sides, 1 shelf. Back is calculated separately.
+            case 'tu-bep-tren':
                 mainCarcassArea = (2 * length * width) + (2 * width * height) + (length * height);
                 break;
-            case 'tu-ao': // Top, bottom, 2 sides, front door(s). Back is calculated separately.
+            case 'tu-ao':
                 mainCarcassArea = 2 * (length * width) + 2 * (width * height) + (length * height);
                 break;
             case 'khac':
-            default: // Standard 4-sided carcass (top, bottom, 2 sides). Back is calculated separately.
+            default:
                 mainCarcassArea = (2 * length * width) + (2 * width * height);
                 break;
         }
@@ -484,23 +337,20 @@ function updateClientSideCosts() {
         const standardPanelArea = 1220 * 2440;
         const wasteFactor = 1.3;
 
-        // If a separate back panel material is selected
         if (backPanelWood) {
-            // Main wood cost
             const mainPanelsNeeded = (mainCarcassArea / standardPanelArea) * wasteFactor;
             const mainWoodCost = mainPanelsNeeded * wood.price;
             if (mainWoodCost > 0) {
                 breakdown.push({ item: wood.name, quantity: `${mainPanelsNeeded.toFixed(2)} tấm`, unitCost: wood.price, totalCost: mainWoodCost });
                 totalCost += mainWoodCost;
             }
-            // Back panel wood cost
             const backPanelsNeeded = (backPanelArea / standardPanelArea) * wasteFactor;
             const backPanelCost = backPanelsNeeded * backPanelWood.price;
             if (backPanelCost > 0) {
                 breakdown.push({ item: `${backPanelWood.name} (Hậu)`, quantity: `${backPanelsNeeded.toFixed(2)} tấm`, unitCost: backPanelWood.price, totalCost: backPanelCost });
                 totalCost += backPanelCost;
             }
-        } else { // Use main wood for everything
+        } else {
             const totalWoodArea = mainCarcassArea + backPanelArea;
             const panelsNeeded = (totalWoodArea / standardPanelArea) * wasteFactor;
             const woodCost = panelsNeeded * wood.price;
@@ -511,8 +361,6 @@ function updateClientSideCosts() {
         }
     }
 
-
-    // Edge banding
     if (edge && length > 0 && width > 0 && height > 0) {
         const edgeLength = (4 * length) + (4 * width) + (4 * height);
         const edgeLengthMeters = edgeLength / 1000;
@@ -523,17 +371,13 @@ function updateClientSideCosts() {
         }
     }
 
-    // Accessories
     addedAccessories.forEach(acc => {
         const accCost = acc.quantity * acc.price;
         breakdown.push({ item: acc.name, quantity: `${acc.quantity} ${acc.unit}`, unitCost: acc.price, totalCost: accCost });
         totalCost += accCost;
     });
 
-    // 3. Update global state
     currentCalculation = { breakdown, totalCost };
-
-    // 4. Render UI
     renderCostBreakdown(breakdown);
 
     const suggestedPrice = totalCost * (1 + profitMargin / 100);
@@ -548,7 +392,6 @@ function updateClientSideCosts() {
         priceSummaryContainer.classList.add('hidden');
     }
     
-    // Disable save button if there's no analysis from Gemini yet
     saveItemBtn.disabled = !lastGeminiResult;
 }
 
@@ -589,7 +432,6 @@ function renderCostBreakdown(breakdownData) {
 function formatAnalysisToHtml(analysisData) {
     if (!analysisData) return '<p>Không có phân tích.</p>';
 
-    // For backward compatibility with old saved items.
     if (!analysisData.finalPricingAnalysis && analysisData.summary) {
         let oldHtml = '';
         if (analysisData.keyObservations && analysisData.keyObservations.length > 0) { oldHtml += `<h4><i class="fas fa-search-dollar"></i> Điểm Lưu Ý Chính</h4><ul>${analysisData.keyObservations.map(item => `<li>${item}</li>`).join('')}</ul>`; }
@@ -601,7 +443,6 @@ function formatAnalysisToHtml(analysisData) {
 
     let html = '';
 
-    // Final Pricing Analysis - Display this first as it's the most important
     if (analysisData.finalPricingAnalysis) {
         html += `
             <div class="final-price-recommendation">
@@ -612,7 +453,6 @@ function formatAnalysisToHtml(analysisData) {
         `;
     }
 
-    // Hidden Costs with estimated values
     if (analysisData.hiddenCosts && analysisData.hiddenCosts.length > 0) {
         html += `<h4><i class="fas fa-file-invoice-dollar"></i> Chi Phí Ẩn (Ước tính bởi AI)</h4><ul class="cost-list">`;
         let totalHiddenCost = 0;
@@ -635,14 +475,12 @@ function formatAnalysisToHtml(analysisData) {
         html += `</ul>`;
     }
     
-    // Key Observations
     if (analysisData.keyObservations && analysisData.keyObservations.length > 0) {
         html += `<h4><i class="fas fa-search-dollar"></i> Điểm Lưu Ý Chính</h4><ul>`;
         analysisData.keyObservations.forEach(item => { html += `<li>${item}</li>`; });
         html += `</ul>`;
     }
     
-    // Optimization Tips
     if (analysisData.optimizationTips && analysisData.optimizationTips.length > 0) {
         html += `<h4><i class="fas fa-lightbulb"></i> Gợi Ý Tối Ưu Hóa</h4><ul>`;
         analysisData.optimizationTips.forEach(item => { html += `<li>${item}</li>`; });
@@ -724,7 +562,7 @@ Trả về một đối tượng JSON duy nhất, **KHÔNG** thêm bất kỳ v�
                 ...resultObject,
                 costBreakdown: currentCalculation.breakdown,
                 totalCost: currentCalculation.totalCost,
-                suggestedSellingPrice: suggestedPrice, // This is based on user's margin, not AI's
+                suggestedSellingPrice: suggestedPrice,
                 estimatedProfit: suggestedPrice - currentCalculation.totalCost
             };
             resultContainer.innerHTML = formatAnalysisToHtml(resultObject);
@@ -799,7 +637,7 @@ saveItemBtn.addEventListener('click', async () => {
             createdAt: serverTimestamp()
         });
         showToast(`Đã lưu thành công dự án "${itemName}"!`, 'success');
-        lastGeminiResult = null; // Reset to prevent re-saving same analysis
+        lastGeminiResult = null;
         saveItemBtn.disabled = true;
     } catch (error) { 
         showToast('Lỗi khi lưu dự án.', 'error');
@@ -811,6 +649,7 @@ savedItemsTableBody.addEventListener('click', async e => {
     const btn = e.target.closest('button');
     if (!currentUserId || !btn) return;
     const id = btn.dataset.id;
+    const tabsContainer = document.getElementById('tabs');
 
     if (btn.classList.contains('delete-item-btn')) {
         if (await showConfirm('Bạn có chắc chắn muốn xóa dự án này?')) {
@@ -820,7 +659,7 @@ savedItemsTableBody.addEventListener('click', async e => {
     } else if (btn.classList.contains('copy-item-btn')) {
         const item = localSavedItems.find(i => i.id === id);
         if (item && item.formData) {
-            tabs.querySelector('button[data-tab="calculator"]').click();
+            tabsContainer.querySelector('button[data-tab="calculator"]').click();
             
             document.getElementById('item-name').value = item.formData.name || '';
             document.getElementById('item-length').value = item.formData.length || '';
@@ -836,7 +675,6 @@ savedItemsTableBody.addEventListener('click', async e => {
             addedAccessories = item.formData.accessories ? [...item.formData.accessories] : [];
             renderAddedAccessories();
             
-            // Trigger client-side calculation for the copied item
             updateClientSideCosts();
 
             resultContainer.innerHTML = '';
@@ -954,5 +792,14 @@ async function callGeminiAPI(prompt, image) {
     }
 }
 
-// Initial call to set up UI
-updateClientSideCosts();
+// --- Initial Setup ---
+document.addEventListener('DOMContentLoaded', () => {
+    initializeTabs();
+    initializeModals();
+    initializeImageUploader(
+        (imageData) => { uploadedImage = imageData; },
+        () => { uploadedImage = null; }
+    );
+    
+    updateClientSideCosts();
+});
