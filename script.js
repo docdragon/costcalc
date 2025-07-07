@@ -588,45 +588,70 @@ function renderCostBreakdown(breakdownData) {
 
 function formatAnalysisToHtml(analysisData) {
     if (!analysisData) return '<p>Không có phân tích.</p>';
-    
-    // Handle old format for backward compatibility in saved items
-    if (typeof analysisData.analysisText === 'string') {
-        // A simple way to render markdown-like text
-        return `<p>${analysisData.analysisText.replace(/\n/g, '<br>')}</p>`;
+
+    // For backward compatibility with old saved items.
+    if (!analysisData.finalPricingAnalysis && analysisData.summary) {
+        let oldHtml = '';
+        if (analysisData.keyObservations && analysisData.keyObservations.length > 0) { oldHtml += `<h4><i class="fas fa-search-dollar"></i> Điểm Lưu Ý Chính</h4><ul>${analysisData.keyObservations.map(item => `<li>${item}</li>`).join('')}</ul>`; }
+        if (analysisData.hiddenCosts && analysisData.hiddenCosts.length > 0) { oldHtml += `<h4><i class="fas fa-file-invoice-dollar"></i> Chi Phí Ẩn Tiềm Tàng</h4><ul>${analysisData.hiddenCosts.map(item => `<li>${typeof item === 'string' ? item : item.item}</li>`).join('')}</ul>`; }
+        if (analysisData.optimizationTips && analysisData.optimizationTips.length > 0) { oldHtml += `<h4><i class="fas fa-lightbulb"></i> Gợi Ý Tối Ưu Hóa</h4><ul>${analysisData.optimizationTips.map(item => `<li>${item}</li>`).join('')}</ul>`; }
+        if (analysisData.summary) { oldHtml += `<h4><i class="fas fa-flag-checkered"></i> Tổng Kết</h4><p>${analysisData.summary}</p>`; }
+        return oldHtml || '<p>Không thể hiển thị phân tích. Dữ liệu có định dạng không mong đợi.</p>';
+    }
+
+    let html = '';
+
+    // Final Pricing Analysis - Display this first as it's the most important
+    if (analysisData.finalPricingAnalysis) {
+        html += `
+            <div class="final-price-recommendation">
+                <div class="final-price-label">Giá Bán Tham Khảo Tốt Nhất</div>
+                <div class="final-price-value">${Number(analysisData.finalPricingAnalysis.suggestedMarketPrice || 0).toLocaleString('vi-VN')}đ</div>
+                <p class="final-price-summary">${analysisData.finalPricingAnalysis.summary || 'Không có tóm tắt.'}</p>
+            </div>
+        `;
+    }
+
+    // Hidden Costs with estimated values
+    if (analysisData.hiddenCosts && analysisData.hiddenCosts.length > 0) {
+        html += `<h4><i class="fas fa-file-invoice-dollar"></i> Chi Phí Ẩn (Ước tính bởi AI)</h4><ul class="cost-list">`;
+        let totalHiddenCost = 0;
+        analysisData.hiddenCosts.forEach(cost => {
+            const costValue = Number(cost.estimatedCost || 0);
+            totalHiddenCost += costValue;
+            html += `
+                <li>
+                    <span class="cost-item-name">${cost.item}</span>
+                    <span class="cost-item-value">${costValue.toLocaleString('vi-VN')}đ</span>
+                    ${cost.reason ? `<span class="cost-item-reason">${cost.reason}</span>` : ''}
+                </li>`;
+        });
+        html += `
+            <li class="total-cost-item">
+                <span class="cost-item-name">Tổng chi phí ẩn</span>
+                <span class="cost-item-value">${totalHiddenCost.toLocaleString('vi-VN')}đ</span>
+            </li>
+        `;
+        html += `</ul>`;
     }
     
-    // Handle new structured format
-    let html = '';
-    
+    // Key Observations
     if (analysisData.keyObservations && analysisData.keyObservations.length > 0) {
         html += `<h4><i class="fas fa-search-dollar"></i> Điểm Lưu Ý Chính</h4><ul>`;
         analysisData.keyObservations.forEach(item => { html += `<li>${item}</li>`; });
         html += `</ul>`;
     }
     
-    if (analysisData.hiddenCosts && analysisData.hiddenCosts.length > 0) {
-        html += `<h4><i class="fas fa-file-invoice-dollar"></i> Chi Phí Ẩn Tiềm Tàng</h4><ul>`;
-        analysisData.hiddenCosts.forEach(item => { html += `<li>${item}</li>`; });
-        html += `</ul>`;
-    }
-    
+    // Optimization Tips
     if (analysisData.optimizationTips && analysisData.optimizationTips.length > 0) {
         html += `<h4><i class="fas fa-lightbulb"></i> Gợi Ý Tối Ưu Hóa</h4><ul>`;
         analysisData.optimizationTips.forEach(item => { html += `<li>${item}</li>`; });
         html += `</ul>`;
     }
     
-    if (analysisData.summary) {
-        html += `<h4><i class="fas fa-flag-checkered"></i> Tổng Kết</h4><p>${analysisData.summary}</p>`;
-    }
-
-    // Fallback if structure is unexpected but not the old format
-    if (html === '') {
-        return '<p>Không thể hiển thị phân tích. Dữ liệu có định dạng không mong đợi.</p>';
-    }
-    
-    return html;
+    return html || '<p>Không thể hiển thị phân tích. Dữ liệu có định dạng không mong đợi.</p>';
 }
+
 
 calculateBtn.addEventListener('click', async () => {
     if (!currentUserId) { showToast('Vui lòng đăng nhập để dùng chức năng này.', 'error'); return; }
@@ -645,7 +670,7 @@ calculateBtn.addEventListener('click', async () => {
     ).join('\n');
     const suggestedPriceText = Math.round(currentCalculation.totalCost * (1 + profitMargin/100)).toLocaleString('vi-VN');
 
-    const prompt = `Bạn là chuyên gia tư vấn sản xuất nội thất. Người dùng đã tạo một bảng tính chi phí sơ bộ.
+    const prompt = `Bạn là chuyên gia tư vấn sản xuất và định giá nội thất cao cấp. Người dùng đã tạo một bảng tính chi phí vật tư sơ bộ.
 
 **Thông tin sản phẩm:**
 - **Tên:** ${itemName}
@@ -653,30 +678,37 @@ calculateBtn.addEventListener('click', async () => {
 - **Mô tả thêm:** ${description || 'Không có'}
 ${chatHistory.length > 0 ? `\n**Lưu ý từ người dùng (toàn bộ cuộc hội thoại trước):**\n${chatHistory.map(c => `${c.role}: ${c.parts[0].text}`).join('\n')}` : ''}
 
-**Bảng tính chi phí sơ bộ của người dùng:**
+**Bảng tính chi phí vật tư của người dùng:**
 ${breakdownText}
 - **TỔNG CHI PHÍ VẬT TƯ:** ${Math.round(currentCalculation.totalCost).toLocaleString('vi-VN')}đ
 - **Tỷ suất lợi nhuận mong muốn:** ${profitMargin}%
-- **Giá bán đề xuất (tạm tính):** ${suggestedPriceText}đ
+- **Giá bán đề xuất (tạm tính theo vật tư):** ${suggestedPriceText}đ
 
 **Nhiệm vụ của bạn:**
-Phân tích thông tin trên một cách **ngắn gọn, súc tích, đi thẳng vào vấn đề**. Tập trung vào những điểm quan trọng nhất mà một chủ xưởng cần biết ngay lập tức.
+Phân tích thông tin trên một cách **chuyên sâu và thực tế**.
+1.  **Phân tích chi phí:** Nhận xét về tính hợp lý của chi phí vật tư do người dùng cung cấp.
+2.  **Ước tính Chi phí ẩn:** Dựa vào kinh nghiệm, xác định và **đưa ra giá trị ước tính (bằng VNĐ)** cho các chi phí ẩn quan trọng mà người dùng có thể đã bỏ qua. Đây là phần quan trọng nhất.
+3.  **Đưa ra Giá bán tham khảo:** Dựa trên tổng chi phí (vật tư + chi phí ẩn bạn ước tính) và phân tích thị trường, hãy đề xuất một mức giá bán cuối cùng hợp lý.
 
 **Yêu cầu định dạng đầu ra:**
-Trả về một đối tượng JSON duy nhất. KHÔNG thêm bất kỳ giải thích nào. Cấu trúc phải là:
+Trả về một đối tượng JSON duy nhất, **KHÔNG** thêm bất kỳ văn bản giải thích nào bên ngoài JSON. Cấu trúc phải là:
 {
   "keyObservations": [
     "Một nhận xét quan trọng về tính hợp lý của chi phí hoặc số lượng vật tư.",
-    "Một điểm đáng ngờ hoặc không nhất quán trong dữ liệu được cung cấp (ví dụ: kích thước không khớp hình ảnh, phụ kiện không cần thiết)."
+    "Một điểm đáng ngờ hoặc không nhất quán trong dữ liệu được cung cấp."
   ],
   "hiddenCosts": [
-    "Liệt kê ngắn gọn chi phí ẩn quan trọng nhất bị bỏ qua (vd: 'Chi phí nhân công lắp ráp').",
-    "Một chi phí ẩn khác (vd: 'Chi phí vật tư phụ: keo, vít, nẹp...')."
+    { "item": "Chi phí nhân công lắp ráp & hoàn thiện", "estimatedCost": 500000, "reason": "Dựa trên độ phức tạp ước tính của sản phẩm." },
+    { "item": "Chi phí vật tư phụ (keo, vít, giấy nhám...)", "estimatedCost": 75000, "reason": "Ước tính khoảng 3-5% tổng chi phí ván." },
+    { "item": "Chi phí vận chuyển & lắp đặt tại nhà khách", "estimatedCost": 300000, "reason": "Chi phí trung bình cho khu vực nội thành." }
   ],
   "optimizationTips": [
-    "Một mẹo tối ưu hóa chi phí cụ thể và dễ thực hiện."
+    "Một mẹo tối ưu hóa chi phí cụ thể và dễ thực hiện để giảm giá thành."
   ],
-  "summary": "Một câu tổng kết ngắn gọn về tiềm năng hoặc rủi ro chính của sản phẩm này."
+  "finalPricingAnalysis": {
+    "suggestedMarketPrice": 9500000,
+    "summary": "Dựa trên tổng chi phí ước tính (vật tư + ẩn) và so sánh với các sản phẩm tương tự trên thị trường, mức giá này vừa đảm bảo lợi nhuận cạnh tranh, vừa hấp dẫn đối với khách hàng mục tiêu."
+  }
 }
 `;
     
@@ -689,10 +721,10 @@ Trả về một đối tượng JSON duy nhất. KHÔNG thêm bất kỳ giải
         if (resultObject) {
             const suggestedPrice = currentCalculation.totalCost * (1 + (profitMargin / 100));
             lastGeminiResult = {
-                ...resultObject, // contains keyObservations, hiddenCosts, etc.
+                ...resultObject,
                 costBreakdown: currentCalculation.breakdown,
                 totalCost: currentCalculation.totalCost,
-                suggestedSellingPrice: suggestedPrice,
+                suggestedSellingPrice: suggestedPrice, // This is based on user's margin, not AI's
                 estimatedProfit: suggestedPrice - currentCalculation.totalCost
             };
             resultContainer.innerHTML = formatAnalysisToHtml(resultObject);
