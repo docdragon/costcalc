@@ -468,9 +468,13 @@ calculateBtn.addEventListener('click', async () => {
         if (resultObject) {
             lastGeminiResult = resultObject;
             
-            totalCostValue.textContent = `${Number(resultObject.totalCost || 0).toLocaleString('vi-VN')}đ`;
-            suggestedPriceValue.textContent = `${Number(resultObject.suggestedSellingPrice || 0).toLocaleString('vi-VN')}đ`;
-            estimatedProfitValue.textContent = `${Number(resultObject.estimatedProfit || 0).toLocaleString('vi-VN')}đ`;
+            const totalCost = Number(resultObject.totalCost || 0);
+            const suggestedPrice = Number(resultObject.suggestedSellingPrice || 0);
+            const estimatedProfit = suggestedPrice - totalCost;
+
+            totalCostValue.textContent = `${totalCost.toLocaleString('vi-VN')}đ`;
+            suggestedPriceValue.textContent = `${suggestedPrice.toLocaleString('vi-VN')}đ`;
+            estimatedProfitValue.textContent = `${estimatedProfit.toLocaleString('vi-VN')}đ`;
             priceSummaryContainer.classList.remove('hidden');
             
             if (resultObject.costBreakdown && Array.isArray(resultObject.costBreakdown)) {
@@ -481,7 +485,7 @@ calculateBtn.addEventListener('click', async () => {
         }
     } finally {
         calculateBtn.disabled = false;
-        calculateBtn.innerHTML = `<i class="fas fa-cogs"></i>Phân tích`;
+        calculateBtn.innerHTML = `<i class="fas fa-cogs"></i> Phân tích`;
     }
 });
 
@@ -534,6 +538,11 @@ saveItemBtn.addEventListener('click', async () => {
         profitMargin: document.getElementById('profit-margin').value,
     };
 
+    // Recalculate profit to ensure saved data is consistent
+    const totalCost = Number(lastGeminiResult.totalCost || 0);
+    const suggestedPrice = Number(lastGeminiResult.suggestedSellingPrice || 0);
+    const estimatedProfit = suggestedPrice - totalCost;
+
     try {
         await addDoc(savedItemsCollectionRef, {
             name: itemName,
@@ -541,9 +550,9 @@ saveItemBtn.addEventListener('click', async () => {
             geminiAnalysis: {
                 analysisText: lastGeminiResult.analysisText,
                 costBreakdown: lastGeminiResult.costBreakdown || [],
-                totalCost: lastGeminiResult.totalCost || 0,
-                suggestedSellingPrice: lastGeminiResult.suggestedSellingPrice || 0,
-                estimatedProfit: lastGeminiResult.estimatedProfit || 0
+                totalCost: totalCost,
+                suggestedSellingPrice: suggestedPrice,
+                estimatedProfit: estimatedProfit // Save the client-calculated profit
             },
             createdAt: serverTimestamp()
         });
@@ -692,10 +701,12 @@ async function callGeminiAPI(prompt, image) {
     priceSummaryContainer.classList.add('hidden');
 
     try {
+        // NOTE: We no longer send chatHistory for calculator requests to avoid context confusion.
+        // The serverless function has been updated to handle this.
         const response = await fetch('/api/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt, image, chatHistory }), // Include chat history here
+            body: JSON.stringify({ prompt, image }),
         });
 
         const resultData = await response.json();

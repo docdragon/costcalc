@@ -449,8 +449,9 @@ tbody tr:last-child td { border-bottom: none; }
     animation: rotation 1s linear infinite;
 }
 .spinner-sm {
-    width: 16px; height: 16px;
-    border: 2px solid rgba(255,255,255,0.4);
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
     border-bottom-color: white;
     border-radius: 50%;
     display: inline-block;

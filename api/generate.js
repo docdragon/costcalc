@@ -21,14 +21,17 @@ export default async function handler(request, response) {
         // --- Handle Chat Request ---
         if (newChatMessage) {
             // We receive the full history and the new message separately to avoid duplication
-            const chat = ai.chats.create({ model, history: chatHistory.slice(0, -1) }); // History without the latest user message
+            // The last message in chatHistory is the new user message, so we exclude it from the history passed to create()
+            const historyForChat = chatHistory ? chatHistory.slice(0, -1) : [];
+            const chat = ai.chats.create({ model, history: historyForChat });
             const result = await chat.sendMessage({ message: newChatMessage });
             return response.status(200).json({ text: result.text });
         }
 
         // --- Handle Calculator Request ---
         if (prompt) {
-             // Construct the prompt parts for the latest user message
+             // Construct the prompt parts for the calculator request.
+             // We deliberately DO NOT use chatHistory here to keep the context clean.
             const promptParts = [];
             if (image && image.data && image.mimeType) {
                 promptParts.push({
@@ -40,12 +43,9 @@ export default async function handler(request, response) {
             }
             promptParts.push({ text: prompt });
 
-            // Combine history with the new user message
-            const contents = [...(chatHistory || []), { role: 'user', parts: promptParts }];
-
             const genAIResponse = await ai.models.generateContent({
                 model: model,
-                contents: contents,
+                contents: { parts: promptParts }, // Send as a single-turn request
                 config: { responseMimeType: "application/json" }
             });
 
