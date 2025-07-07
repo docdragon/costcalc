@@ -23,13 +23,9 @@ const loggedInView = document.getElementById('logged-in-view');
 const userEmailDisplay = document.getElementById('user-email-display');
 const logoutBtn = document.getElementById('logout-btn');
 const loginModal = document.getElementById('login-modal');
-const registerModal = document.getElementById('register-modal');
 const viewItemModal = document.getElementById('view-item-modal');
 const confirmModal = document.getElementById('confirm-modal');
-const loginForm = document.getElementById('login-form');
-const registerForm = document.getElementById('register-form');
 const loginError = document.getElementById('login-error');
-const registerError = document.getElementById('register-error');
 const googleLoginBtn = document.getElementById('google-login-btn');
 const materialForm = document.getElementById('material-form');
 const materialsTableBody = document.getElementById('materials-table-body');
@@ -176,10 +172,9 @@ tabs.addEventListener('click', (e) => {
 function openModal(modal) { modal.classList.remove('hidden'); }
 function closeModal(modal) { modal.classList.add('hidden'); }
 function closeAllModals() {
-    [loginModal, registerModal, viewItemModal, confirmModal].forEach(closeModal);
+    [loginModal, viewItemModal, confirmModal].forEach(closeModal);
 }
 document.getElementById('open-login-modal-btn').addEventListener('click', () => openModal(loginModal));
-document.getElementById('open-register-modal-btn').addEventListener('click', () => openModal(registerModal));
 document.querySelectorAll('.modal-close-btn, .modal-overlay').forEach(el => {
     el.addEventListener('click', (e) => { if (e.target === el) closeAllModals(); });
 });
@@ -223,26 +218,15 @@ function showToast(message, type = 'info') {
 }
 
 // --- Firebase Auth Actions ---
-loginForm.addEventListener('submit', async e => {
-    e.preventDefault();
+googleLoginBtn.addEventListener('click', async () => {
     loginError.textContent = '';
     try {
-        await signInWithEmailAndPassword(auth, loginForm['login-email'].value, loginForm['login-password'].value);
-    } catch (error) { loginError.textContent = "Email hoặc mật khẩu không đúng."; }
-});
-
-registerForm.addEventListener('submit', async e => {
-    e.preventDefault();
-    registerError.textContent = '';
-    try {
-        await createUserWithEmailAndPassword(auth, registerForm['register-email'].value, registerForm['register-password'].value);
-    } catch (error) { registerError.textContent = error.code === 'auth/email-already-in-use' ? "Email này đã được sử dụng." : "Đã xảy ra lỗi."; }
-});
-
-googleLoginBtn.addEventListener('click', async () => {
-    try {
         await signInWithPopup(auth, new GoogleAuthProvider());
-    } catch (error) { loginError.textContent = "Không thể đăng nhập với Google."; }
+        // onAuthStateChanged will handle closing the modal and UI updates
+    } catch (error) {
+        console.error("Google Sign-In Error:", error);
+        loginError.textContent = "Không thể đăng nhập với Google. Vui lòng thử lại.";
+    }
 });
 
 logoutBtn.addEventListener('click', () => signOut(auth));

@@ -38,8 +38,7 @@
                     </button>
                 </div>
                 <div id="logged-out-view">
-                    <button id="open-login-modal-btn" class="btn btn-primary btn-sm">Đăng nhập</button>
-                    <button id="open-register-modal-btn" class="btn btn-secondary btn-sm">Đăng ký</button>
+                    <button id="open-login-modal-btn" class="btn btn-primary btn-sm">Đăng nhập / Đăng ký</button>
                 </div>
             </div>
         </div>
@@ -210,8 +209,17 @@
     </div>
 
     <!-- Modals -->
-    <div id="login-modal" class="modal-overlay hidden"><div class="modal-content"><button class="modal-close-btn">&times;</button><h3 class="modal-title">Đăng nhập</h3><form id="login-form"><div class="form-group"><label for="login-email" class="form-label">Email</label><input type="email" id="login-email" required class="input-style"></div><div class="form-group"><label for="login-password" class="form-label">Mật khẩu</label><input type="password" id="login-password" required class="input-style"></div><p id="login-error" class="error-message"></p><button type="submit" class="btn btn-primary full-width">Đăng nhập</button></form><div class="separator">HOẶC</div><button type="button" id="google-login-btn" class="google-btn"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google icon">Đăng nhập với Google</button></div></div>
-    <div id="register-modal" class="modal-overlay hidden"><div class="modal-content"><button class="modal-close-btn">&times;</button><h3 class="modal-title">Đăng ký tài khoản</h3><form id="register-form"><div class="form-group"><label for="register-email" class="form-label">Email</label><input type="email" id="register-email" required class="input-style"></div><div class="form-group"><label for="register-password" class="form-label">Mật khẩu (tối thiểu 6 ký tự)</label><input type="password" id="register-password" required class="input-style"></div><p id="register-error" class="error-message"></p><button type="submit" class="btn btn-success full-width">Đăng ký</button></form></div></div>
+    <div id="login-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="modal-close-btn">&times;</button>
+            <h3 class="modal-title">Đăng nhập / Đăng ký</h3>
+            <p id="login-error" class="error-message"></p>
+            <p class="confirm-text" style="text-align: center; margin-bottom: 1.5rem;">Sử dụng tài khoản Google của bạn để truy cập tất cả các tính năng.</p>
+            <button type="button" id="google-login-btn" class="google-btn full-width" style="justify-content: center;">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google icon">Đăng nhập với Google
+            </button>
+        </div>
+    </div>
     <div id="view-item-modal" class="modal-overlay hidden"><div class="modal-content modal-lg"><button class="modal-close-btn">&times;</button><h3 id="view-item-title" class="modal-title"></h3><div id="view-item-content" class="modal-body"></div></div></div>
     <div id="confirm-modal" class="modal-overlay hidden"><div class="modal-content"><h3 class="modal-title-sm">Xác nhận hành động</h3><p id="confirm-message" class="confirm-text"></p><div class="confirm-actions"><button id="confirm-cancel-btn" class="btn btn-secondary">Hủy</button><button id="confirm-ok-btn" class="btn btn-danger">Xác nhận</button></div></div></div>
     
