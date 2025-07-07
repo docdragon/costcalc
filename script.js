@@ -69,6 +69,8 @@ let addedAccessories = [];
 let uploadedImage = null;
 let chatHistory = [];
 let isAwaitingChatResponse = false;
+let currentCalculation = { breakdown: [], totalCost: 0 };
+
 
 // --- Sample Data for New Users ---
 const sampleMaterials = [
@@ -137,6 +139,7 @@ function clearLocalData() {
     renderMaterials([]);
     renderSavedItems([]);
     populateSelects();
+    updateClientSideCosts();
 }
 
 function updateUIVisibility(isLoggedIn, user) {
@@ -389,10 +392,18 @@ addAccessoryBtn.addEventListener('click', () => {
     const selectedId = accessorySelect.value;
     const quantity = parseInt(quantityInput.value) || 1;
     if (!selectedId) return;
+
     const accessory = localMaterials['Phụ kiện'].find(a => a.id === selectedId);
     if (accessory) {
-        addedAccessories.push({ ...accessory, quantity });
+        // Check if accessory already exists to avoid duplicates, just update quantity if so
+        const existingAccessory = addedAccessories.find(a => a.id === selectedId);
+        if(existingAccessory){
+            existingAccessory.quantity += quantity;
+        } else {
+            addedAccessories.push({ ...accessory, quantity });
+        }
         renderAddedAccessories();
+        updateClientSideCosts();
         quantityInput.value = 1;
         accessorySelect.value = '';
     }
@@ -402,22 +413,116 @@ function renderAddedAccessories() {
     accessoriesList.innerHTML = '';
     addedAccessories.forEach((acc, index) => {
         const li = document.createElement('li');
-        li.innerHTML = `<span>${acc.quantity} ${acc.unit} ${acc.name}</span> <button data-index="${index}" class="remove-acc-btn text-red-400 hover:text-red-600">&times;</button>`;
+        li.innerHTML = `
+            <span class="flex-grow">${acc.name}</span>
+            <input type="number" class="input-style accessory-list-qty" value="${acc.quantity}" min="1" data-index="${index}">
+            <span class="accessory-unit">${acc.unit}</span>
+            <button data-index="${index}" class="remove-acc-btn text-red-400 hover:text-red-600">&times;</button>
+        `;
         accessoriesList.appendChild(li);
     });
 }
+
+accessoriesList.addEventListener('input', e => {
+    if (e.target.classList.contains('accessory-list-qty')) {
+        const index = e.target.dataset.index;
+        const newQuantity = parseInt(e.target.value, 10);
+        if (addedAccessories[index] && newQuantity > 0) {
+            addedAccessories[index].quantity = newQuantity;
+            updateClientSideCosts();
+        }
+    }
+});
 
 accessoriesList.addEventListener('click', e => {
     if (e.target.classList.contains('remove-acc-btn')) {
         addedAccessories.splice(e.target.dataset.index, 1);
         renderAddedAccessories();
+        updateClientSideCosts();
     }
 });
 
+function updateClientSideCosts() {
+    // 1. Gather data
+    const length = parseFloat(document.getElementById('item-length').value) || 0;
+    const width = parseFloat(document.getElementById('item-width').value) || 0;
+    const height = parseFloat(document.getElementById('item-height').value) || 0;
+    const profitMargin = parseFloat(document.getElementById('profit-margin').value) || 0;
+
+    const woodId = document.getElementById('material-wood').value;
+    const edgeId = document.getElementById('material-edge').value;
+    const wood = localMaterials['Ván'].find(m => m.id === woodId);
+    const edge = localMaterials['Cạnh'].find(m => m.id === edgeId);
+
+    let totalCost = 0;
+    const breakdown = [];
+
+    // 2. Calculate
+    // Wood
+    if (wood && length > 0 && width > 0) {
+        const woodSurfaceArea = (length * width) + 2 * (length * height) + 2 * (width * height);
+        const standardPanelArea = 1220 * 2440;
+        const wasteFactor = 1.25;
+        const panelsNeeded = (woodSurfaceArea / standardPanelArea) * wasteFactor;
+        const woodCost = panelsNeeded * wood.price;
+        if (woodCost > 0) {
+            breakdown.push({ item: wood.name, quantity: `${panelsNeeded.toFixed(2)} tấm`, unitCost: wood.price, totalCost: woodCost });
+            totalCost += woodCost;
+        }
+    }
+
+    // Edge banding
+    if (edge && length > 0 && width > 0) {
+        const edgeLength = (4 * length) + (4 * width) + (4 * height);
+        const edgeLengthMeters = edgeLength / 1000;
+        const edgeCost = edgeLengthMeters * edge.price;
+        if (edgeCost > 0) {
+            breakdown.push({ item: edge.name, quantity: `${edgeLengthMeters.toFixed(2)} mét`, unitCost: edge.price, totalCost: edgeCost });
+            totalCost += edgeCost;
+        }
+    }
+
+    // Accessories
+    addedAccessories.forEach(acc => {
+        const accCost = acc.quantity * acc.price;
+        breakdown.push({ item: acc.name, quantity: `${acc.quantity} ${acc.unit}`, unitCost: acc.price, totalCost: accCost });
+        totalCost += accCost;
+    });
+
+    // 3. Update global state
+    currentCalculation = { breakdown, totalCost };
+
+    // 4. Render UI
+    renderCostBreakdown(breakdown);
+
+    const suggestedPrice = totalCost * (1 + profitMargin / 100);
+    const estimatedProfit = suggestedPrice - totalCost;
+
+    if (totalCost > 0) {
+        priceSummaryContainer.classList.remove('hidden');
+        totalCostValue.textContent = `${Math.round(totalCost).toLocaleString('vi-VN')}đ`;
+        suggestedPriceValue.textContent = `${Math.round(suggestedPrice).toLocaleString('vi-VN')}đ`;
+        estimatedProfitValue.textContent = `${Math.round(estimatedProfit).toLocaleString('vi-VN')}đ`;
+    } else {
+        priceSummaryContainer.classList.add('hidden');
+    }
+    
+    // Disable save button if there's no analysis from Gemini yet
+    saveItemBtn.disabled = !lastGeminiResult;
+}
+
+const calculatorInputs = ['item-length', 'item-width', 'item-height', 'profit-margin'];
+calculatorInputs.forEach(id => document.getElementById(id).addEventListener('input', updateClientSideCosts));
+const calculatorSelects = ['material-wood', 'material-edge'];
+calculatorSelects.forEach(id => document.getElementById(id).addEventListener('change', updateClientSideCosts));
+
+
 function renderCostBreakdown(breakdownData) {
-    if (!breakdownData || breakdownData.length === 0) { costBreakdownContainer.innerHTML = ''; return; }
+    if (!breakdownData || breakdownData.length === 0) {
+        costBreakdownContainer.innerHTML = ''; return;
+    }
     let tableHTML = `
-        <h3 class="result-box-header">Bảng Kê Chi Phí Vật Tư Ước Tính</h3>
+        <h3 class="result-box-header">Bảng Kê Chi Phí Vật Tư Tạm Tính</h3>
         <div class="table-wrapper">
             <table class="data-table">
                 <thead><tr>
@@ -433,7 +538,7 @@ function renderCostBreakdown(breakdownData) {
                 <td>${item.item || 'N/A'}</td>
                 <td class="text-center">${item.quantity || 'N/A'}</td>
                 <td class="text-right">${Number(item.unitCost || 0).toLocaleString('vi-VN')}đ</td>
-                <td class="text-right font-semibold">${Number(item.totalCost || 0).toLocaleString('vi-VN')}đ</td>
+                <td class="text-right font-semibold">${Math.round(item.totalCost || 0).toLocaleString('vi-VN')}đ</td>
             </tr>`;
     });
     tableHTML += `</tbody></table></div>`;
@@ -441,54 +546,76 @@ function renderCostBreakdown(breakdownData) {
 }
 
 calculateBtn.addEventListener('click', async () => {
-    const itemName = document.getElementById('item-name').value;
+    if (!currentUserId) { showToast('Vui lòng đăng nhập để dùng chức năng này.', 'error'); return; }
+    if (currentCalculation.totalCost <= 0) {
+        showToast('Chưa có chi phí để phân tích. Vui lòng nhập thông tin sản phẩm.', 'error');
+        return;
+    }
+
+    const itemName = document.getElementById('item-name').value || 'Sản phẩm chưa đặt tên';
     const dimensions = `Dài ${document.getElementById('item-length').value || 0}mm x Rộng ${document.getElementById('item-width').value || 0}mm x Cao ${document.getElementById('item-height').value || 0}mm`;
-    const woodId = document.getElementById('material-wood').value;
-    const edgeId = document.getElementById('material-edge').value;
-    const wood = localMaterials['Ván'].find(m => m.id === woodId);
-    const edge = localMaterials['Cạnh'].find(m => m.id === edgeId);
     const description = document.getElementById('product-description').value;
     const profitMargin = document.getElementById('profit-margin').value || 50;
     
-    if (!itemName) { showToast('Vui lòng nhập tên sản phẩm.', 'error'); return; }
-    if (!wood) { showToast('Vui lòng chọn loại ván chính.', 'error'); return; }
+    const breakdownText = currentCalculation.breakdown.map(item => 
+        `- ${item.item}: ${item.quantity} @ ${item.unitCost.toLocaleString('vi-VN')}đ = ${Math.round(item.totalCost).toLocaleString('vi-VN')}đ`
+    ).join('\n');
+    const suggestedPriceText = Math.round(currentCalculation.totalCost * (1 + profitMargin/100)).toLocaleString('vi-VN');
 
-    let materialsText = `* Ván chính: ${wood.name} (Đơn giá: ${Number(wood.price).toLocaleString('vi-VN')}đ / ${wood.unit})\n`;
-    if (edge) {
-        materialsText += `* Nẹp cạnh: ${edge.name} (Đơn giá: ${Number(edge.price).toLocaleString('vi-VN')}đ / ${edge.unit})\n`;
-    }
-    addedAccessories.forEach(acc => {
-        materialsText += `* ${acc.name}: ${acc.quantity} ${acc.unit} (Đơn giá: ${Number(acc.price).toLocaleString('vi-VN')}đ / ${acc.unit})\n`;
-    });
+    const prompt = `Bạn là chuyên gia tư vấn sản xuất nội thất. Người dùng đã tạo một bảng tính chi phí sơ bộ. Nhiệm vụ của bạn là phân tích và đưa ra tư vấn.
 
-    const prompt = `Bạn là chuyên gia dự toán chi phí và định giá sản phẩm nội thất. Hãy phân tích và báo giá cho sản phẩm sau, dựa vào mô tả và hình ảnh được cung cấp (nếu có). Toàn bộ cuộc trò chuyện trước đó (nếu có) là những quy tắc và hướng dẫn của người dùng, hãy tuân thủ chúng:\n\n**Tên sản phẩm:** ${itemName}\n**Kích thước:** ${dimensions}\n**Danh sách vật tư được chọn (BẮT BUỘC SỬ DỤNG ĐƠN GIÁ ĐƯỢC CUNG CẤP Ở ĐÂY):**\n${materialsText}\n**Yêu cầu thêm:** ${description || 'Không có'}\n\n**Nhiệm vụ:**\n1.  **Phân tích chi tiết (analysisText):** Diễn giải logic tính toán, giải thích các hạng mục và đưa ra các tư vấn hữu ích. Toàn bộ phần này sẽ được đặt trong trường JSON "analysisText".\n2.  **Bóc tách chi phí (costBreakdown):** Dựa trên phân tích, tạo một mảng các đối tượng JSON. Mỗi đối tượng đại diện cho một loại vật tư sử dụng và phải có các trường: "item" (tên vật tư), "quantity" (số lượng ước tính, dạng chuỗi có kèm đơn vị, vd: "1.5 tấm"), "unitCost" (đơn giá, dạng số), và "totalCost" (thành tiền, dạng số). **QUAN TRỌNG: Đơn giá ("unitCost") phải khớp chính xác với đơn giá đã được cung cấp trong "Danh sách vật tư được chọn" ở trên.**\n3.  **Tổng chi phí (totalCost):** Xác định con số TỔNG CHI PHÍ VẬT TƯ cuối cùng và đặt nó vào trường "totalCost".\n4.  **Giá bán đề xuất (suggestedSellingPrice):** Dựa trên tổng chi phí, độ phức tạp, và giá thị trường, hãy đề xuất một mức GIÁ BÁN HỢP LÝ (với tỷ suất lợi nhuận mục tiêu khoảng ${profitMargin}%) và đặt nó vào trường "suggestedSellingPrice".\n5.  **Lợi nhuận dự kiến (estimatedProfit):** Tính toán LỢI NHUẬN DỰ KIẾN (Giá bán - Tổng chi phí) và đặt nó vào trường "estimatedProfit".\n\n**Yêu cầu định dạng đầu ra:**\nHãy trả về một đối tượng JSON duy nhất, không có bất kỳ văn bản nào khác bên ngoài. JSON phải có cấu trúc như sau:\n{\n  "analysisText": "Toàn bộ bài phân tích chi tiết của bạn ở đây...",\n  "costBreakdown": [ { "item": "Ván MDF", "quantity": "1.5 tấm", "unitCost": 550000, "totalCost": 825000 } ],\n  "totalCost": <con_số_tổng_chi_phí_vật_tư>,\n  "suggestedSellingPrice": <con_số_giá_bán_hợp_lý>,\n  "estimatedProfit": <con_số_lợi_nhuận_dự_kiến>\n}`;
+**Thông tin sản phẩm:**
+- **Tên:** ${itemName}
+- **Kích thước:** ${dimensions}
+- **Mô tả thêm:** ${description || 'Không có'}
+${chatHistory.length > 0 ? `\n**Lưu ý từ người dùng (toàn bộ cuộc hội thoại trước):**\n${chatHistory.map(c => `${c.role}: ${c.parts[0].text}`).join('\n')}` : ''}
+
+
+**Bảng tính chi phí sơ bộ của người dùng:**
+${breakdownText}
+- **TỔNG CHI PHÍ VẬT TƯ:** ${Math.round(currentCalculation.totalCost).toLocaleString('vi-VN')}đ
+- **Tỷ suất lợi nhuận mong muốn:** ${profitMargin}%
+- **Giá bán đề xuất (tạm tính):** ${suggestedPriceText}đ
+
+**Nhiệm vụ của bạn:**
+1.  **Đánh giá & Nhận xét:** Nhận xét nhanh về bảng tính chi phí. Các ước tính về số lượng (tấm ván, mét nẹp) có hợp lý với kích thước đã cho không? Có điểm nào cần lưu ý không (ví dụ: "Ước tính 0.25 tấm ván có vẻ hợp lý, nhưng hãy nhớ tính đến đường cưa và sai sót.")
+2.  **Tư vấn chuyên sâu:** Đưa ra các lời khuyên giá trị.
+    -   **Chi phí ẩn:** Người dùng có thể đã bỏ quên những chi phí nào? (ví dụ: nhân công, quản lý, điện nước, vận chuyển, hao mòn máy móc). Hãy gợi ý cách tính các chi phí này.
+    -   **Tối ưu hóa:** Có cách nào để giảm chi phí mà vẫn đảm bảo chất lượng không? (ví dụ: gợi ý vật liệu thay thế, phương án ghép ván để tiết kiệm).
+    -   **Định vị sản phẩm:** Dựa trên chi phí và mô tả, sản phẩm này nên được định vị ở phân khúc nào? Gợi ý các điểm nhấn để marketing sản phẩm.
+3.  **Tổng hợp:** Tóm tắt lại các điểm chính một cách rõ ràng, chuyên nghiệp.
+
+**Yêu cầu định dạng đầu ra:**
+Trả về một đối tượng JSON duy nhất có cấu trúc:
+{
+  "analysisText": "Toàn bộ bài phân tích chi tiết của bạn ở đây, sử dụng markdown để định dạng cho đẹp mắt (tiêu đề, danh sách, in đậm)."
+}`;
     
     calculateBtn.disabled = true;
     calculateBtn.innerHTML = `<span class="spinner-sm"></span> Đang phân tích...`;
+    resultContainer.innerHTML = '';
     
     try {
         const resultObject = await callGeminiAPI(prompt, uploadedImage);
-        if (resultObject) {
-            lastGeminiResult = resultObject;
-            
-            const totalCost = Number(resultObject.totalCost || 0);
-            const suggestedPrice = Number(resultObject.suggestedSellingPrice || 0);
-            const estimatedProfit = suggestedPrice - totalCost;
-
-            totalCostValue.textContent = `${totalCost.toLocaleString('vi-VN')}đ`;
-            suggestedPriceValue.textContent = `${suggestedPrice.toLocaleString('vi-VN')}đ`;
-            estimatedProfitValue.textContent = `${estimatedProfit.toLocaleString('vi-VN')}đ`;
-            priceSummaryContainer.classList.remove('hidden');
-            
-            if (resultObject.costBreakdown && Array.isArray(resultObject.costBreakdown)) {
-                renderCostBreakdown(resultObject.costBreakdown);
-            }
+        if (resultObject && resultObject.analysisText) {
+            const suggestedPrice = currentCalculation.totalCost * (1 + (profitMargin / 100));
+            lastGeminiResult = {
+                analysisText: resultObject.analysisText,
+                costBreakdown: currentCalculation.breakdown,
+                totalCost: currentCalculation.totalCost,
+                suggestedSellingPrice: suggestedPrice,
+                estimatedProfit: suggestedPrice - currentCalculation.totalCost
+            };
             resultContainer.textContent = resultObject.analysisText;
             saveItemBtn.disabled = false;
+            showToast('Phân tích AI hoàn tất!', 'success');
+        } else {
+            resultContainer.textContent = 'AI không thể đưa ra phân tích. Vui lòng thử lại.';
+            showToast('Không nhận được phân tích từ AI.', 'error');
         }
     } finally {
         calculateBtn.disabled = false;
-        calculateBtn.innerHTML = `<i class="fas fa-cogs"></i> Phân tích`;
+        calculateBtn.innerHTML = `<i class="fas fa-cogs"></i> Nhờ AI Phân tích`;
     }
 });
 
@@ -504,7 +631,7 @@ function listenForSavedItems() {
 function renderSavedItems(items) {
     savedItemsTableBody.innerHTML = '';
     if (items.length === 0) {
-        savedItemsTableBody.innerHTML = `<tr><td colspan="3" class="text-center p-4 text-gray-400">Chưa có hạng mục nào được lưu.</td></tr>`;
+        savedItemsTableBody.innerHTML = `<tr><td colspan="3" class="text-center p-4 text-gray-400">Chưa có dự án nào được lưu.</td></tr>`;
         return;
     }
     items.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
@@ -527,7 +654,7 @@ function renderSavedItems(items) {
 saveItemBtn.addEventListener('click', async () => {
     if (!currentUserId || !lastGeminiResult) return;
     const itemName = document.getElementById('item-name').value.trim();
-    if (!itemName) { showToast('Vui lòng nhập tên sản phẩm để lưu.', 'error'); return; }
+    if (!itemName) { showToast('Vui lòng nhập tên dự án để lưu.', 'error'); return; }
 
     const formData = {
         name: document.getElementById('item-name').value,
@@ -541,29 +668,18 @@ saveItemBtn.addEventListener('click', async () => {
         profitMargin: document.getElementById('profit-margin').value,
     };
 
-    // Recalculate profit to ensure saved data is consistent
-    const totalCost = Number(lastGeminiResult.totalCost || 0);
-    const suggestedPrice = Number(lastGeminiResult.suggestedSellingPrice || 0);
-    const estimatedProfit = suggestedPrice - totalCost;
-
     try {
         await addDoc(savedItemsCollectionRef, {
             name: itemName,
             formData: formData,
-            geminiAnalysis: {
-                analysisText: lastGeminiResult.analysisText,
-                costBreakdown: lastGeminiResult.costBreakdown || [],
-                totalCost: totalCost,
-                suggestedSellingPrice: suggestedPrice,
-                estimatedProfit: estimatedProfit // Save the client-calculated profit
-            },
+            geminiAnalysis: lastGeminiResult,
             createdAt: serverTimestamp()
         });
-        showToast(`Đã lưu thành công hạng mục "${itemName}"!`, 'success');
-        lastGeminiResult = null;
+        showToast(`Đã lưu thành công dự án "${itemName}"!`, 'success');
+        lastGeminiResult = null; // Reset to prevent re-saving same analysis
         saveItemBtn.disabled = true;
     } catch (error) { 
-        showToast('Lỗi khi lưu hạng mục.', 'error');
+        showToast('Lỗi khi lưu dự án.', 'error');
         console.error("Error saving item:", error); 
     }
 });
@@ -574,9 +690,9 @@ savedItemsTableBody.addEventListener('click', async e => {
     const id = btn.dataset.id;
 
     if (btn.classList.contains('delete-item-btn')) {
-        if (await showConfirm('Bạn có chắc chắn muốn xóa hạng mục này?')) {
+        if (await showConfirm('Bạn có chắc chắn muốn xóa dự án này?')) {
             await deleteDoc(doc(db, `users/${currentUserId}/savedItems`, id));
-            showToast('Đã xóa hạng mục.', 'info');
+            showToast('Đã xóa dự án.', 'info');
         }
     } else if (btn.classList.contains('copy-item-btn')) {
         const item = localSavedItems.find(i => i.id === id);
@@ -594,22 +710,24 @@ savedItemsTableBody.addEventListener('click', async e => {
 
             addedAccessories = item.formData.accessories ? [...item.formData.accessories] : [];
             renderAddedAccessories();
+            
+            // Trigger client-side calculation for the copied item
+            updateClientSideCosts();
 
             resultContainer.innerHTML = '';
-            priceSummaryContainer.classList.add('hidden');
-            costBreakdownContainer.innerHTML = '';
+            lastGeminiResult = null;
             saveItemBtn.disabled = true;
 
             showToast('Đã tải thông tin. Sẵn sàng để chỉnh sửa!', 'success');
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
-            showToast('Không thể tải dữ liệu mẫu cho hạng mục này.', 'error');
+            showToast('Không thể tải dữ liệu mẫu cho dự án này.', 'error');
         }
     } else if (btn.classList.contains('view-item-btn')) {
         const item = localSavedItems.find(i => i.id === id);
         if (item) {
             document.getElementById('view-item-title').textContent = item.name;
-            const analysisText = (item.geminiAnalysis && item.geminiAnalysis.analysisText) || item.geminiResult || "Không có nội dung chi tiết.";
+            const analysisText = (item.geminiAnalysis && item.geminiAnalysis.analysisText) || "Không có nội dung chi tiết.";
             document.getElementById('view-item-content').textContent = analysisText;
             openModal(viewItemModal);
         }
@@ -629,20 +747,12 @@ function renderChatMessage(message, role) {
 
     let content;
     if (role === 'typing') {
-        content = `
-            <div class="icon"><i class="fas fa-robot"></i></div>
-            <div class="message-content typing-indicator">
-                <span></span><span></span><span></span>
-            </div>
-        `;
+        content = `<div class="icon"><i class="fas fa-robot"></i></div><div class="message-content typing-indicator"><span></span><span></span><span></span></div>`;
     } else if (role === 'system') {
         content = `<p>${message}</p>`;
     } else {
         const iconClass = role === 'user' ? 'fa-user' : 'fa-robot';
-        content = `
-            <div class="icon"><i class="fas ${iconClass}"></i></div>
-            <div class="message-content">${message}</div>
-        `;
+        content = `<div class="icon"><i class="fas ${iconClass}"></i></div><div class="message-content">${message}</div>`;
     }
     
     messageWrapper.innerHTML = content;
@@ -669,10 +779,7 @@ chatForm.addEventListener('submit', async (e) => {
         const response = await fetch('/api/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chatHistory: chatHistory,
-                newChatMessage: userMessage
-            }),
+            body: JSON.stringify({ chatHistory: chatHistory, newChatMessage: userMessage }),
         });
 
         const result = await response.json();
@@ -698,14 +805,10 @@ chatForm.addEventListener('submit', async (e) => {
 async function callGeminiAPI(prompt, image) {
     const spinner = `<div class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75"><div class="spinner"></div></div>`;
     resultContainer.innerHTML = spinner;
-    costBreakdownContainer.innerHTML = '';
     saveItemBtn.disabled = true;
     lastGeminiResult = null;
-    priceSummaryContainer.classList.add('hidden');
 
     try {
-        // NOTE: We no longer send chatHistory for calculator requests to avoid context confusion.
-        // The serverless function has been updated to handle this.
         const response = await fetch('/api/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -725,3 +828,6 @@ async function callGeminiAPI(prompt, image) {
         return null;
     }
 }
+
+// Initial call to set up UI
+updateClientSideCosts();

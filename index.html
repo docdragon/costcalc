@@ -52,7 +52,7 @@
                 <button data-tab="calculator" class="tab-btn active"><i class="fas fa-magic"></i>Bảng tính giá</button>
                 <button data-tab="materials" class="tab-btn"><i class="fas fa-boxes"></i>Quản lý Vật tư</button>
                 <button data-tab="assistant" class="tab-btn"><i class="fas fa-robot"></i>Trợ lý AI</button>
-                <button data-tab="saved" class="tab-btn"><i class="fas fa-history"></i>Hạng mục đã lưu</button>
+                <button data-tab="saved" class="tab-btn"><i class="fas fa-folder-open"></i>Dự án đã lưu</button>
             </nav>
         </div>
 
@@ -69,7 +69,7 @@
                                 <div><label for="item-width" class="form-label">Rộng (mm)</label><input type="number" id="item-width" class="input-style" placeholder="Vd: 600"></div>
                                 <div><label for="item-height" class="form-label">Cao (mm)</label><input type="number" id="item-height" class="input-style" placeholder="Vd: 750"></div>
                             </div>
-                            <div class="form-group"><label for="item-name" class="form-label">Tên sản phẩm / hạng mục</label><input type="text" id="item-name" class="input-style" placeholder="Vd: Bàn làm việc chân sắt"></div>
+                            <div class="form-group"><label for="item-name" class="form-label">Tên sản phẩm / dự án</label><input type="text" id="item-name" class="input-style" placeholder="Vd: Bàn làm việc chân sắt"></div>
                             <div class="form-group">
                                 <label class="form-label">Vật liệu chính</label>
                                 <div class="grid-2-col">
@@ -81,7 +81,7 @@
                                 <label for="material-accessories" class="form-label">Phụ kiện & Vật tư khác</label>
                                 <div class="accessory-adder">
                                     <select id="material-accessories" class="input-style"></select>
-                                    <input type="number" id="accessory-quantity" class="input-style accessory-qty" placeholder="SL" value="1">
+                                    <input type="number" id="accessory-quantity" class="input-style accessory-qty" placeholder="SL" value="1" min="1">
                                     <button id="add-accessory-btn" class="btn btn-secondary accessory-add-btn"><i class="fas fa-plus"></i></button>
                                 </div>
                                 <ul id="accessories-list" class="accessory-list"></ul>
@@ -102,17 +102,21 @@
                                 <input type="file" id="image-input" class="hidden" accept="image/png, image/jpeg, image/webp">
                             </div>
                              <div class="form-group"><label for="product-description" class="form-label">Mô tả & Yêu cầu thêm</label><textarea id="product-description" rows="3" class="input-style" placeholder="Vd: Chân sắt sơn tĩnh điện, có 1 hộc kéo..."></textarea></div>
+                             
+                             <div id="cost-breakdown-container" class="pre-analysis-breakdown">
+                                <!-- Client-side cost breakdown will be rendered here -->
+                             </div>
                         </div>
                          <div class="login-prompt-view"><i class="fas fa-lock icon-prompt"></i><h3>Vui lòng đăng nhập</h3><p>Đăng nhập để sử dụng chức năng tính toán.</p></div>
                     </div>
                     <div class="card sidebar-card">
-                        <h2 class="card-header">Kết quả Phân tích</h2>
+                        <h2 class="card-header">Báo giá & Phân tích</h2>
                         <div class="form-group" style="margin-top: 0;">
                             <label for="profit-margin" class="form-label">Tỷ suất lợi nhuận mong muốn (%)</label>
                             <input type="number" id="profit-margin" class="input-style" placeholder="Vd: 50" value="50">
                         </div>
                         <div class="button-group">
-                            <button id="calculate-btn" class="btn btn-success full-width"><i class="fas fa-cogs"></i>Phân tích</button>
+                            <button id="calculate-btn" class="btn btn-success full-width"><i class="fas fa-cogs"></i>Nhờ AI Phân tích</button>
                             <button id="save-item-btn" class="btn btn-primary full-width" disabled><i class="fas fa-save"></i>Lưu lại</button>
                         </div>
                         
@@ -123,8 +127,7 @@
                         </div>
 
                         <div class="result-box">
-                            <div id="cost-breakdown-container"></div>
-                            <h3 class="result-box-header">Diễn giải chi tiết</h3>
+                            <h3 class="result-box-header">Phân tích &amp; Tư vấn từ AI</h3>
                             <div id="result-content" class="result-content-inner"></div>
                         </div>
                     </div>
@@ -178,7 +181,8 @@
                             <form id="chat-form" class="chat-input-area">
                                 <input type="text" id="chat-input" class="input-style chat-input" placeholder="Dạy AI hoặc đặt câu hỏi ở đây..." autocomplete="off">
                                 <button id="send-chat-btn" type="submit" class="btn btn-primary">
-                                    <i class="fas fa-paper-plane mr-2"></i> Gửi
+                                    <i class="fas fa-paper-plane"></i>
+                                    <span>Gửi</span>
                                 </button>
                             </form>
                         </div>
@@ -187,19 +191,19 @@
                 </div>
             </div>
 
-            <!-- Tab 4: Hạng mục đã lưu -->
+            <!-- Tab 4: Dự án đã lưu -->
             <div id="saved-tab" class="tab-pane hidden">
                  <div class="card">
                      <div class="content-wrapper saved-items-content">
-                        <h2 class="card-header">Các Hạng mục đã lưu</h2>
+                        <h2 class="card-header">Các Dự án đã lưu</h2>
                         <div class="table-wrapper">
                             <table class="data-table">
-                                <thead><tr><th class="th-style">Tên Hạng mục</th><th class="th-style">Ngày tạo</th><th class="th-style text-center">Hành động</th></tr></thead>
+                                <thead><tr><th class="th-style">Tên Dự án</th><th class="th-style">Ngày tạo</th><th class="th-style text-center">Hành động</th></tr></thead>
                                 <tbody id="saved-items-table-body"></tbody>
                             </table>
                         </div>
                     </div>
-                    <div class="login-prompt-view"><i class="fas fa-lock icon-prompt"></i><h3>Vui lòng đăng nhập</h3><p>Đăng nhập để xem các hạng mục đã lưu.</p></div>
+                    <div class="login-prompt-view"><i class="fas fa-lock icon-prompt"></i><h3>Vui lòng đăng nhập</h3><p>Đăng nhập để xem các dự án đã lưu.</p></div>
                  </div>
             </div>
         </main>
