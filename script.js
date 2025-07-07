@@ -460,20 +460,28 @@ calculateBtn.addEventListener('click', async () => {
 
     const prompt = `Bạn là chuyên gia dự toán chi phí và định giá sản phẩm nội thất. Hãy phân tích và báo giá cho sản phẩm sau, dựa vào mô tả và hình ảnh được cung cấp (nếu có). Toàn bộ cuộc trò chuyện trước đó (nếu có) là những quy tắc và hướng dẫn của người dùng, hãy tuân thủ chúng:\n\n**Tên sản phẩm:** ${itemName}\n**Kích thước:** ${dimensions}\n**Danh sách vật tư được chọn:**\n${materialsText}\n**Yêu cầu thêm:** ${description || 'Không có'}\n\n**Nhiệm vụ:**\n1.  **Phân tích chi tiết (analysisText):** Diễn giải logic tính toán, giải thích các hạng mục và đưa ra các tư vấn hữu ích. Toàn bộ phần này sẽ được đặt trong trường JSON "analysisText".\n2.  **Bóc tách chi phí (costBreakdown):** Dựa trên phân tích, tạo một mảng các đối tượng JSON. Mỗi đối tượng đại diện cho một loại vật tư sử dụng và phải có các trường: "item" (tên vật tư), "quantity" (số lượng ước tính, dạng chuỗi có kèm đơn vị, vd: "1.5 tấm"), "unitCost" (đơn giá, dạng số), và "totalCost" (thành tiền, dạng số). Đặt mảng này vào trường "costBreakdown".\n3.  **Tổng chi phí (totalCost):** Xác định con số TỔNG CHI PHÍ VẬT TƯ cuối cùng và đặt nó vào trường "totalCost".\n4.  **Giá bán đề xuất (suggestedSellingPrice):** Dựa trên tổng chi phí, độ phức tạp, và giá thị trường, hãy đề xuất một mức GIÁ BÁN HỢP LÝ (với tỷ suất lợi nhuận mục tiêu khoảng ${profitMargin}%) và đặt nó vào trường "suggestedSellingPrice".\n5.  **Lợi nhuận dự kiến (estimatedProfit):** Tính toán LỢI NHUẬN DỰ KIẾN (Giá bán - Tổng chi phí) và đặt nó vào trường "estimatedProfit".\n\n**Yêu cầu định dạng đầu ra:**\nHãy trả về một đối tượng JSON duy nhất, không có bất kỳ văn bản nào khác bên ngoài. JSON phải có cấu trúc như sau:\n{\n  "analysisText": "Toàn bộ bài phân tích chi tiết của bạn ở đây...",\n  "costBreakdown": [ { "item": "Ván MDF", "quantity": "1.5 tấm", "unitCost": 550000, "totalCost": 825000 } ],\n  "totalCost": <con_số_tổng_chi_phí_vật_tư>,\n  "suggestedSellingPrice": <con_số_giá_bán_hợp_lý>,\n  "estimatedProfit": <con_số_lợi_nhuận_dự_kiến>\n}\n\n**Danh sách vật tư đầy đủ (để tham khảo đơn giá):**\n${fullMaterialsList}`;
     
-    const resultObject = await callGeminiAPI(prompt, uploadedImage);
-    if (resultObject) {
-        lastGeminiResult = resultObject;
-        
-        totalCostValue.textContent = `${Number(resultObject.totalCost || 0).toLocaleString('vi-VN')}đ`;
-        suggestedPriceValue.textContent = `${Number(resultObject.suggestedSellingPrice || 0).toLocaleString('vi-VN')}đ`;
-        estimatedProfitValue.textContent = `${Number(resultObject.suggestedProfit || 0).toLocaleString('vi-VN')}đ`;
-        priceSummaryContainer.classList.remove('hidden');
-        
-        if (resultObject.costBreakdown && Array.isArray(resultObject.costBreakdown)) {
-            renderCostBreakdown(resultObject.costBreakdown);
+    calculateBtn.disabled = true;
+    calculateBtn.innerHTML = `<span class="spinner-sm"></span> Đang phân tích...`;
+    
+    try {
+        const resultObject = await callGeminiAPI(prompt, uploadedImage);
+        if (resultObject) {
+            lastGeminiResult = resultObject;
+            
+            totalCostValue.textContent = `${Number(resultObject.totalCost || 0).toLocaleString('vi-VN')}đ`;
+            suggestedPriceValue.textContent = `${Number(resultObject.suggestedSellingPrice || 0).toLocaleString('vi-VN')}đ`;
+            estimatedProfitValue.textContent = `${Number(resultObject.estimatedProfit || 0).toLocaleString('vi-VN')}đ`;
+            priceSummaryContainer.classList.remove('hidden');
+            
+            if (resultObject.costBreakdown && Array.isArray(resultObject.costBreakdown)) {
+                renderCostBreakdown(resultObject.costBreakdown);
+            }
+            resultContainer.textContent = resultObject.analysisText;
+            saveItemBtn.disabled = false;
         }
-        resultContainer.textContent = resultObject.analysisText;
-        saveItemBtn.disabled = false;
+    } finally {
+        calculateBtn.disabled = false;
+        calculateBtn.innerHTML = `<i class="fas fa-cogs"></i>Phân tích`;
     }
 });
 

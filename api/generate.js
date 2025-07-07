@@ -28,12 +28,7 @@ export default async function handler(request, response) {
 
         // --- Handle Calculator Request ---
         if (prompt) {
-            const calcChat = ai.chats.create({
-                model,
-                history: chatHistory || [],
-                config: { responseMimeType: "application/json" }
-            });
-
+             // Construct the prompt parts for the latest user message
             const promptParts = [];
             if (image && image.data && image.mimeType) {
                 promptParts.push({
@@ -45,7 +40,14 @@ export default async function handler(request, response) {
             }
             promptParts.push({ text: prompt });
 
-            const genAIResponse = await calcChat.sendMessage({ parts: promptParts });
+            // Combine history with the new user message
+            const contents = [...(chatHistory || []), { role: 'user', parts: promptParts }];
+
+            const genAIResponse = await ai.models.generateContent({
+                model: model,
+                contents: contents,
+                config: { responseMimeType: "application/json" }
+            });
 
             // The response from Gemini should already be JSON text because of responseMimeType
             let jsonStr = genAIResponse.text.trim();
