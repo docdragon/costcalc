@@ -545,6 +545,48 @@ function renderCostBreakdown(breakdownData) {
     costBreakdownContainer.innerHTML = tableHTML;
 }
 
+function formatAnalysisToHtml(analysisData) {
+    if (!analysisData) return '<p>Không có phân tích.</p>';
+    
+    // Handle old format for backward compatibility in saved items
+    if (typeof analysisData.analysisText === 'string') {
+        // A simple way to render markdown-like text
+        return `<p>${analysisData.analysisText.replace(/\n/g, '<br>')}</p>`;
+    }
+    
+    // Handle new structured format
+    let html = '';
+    
+    if (analysisData.keyObservations && analysisData.keyObservations.length > 0) {
+        html += `<h4><i class="fas fa-search-dollar"></i> Điểm Lưu Ý Chính</h4><ul>`;
+        analysisData.keyObservations.forEach(item => { html += `<li>${item}</li>`; });
+        html += `</ul>`;
+    }
+    
+    if (analysisData.hiddenCosts && analysisData.hiddenCosts.length > 0) {
+        html += `<h4><i class="fas fa-file-invoice-dollar"></i> Chi Phí Ẩn Tiềm Tàng</h4><ul>`;
+        analysisData.hiddenCosts.forEach(item => { html += `<li>${item}</li>`; });
+        html += `</ul>`;
+    }
+    
+    if (analysisData.optimizationTips && analysisData.optimizationTips.length > 0) {
+        html += `<h4><i class="fas fa-lightbulb"></i> Gợi Ý Tối Ưu Hóa</h4><ul>`;
+        analysisData.optimizationTips.forEach(item => { html += `<li>${item}</li>`; });
+        html += `</ul>`;
+    }
+    
+    if (analysisData.summary) {
+        html += `<h4><i class="fas fa-flag-checkered"></i> Tổng Kết</h4><p>${analysisData.summary}</p>`;
+    }
+
+    // Fallback if structure is unexpected but not the old format
+    if (html === '') {
+        return '<p>Không thể hiển thị phân tích. Dữ liệu có định dạng không mong đợi.</p>';
+    }
+    
+    return html;
+}
+
 calculateBtn.addEventListener('click', async () => {
     if (!currentUserId) { showToast('Vui lòng đăng nhập để dùng chức năng này.', 'error'); return; }
     if (currentCalculation.totalCost <= 0) {
@@ -562,14 +604,13 @@ calculateBtn.addEventListener('click', async () => {
     ).join('\n');
     const suggestedPriceText = Math.round(currentCalculation.totalCost * (1 + profitMargin/100)).toLocaleString('vi-VN');
 
-    const prompt = `Bạn là chuyên gia tư vấn sản xuất nội thất. Người dùng đã tạo một bảng tính chi phí sơ bộ. Nhiệm vụ của bạn là phân tích và đưa ra tư vấn.
+    const prompt = `Bạn là chuyên gia tư vấn sản xuất nội thất. Người dùng đã tạo một bảng tính chi phí sơ bộ.
 
 **Thông tin sản phẩm:**
 - **Tên:** ${itemName}
 - **Kích thước:** ${dimensions}
 - **Mô tả thêm:** ${description || 'Không có'}
 ${chatHistory.length > 0 ? `\n**Lưu ý từ người dùng (toàn bộ cuộc hội thoại trước):**\n${chatHistory.map(c => `${c.role}: ${c.parts[0].text}`).join('\n')}` : ''}
-
 
 **Bảng tính chi phí sơ bộ của người dùng:**
 ${breakdownText}
@@ -578,18 +619,25 @@ ${breakdownText}
 - **Giá bán đề xuất (tạm tính):** ${suggestedPriceText}đ
 
 **Nhiệm vụ của bạn:**
-1.  **Đánh giá & Nhận xét:** Nhận xét nhanh về bảng tính chi phí. Các ước tính về số lượng (tấm ván, mét nẹp) có hợp lý với kích thước đã cho không? Có điểm nào cần lưu ý không (ví dụ: "Ước tính 0.25 tấm ván có vẻ hợp lý, nhưng hãy nhớ tính đến đường cưa và sai sót.")
-2.  **Tư vấn chuyên sâu:** Đưa ra các lời khuyên giá trị.
-    -   **Chi phí ẩn:** Người dùng có thể đã bỏ quên những chi phí nào? (ví dụ: nhân công, quản lý, điện nước, vận chuyển, hao mòn máy móc). Hãy gợi ý cách tính các chi phí này.
-    -   **Tối ưu hóa:** Có cách nào để giảm chi phí mà vẫn đảm bảo chất lượng không? (ví dụ: gợi ý vật liệu thay thế, phương án ghép ván để tiết kiệm).
-    -   **Định vị sản phẩm:** Dựa trên chi phí và mô tả, sản phẩm này nên được định vị ở phân khúc nào? Gợi ý các điểm nhấn để marketing sản phẩm.
-3.  **Tổng hợp:** Tóm tắt lại các điểm chính một cách rõ ràng, chuyên nghiệp.
+Phân tích thông tin trên một cách **ngắn gọn, súc tích, đi thẳng vào vấn đề**. Tập trung vào những điểm quan trọng nhất mà một chủ xưởng cần biết ngay lập tức.
 
 **Yêu cầu định dạng đầu ra:**
-Trả về một đối tượng JSON duy nhất có cấu trúc:
+Trả về một đối tượng JSON duy nhất. KHÔNG thêm bất kỳ giải thích nào. Cấu trúc phải là:
 {
-  "analysisText": "Toàn bộ bài phân tích chi tiết của bạn ở đây, sử dụng markdown để định dạng cho đẹp mắt (tiêu đề, danh sách, in đậm)."
-}`;
+  "keyObservations": [
+    "Một nhận xét quan trọng về tính hợp lý của chi phí hoặc số lượng vật tư.",
+    "Một điểm đáng ngờ hoặc không nhất quán trong dữ liệu được cung cấp (ví dụ: kích thước không khớp hình ảnh, phụ kiện không cần thiết)."
+  ],
+  "hiddenCosts": [
+    "Liệt kê ngắn gọn chi phí ẩn quan trọng nhất bị bỏ qua (vd: 'Chi phí nhân công lắp ráp').",
+    "Một chi phí ẩn khác (vd: 'Chi phí vật tư phụ: keo, vít, nẹp...')."
+  ],
+  "optimizationTips": [
+    "Một mẹo tối ưu hóa chi phí cụ thể và dễ thực hiện."
+  ],
+  "summary": "Một câu tổng kết ngắn gọn về tiềm năng hoặc rủi ro chính của sản phẩm này."
+}
+`;
     
     calculateBtn.disabled = true;
     calculateBtn.innerHTML = `<span class="spinner-sm"></span> Đang phân tích...`;
@@ -597,20 +645,20 @@ Trả về một đối tượng JSON duy nhất có cấu trúc:
     
     try {
         const resultObject = await callGeminiAPI(prompt, uploadedImage);
-        if (resultObject && resultObject.analysisText) {
+        if (resultObject) {
             const suggestedPrice = currentCalculation.totalCost * (1 + (profitMargin / 100));
             lastGeminiResult = {
-                analysisText: resultObject.analysisText,
+                ...resultObject, // contains keyObservations, hiddenCosts, etc.
                 costBreakdown: currentCalculation.breakdown,
                 totalCost: currentCalculation.totalCost,
                 suggestedSellingPrice: suggestedPrice,
                 estimatedProfit: suggestedPrice - currentCalculation.totalCost
             };
-            resultContainer.textContent = resultObject.analysisText;
+            resultContainer.innerHTML = formatAnalysisToHtml(resultObject);
             saveItemBtn.disabled = false;
             showToast('Phân tích AI hoàn tất!', 'success');
         } else {
-            resultContainer.textContent = 'AI không thể đưa ra phân tích. Vui lòng thử lại.';
+            resultContainer.innerHTML = '<p>AI không thể đưa ra phân tích. Vui lòng thử lại.</p>';
             showToast('Không nhận được phân tích từ AI.', 'error');
         }
     } finally {
@@ -727,8 +775,8 @@ savedItemsTableBody.addEventListener('click', async e => {
         const item = localSavedItems.find(i => i.id === id);
         if (item) {
             document.getElementById('view-item-title').textContent = item.name;
-            const analysisText = (item.geminiAnalysis && item.geminiAnalysis.analysisText) || "Không có nội dung chi tiết.";
-            document.getElementById('view-item-content').textContent = analysisText;
+            const viewContent = document.getElementById('view-item-content');
+            viewContent.innerHTML = formatAnalysisToHtml(item.geminiAnalysis);
             openModal(viewItemModal);
         }
     }
