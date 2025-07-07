@@ -1,4 +1,5 @@
 
+
 import { GoogleGenAI } from "@google/genai";
 
 // This is a Vercel Serverless Function.
@@ -21,13 +22,15 @@ export default async function handler(request, response) {
 
         // --- Handle Chat Request ---
         if (newChatMessage) {
-            // We receive the full history and the new message separately.
-            // The last message in chatHistory is the new user message, so we exclude it from the history passed to create().
-            const historyForChat = chatHistory ? chatHistory.slice(0, -1) : [];
-            const chat = ai.chats.create({ model, history: historyForChat });
-            
-            // As per the documentation, sendMessage expects an object with a `message` property.
-            const result = await chat.sendMessage({message: newChatMessage});
+            // The client sends the entire chat history, including the latest user message.
+            // The `chatHistory` array is already in the format required by `generateContent` for multi-turn conversations.
+            // This is a more robust, stateless approach than creating a new chat session for each message.
+            const result = await ai.models.generateContent({
+                model: model,
+                contents: chatHistory,
+            });
+
+            // The response from generateContent contains the text we need to send back.
             return response.status(200).json({ text: result.text });
         }
 
