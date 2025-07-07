@@ -284,7 +284,7 @@ tbody tr:last-child td { border-bottom: none; }
 .bg-yellow .price-value { color: #ca8a04; }
 
 .result-box { margin-top: 1.5rem; }
-.result-box-header { font-size: 1.125rem; font-weight: 600; color: var(--text-dark); margin-bottom: 0.5rem; }
+.result-box-header { font-size: 1.125rem; font-weight: 600; color: var(--text-dark); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;}
 .pre-analysis-breakdown {
     margin-top: 2rem;
     border-top: 1px solid var(--border-color);
@@ -659,3 +659,72 @@ tbody tr:last-child td { border-bottom: none; }
 /* --- Utility --- */
 .hidden { display: none !important; }
 .mr-2 { margin-right: 0.5rem; }
+
+/* --- AI Cutting Layout --- */
+.cutting-layout-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-top: 1rem;
+}
+
+#cutting-layout-summary {
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 0.75rem;
+    background-color: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 0.5rem;
+    color: var(--primary-color);
+}
+#cutting-layout-summary p {
+    margin: 0;
+    color: var(--primary-color);
+}
+#cutting-layout-summary p + p {
+    margin-top: 0.25rem;
+}
+
+.cutting-sheet-wrapper {
+    margin-bottom: 1rem;
+}
+
+.cutting-sheet-title {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.cutting-sheet {
+    position: relative;
+    width: 100%;
+    height: 0;
+    /* Aspect ratio for 1220x2440 -> 2440/1220 = 2 */
+    padding-bottom: 200%; 
+    background-color: #f9fafb;
+    border: 1px solid var(--border-color);
+    box-sizing: border-box;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.cutting-piece {
+    position: absolute;
+    box-sizing: border-box;
+    border: 1px solid var(--primary-hover);
+    background-color: rgba(79, 70, 229, 0.1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+.cutting-piece-label {
+    font-size: 10px;
+    color: var(--primary-color);
+    font-weight: 500;
+    text-align: center;
+    padding: 2px;
+    white-space: normal;
+    word-break: break-word;
+}
