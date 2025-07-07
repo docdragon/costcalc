@@ -26,8 +26,8 @@ export default async function handler(request, response) {
             const historyForChat = chatHistory ? chatHistory.slice(0, -1) : [];
             const chat = ai.chats.create({ model, history: historyForChat });
             
-            // sendMessage expects the message string or parts directly.
-            const result = await chat.sendMessage(newChatMessage);
+            // As per the documentation, sendMessage expects an object with a `message` property.
+            const result = await chat.sendMessage({message: newChatMessage});
             return response.status(200).json({ text: result.text });
         }
 
