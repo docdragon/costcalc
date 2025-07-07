@@ -72,6 +72,7 @@ let currentCalculation = { breakdown: [], totalCost: 0 };
 const sampleMaterials = [
     { name: 'Ván MDF An Cường chống ẩm 17mm', type: 'Ván', price: 550000, unit: 'tấm', notes: 'Khổ 1220x2440mm' },
     { name: 'Ván HDF siêu chống ẩm 17mm', type: 'Ván', price: 780000, unit: 'tấm', notes: 'Khổ 1220x2440mm' },
+    { name: 'Ván Plywood 9mm', type: 'Ván', price: 250000, unit: 'tấm', notes: 'Làm hậu tủ' },
     { name: 'Nẹp chỉ PVC An Cường 1mm', type: 'Cạnh', price: 5000, unit: 'mét', notes: 'Cùng màu ván' },
     { name: 'Bản lề hơi Ivan giảm chấn', type: 'Phụ kiện', price: 15000, unit: 'cái', notes: 'Loại thẳng' },
     { name: 'Ray bi 3 tầng', type: 'Phụ kiện', price: 45000, unit: 'cặp', notes: 'Dài 45cm' },
@@ -362,11 +363,22 @@ function handleImageFile(file) {
 
 // --- Calculator Tab Logic ---
 function populateSelects() {
-    const selects = { 'material-wood': 'Ván', 'material-edge': 'Cạnh', 'material-accessories': 'Phụ kiện' };
+    const selects = { 
+        'material-wood': 'Ván', 
+        'material-edge': 'Cạnh', 
+        'material-accessories': 'Phụ kiện',
+        'material-back-panel': 'Ván'
+    };
+
     for (const [selectId, type] of Object.entries(selects)) {
         const selectEl = document.getElementById(selectId);
+        if (!selectEl) continue;
         const currentValue = selectEl.value;
-        selectEl.innerHTML = '<option value="">-- Chọn --</option>';
+        if (selectId === 'material-back-panel') {
+            selectEl.innerHTML = '<option value="">-- Dùng chung ván chính --</option>';
+        } else {
+            selectEl.innerHTML = '<option value="">-- Chọn --</option>';
+        }
         localMaterials[type].forEach(m => { selectEl.innerHTML += `<option value="${m.id}">${m.name}</option>`; });
         selectEl.value = currentValue;
     }
@@ -438,8 +450,10 @@ function updateClientSideCosts() {
 
     const woodId = document.getElementById('material-wood').value;
     const edgeId = document.getElementById('material-edge').value;
+    const backPanelId = document.getElementById('material-back-panel').value;
     const wood = localMaterials['Ván'].find(m => m.id === woodId);
     const edge = localMaterials['Cạnh'].find(m => m.id === edgeId);
+    const backPanelWood = localMaterials['Ván'].find(m => m.id === backPanelId);
 
     let totalCost = 0;
     const breakdown = [];
@@ -447,32 +461,56 @@ function updateClientSideCosts() {
     // 2. Calculate
     // Wood
     if (wood && length > 0 && width > 0 && height > 0) {
-        let woodSurfaceArea = 0;
+        let mainCarcassArea = 0;
+        // The back panel is always calculated as L*H, separated from the main body logic.
+        const backPanelArea = length * height; 
+
         switch (itemType) {
-            case 'tu-bep-duoi': // bottom, 2 sides, front-material, 1 shelf. No top, no back.
-                woodSurfaceArea = (2 * length * width) + (2 * width * height) + (length * height);
+            case 'tu-bep-duoi': // bottom, 2 sides, 1 shelf. Back is calculated separately.
+                mainCarcassArea = (length * width) + (2 * width * height) + (length * height);
                 break;
-            case 'tu-bep-tren': // top, bottom, 2 sides, front-material, 1 shelf. No back.
-                woodSurfaceArea = (3 * length * width) + (2 * width * height) + (length * height);
+            case 'tu-bep-tren': // top, bottom, 2 sides, 1 shelf. Back is calculated separately.
+                mainCarcassArea = (2 * length * width) + (2 * width * height) + (length * height);
                 break;
-            case 'tu-ao': // Full 6-sided box (carcass + doors)
-                woodSurfaceArea = 2 * ((length * width) + (length * height) + (width * height));
+            case 'tu-ao': // Top, bottom, 2 sides, front door(s). Back is calculated separately.
+                mainCarcassArea = 2 * (length * width) + 2 * (width * height) + (length * height);
                 break;
             case 'khac':
-            default: // Standard 5-sided cabinet (carcass: top, bottom, 2 sides, back. no front)
-                woodSurfaceArea = (2 * length * width) + (2 * width * height) + (length * height);
+            default: // Standard 4-sided carcass (top, bottom, 2 sides). Back is calculated separately.
+                mainCarcassArea = (2 * length * width) + (2 * width * height);
                 break;
         }
 
         const standardPanelArea = 1220 * 2440;
-        const wasteFactor = 1.3; // Using a slightly more generous waste factor
-        const panelsNeeded = (woodSurfaceArea / standardPanelArea) * wasteFactor;
-        const woodCost = panelsNeeded * wood.price;
-        if (woodCost > 0) {
-            breakdown.push({ item: wood.name, quantity: `${panelsNeeded.toFixed(2)} tấm`, unitCost: wood.price, totalCost: woodCost });
-            totalCost += woodCost;
+        const wasteFactor = 1.3;
+
+        // If a separate back panel material is selected
+        if (backPanelWood) {
+            // Main wood cost
+            const mainPanelsNeeded = (mainCarcassArea / standardPanelArea) * wasteFactor;
+            const mainWoodCost = mainPanelsNeeded * wood.price;
+            if (mainWoodCost > 0) {
+                breakdown.push({ item: wood.name, quantity: `${mainPanelsNeeded.toFixed(2)} tấm`, unitCost: wood.price, totalCost: mainWoodCost });
+                totalCost += mainWoodCost;
+            }
+            // Back panel wood cost
+            const backPanelsNeeded = (backPanelArea / standardPanelArea) * wasteFactor;
+            const backPanelCost = backPanelsNeeded * backPanelWood.price;
+            if (backPanelCost > 0) {
+                breakdown.push({ item: `${backPanelWood.name} (Hậu)`, quantity: `${backPanelsNeeded.toFixed(2)} tấm`, unitCost: backPanelWood.price, totalCost: backPanelCost });
+                totalCost += backPanelCost;
+            }
+        } else { // Use main wood for everything
+            const totalWoodArea = mainCarcassArea + backPanelArea;
+            const panelsNeeded = (totalWoodArea / standardPanelArea) * wasteFactor;
+            const woodCost = panelsNeeded * wood.price;
+            if (woodCost > 0) {
+                breakdown.push({ item: wood.name, quantity: `${panelsNeeded.toFixed(2)} tấm`, unitCost: wood.price, totalCost: woodCost });
+                totalCost += woodCost;
+            }
         }
     }
+
 
     // Edge banding
     if (edge && length > 0 && width > 0 && height > 0) {
@@ -516,7 +554,7 @@ function updateClientSideCosts() {
 
 const calculatorInputs = ['item-length', 'item-width', 'item-height', 'profit-margin'];
 calculatorInputs.forEach(id => document.getElementById(id).addEventListener('input', updateClientSideCosts));
-const calculatorSelects = ['material-wood', 'material-edge', 'item-type'];
+const calculatorSelects = ['material-wood', 'material-edge', 'item-type', 'material-back-panel'];
 calculatorSelects.forEach(id => document.getElementById(id).addEventListener('change', updateClientSideCosts));
 
 
@@ -715,6 +753,7 @@ saveItemBtn.addEventListener('click', async () => {
         itemType: document.getElementById('item-type').value,
         woodId: document.getElementById('material-wood').value,
         edgeId: document.getElementById('material-edge').value,
+        backPanelId: document.getElementById('material-back-panel').value,
         accessories: addedAccessories,
         description: document.getElementById('product-description').value,
         profitMargin: document.getElementById('profit-margin').value,
@@ -758,6 +797,7 @@ savedItemsTableBody.addEventListener('click', async e => {
             document.getElementById('item-type').value = item.formData.itemType || 'khac';
             document.getElementById('material-wood').value = item.formData.woodId || '';
             document.getElementById('material-edge').value = item.formData.edgeId || '';
+            document.getElementById('material-back-panel').value = item.formData.backPanelId || '';
             document.getElementById('product-description').value = item.formData.description || '';
             document.getElementById('profit-margin').value = item.formData.profitMargin || '50';
 

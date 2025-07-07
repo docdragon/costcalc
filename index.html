@@ -72,17 +72,21 @@
                             <div class="form-group">
                                 <label for="item-type" class="form-label">Loại sản phẩm</label>
                                 <select id="item-type" class="input-style">
-                                    <option value="khac">Khác (Hộp 5 mặt, hở trước)</option>
+                                    <option value="khac">Khác (Hộp 4 mặt, hở trước & sau)</option>
                                     <option value="tu-bep-duoi">Tủ bếp dưới</option>
                                     <option value="tu-bep-tren">Tủ bếp trên</option>
-                                    <option value="tu-ao">Tủ áo (Hộp 6 mặt, kín)</option>
+                                    <option value="tu-ao">Tủ áo (Thùng, cánh, không hậu)</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Vật liệu chính</label>
-                                <div class="grid-2-col">
-                                    <div><label for="material-wood" class="sub-label">Ván</label><select id="material-wood" class="input-style"></select></div>
+                                <label class="form-label">Vật liệu chính & Hậu tủ</label>
+                                <div class="grid-2-col" style="margin-bottom: 1rem;">
+                                    <div><label for="material-wood" class="sub-label">Ván chính (Thùng, Cánh)</label><select id="material-wood" class="input-style"></select></div>
                                     <div><label for="material-edge" class="sub-label">Nẹp cạnh</label><select id="material-edge" class="input-style"></select></div>
+                                </div>
+                                <div>
+                                    <label for="material-back-panel" class="sub-label">Ván hậu tủ (Để trống nếu dùng chung ván chính)</label>
+                                    <select id="material-back-panel" class="input-style"></select>
                                 </div>
                             </div>
                             <div class="form-group">
@@ -90,129 +94,217 @@
                                 <div class="accessory-adder">
                                     <select id="material-accessories" class="input-style"></select>
                                     <input type="number" id="accessory-quantity" class="input-style accessory-qty" placeholder="SL" value="1" min="1">
-                                    <button id="add-accessory-btn" class="btn btn-secondary accessory-add-btn"><i class="fas fa-plus"></i></button>
+                                    <button id="add-accessory-btn" class="btn btn-secondary accessory-add-btn"><i class="fas fa-plus"></i> Thêm</button>
                                 </div>
                                 <ul id="accessories-list" class="accessory-list"></ul>
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Ảnh minh họa sản phẩm (Tùy chọn)</label>
+                                <label for="product-description" class="form-label">Mô tả hoặc ghi chú thêm về sản phẩm</label>
+                                <textarea id="product-description" class="input-style" rows="3" placeholder="Vd: Cánh tủ vát cạnh, không tay nắm. Có 2 ngăn kéo..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Hình ảnh tham khảo (Tùy chọn)</label>
                                 <div id="image-uploader" class="image-uploader">
-                                    <div id="image-upload-prompt" class="image-upload-prompt">
-                                        <i class="fas fa-image"></i>
-                                        <p>Kéo và thả hoặc nhấn để tải ảnh lên</p>
-                                        <span>Hỗ trợ PNG, JPG, WEBP</span>
+                                    <input type="file" id="image-input" class="hidden" accept="image/*">
+                                    <div id="image-upload-prompt">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <p>Nhấp hoặc kéo thả ảnh vào đây</p>
+                                        <span>AI sẽ phân tích ảnh để đưa ra gợi ý chính xác hơn</span>
                                     </div>
                                     <div id="image-preview-container" class="hidden">
-                                        <img id="image-preview" src="#" alt="Xem trước sản phẩm">
+                                        <img id="image-preview" src="#" alt="Xem trước ảnh">
                                         <button id="remove-image-btn" class="remove-image-btn">&times;</button>
                                     </div>
                                 </div>
-                                <input type="file" id="image-input" class="hidden" accept="image/png, image/jpeg, image/webp">
                             </div>
-                             <div class="form-group"><label for="product-description" class="form-label">Mô tả & Yêu cầu thêm</label><textarea id="product-description" rows="3" class="input-style" placeholder="Vd: Chân sắt sơn tĩnh điện, có 1 hộc kéo..."></textarea></div>
-                             
-                             <div id="cost-breakdown-container" class="pre-analysis-breakdown">
-                                <!-- Client-side cost breakdown will be rendered here -->
-                             </div>
+                            <div class="pre-analysis-breakdown">
+                                <div class="form-group">
+                                    <label for="profit-margin" class="form-label">Tỷ suất lợi nhuận mong muốn (%)</label>
+                                    <input type="number" id="profit-margin" class="input-style" value="50">
+                                </div>
+                                <div class="button-group">
+                                    <button id="calculate-btn" class="btn btn-primary full-width">
+                                        <i class="fas fa-cogs"></i> Nhờ AI Phân tích
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="cost-breakdown-container" class="result-box"></div>
+                            <div id="price-summary-container" class="result-box hidden">
+                                <div class="grid-3-col">
+                                    <div class="price-card bg-indigo">
+                                        <div class="price-label">Tổng Chi Phí Vật Tư</div>
+                                        <div id="total-cost-value" class="price-value">0đ</div>
+                                    </div>
+                                    <div class="price-card bg-yellow">
+                                        <div class="price-label">Giá Bán Đề Xuất</div>
+                                        <div id="suggested-price-value" class="price-value">0đ</div>
+                                    </div>
+                                    <div class="price-card bg-green">
+                                        <div class="price-label">Lợi Nhuận Ước Tính</div>
+                                        <div id="estimated-profit-value" class="price-value">0đ</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="result-box">
+                                <h3 class="result-box-header">Phân Tích & Gợi Ý từ AI</h3>
+                                <div id="result-content" class="result-content-inner">
+                                    <p>Kết quả phân tích từ AI sẽ xuất hiện ở đây sau khi bạn nhấn nút.</p>
+                                </div>
+                            </div>
+                            <div class="button-group">
+                                <button id="save-item-btn" class="btn btn-success full-width" disabled>
+                                    <i class="fas fa-save"></i> Lưu Dự án
+                                </button>
+                            </div>
                         </div>
-                         <div class="login-prompt-view"><i class="fas fa-lock icon-prompt"></i><h3>Vui lòng đăng nhập</h3><p>Đăng nhập để sử dụng chức năng tính toán.</p></div>
+                        <div class="login-prompt-view">
+                            <div class="icon-prompt"><i class="fas fa-lock"></i></div>
+                            <h3>Tính năng dành cho thành viên</h3>
+                            <p>Vui lòng đăng nhập để bắt đầu tính toán và lưu dự án của bạn.</p>
+                        </div>
                     </div>
-                    <div class="card sidebar-card">
-                        <h2 class="card-header">Báo giá & Phân tích</h2>
-                        <div class="form-group" style="margin-top: 0;">
-                            <label for="profit-margin" class="form-label">Tỷ suất lợi nhuận mong muốn (%)</label>
-                            <input type="number" id="profit-margin" class="input-style" placeholder="Vd: 50" value="50">
+                    <div class="sidebar-card card">
+                        <h2 class="card-header">Hướng Dẫn</h2>
+                        <div class="content-wrapper calculator-form-content">
+                             <h4><i class="fas fa-lightbulb"></i> Mẹo sử dụng</h4>
+                            <ul>
+                                <li><strong>Nhập Kích Thước:</strong> Bắt đầu bằng cách nhập kích thước cơ bản của sản phẩm.</li>
+                                <li><strong>Chọn Vật Tư:</strong> Chọn vật liệu từ danh sách đã có. Nếu chưa có, hãy thêm ở tab "Quản lý Vật tư".</li>
+                                <li><strong>Thêm Phụ Kiện:</strong> Đừng quên thêm các phụ kiện như bản lề, ray trượt.</li>
+                                <li><strong>Nhờ AI Phân Tích:</strong> Sau khi có chi phí sơ bộ, nhấn nút phân tích để AI tìm các chi phí ẩn và gợi ý tối ưu.</li>
+                                <li><strong>Dạy AI:</strong> Sử dụng tab "Trợ lý AI" để dạy cho AI về cách tính giá đặc thù của xưởng bạn. Các cuộc trò chuyện sẽ được ghi nhớ.</li>
+                            </ul>
                         </div>
-                        <div class="button-group">
-                            <button id="calculate-btn" class="btn btn-success full-width"><i class="fas fa-cogs"></i>Nhờ AI Phân tích</button>
-                            <button id="save-item-btn" class="btn btn-primary full-width" disabled><i class="fas fa-save"></i>Lưu lại</button>
-                        </div>
-                        
-                        <div id="price-summary-container" class="hidden">
-                            <div class="price-card bg-indigo"><p class="price-label">Tổng Chi Phí Vật Tư</p><p id="total-cost-value" class="price-value">0đ</p></div>
-                            <div class="price-card bg-green"><p class="price-label">Giá Bán Đề Xuất</p><p id="suggested-price-value" class="price-value">0đ</p></div>
-                             <div class="price-card bg-yellow"><p class="price-label">Lợi Nhuận Dự Kiến</p><p id="estimated-profit-value" class="price-value">0đ</p></div>
-                        </div>
-
-                        <div class="result-box">
-                            <h3 class="result-box-header">Phân tích &amp; Tư vấn từ AI</h3>
-                            <div id="result-content" class="result-content-inner"></div>
+                         <div class="login-prompt-view">
+                            <div class="icon-prompt"><i class="fas fa-info-circle"></i></div>
+                            <h3>Chào mừng!</h3>
+                            <p>Đăng nhập để mở khóa tất cả tính năng.</p>
                         </div>
                     </div>
                 </div>
             </div>
-
             <!-- Tab 2: Quản lý Vật tư -->
             <div id="materials-tab" class="tab-pane hidden">
                 <div class="card">
-                     <div class="content-wrapper materials-form-content">
+                    <h2 class="card-header">Quản lý Kho Vật tư</h2>
+                    <div class="content-wrapper materials-form-content">
                         <form id="material-form" class="material-form">
-                            <h3 class="form-title">Thêm / Sửa Vật tư</h3>
                             <input type="hidden" id="material-id">
                             <div class="grid-2-col">
-                                <div><label for="material-name" class="form-label">Tên vật tư</label><input type="text" id="material-name" placeholder="Vd: Ván MDF An Cường 17mm" required class="input-style"></div>
-                                <div><label for="material-type" class="form-label">Loại vật tư</label><select id="material-type" class="input-style"><option value="Ván">Ván</option><option value="Cạnh">Cạnh</option><option value="Phụ kiện">Phụ kiện</option></select></div>
+                                <div>
+                                    <label for="material-name" class="form-label">Tên vật tư</label>
+                                    <input type="text" id="material-name" class="input-style" placeholder="Vd: Ván MDF An Cường 17mm" required>
+                                </div>
+                                <div>
+                                    <label for="material-type" class="form-label">Loại vật tư</label>
+                                    <select id="material-type" class="input-style" required>
+                                        <option value="Ván">Ván</option>
+                                        <option value="Cạnh">Cạnh</option>
+                                        <option value="Phụ kiện">Phụ kiện</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="grid-2-col">
-                                <div><label for="material-price" class="form-label">Đơn giá</label><input type="number" id="material-price" placeholder="Vd: 550000" required class="input-style"></div>
-                                <div><label for="material-unit" class="form-label">Đơn vị tính</label><input type="text" id="material-unit" placeholder="Vd: tấm, mét, cái" required class="input-style"></div>
+                                <div>
+                                    <label for="material-price" class="form-label">Đơn giá</label>
+                                    <input type="number" id="material-price" class="input-style" placeholder="Vd: 550000" required>
+                                </div>
+                                <div>
+                                    <label for="material-unit" class="form-label">Đơn vị tính</label>
+                                    <input type="text" id="material-unit" class="input-style" placeholder="Vd: tấm, mét, cái" required>
+                                </div>
                             </div>
-                            <div><label for="material-notes" class="form-label">Ghi chú</label><input type="text" id="material-notes" placeholder="Vd: 1220x2440mm, chống ẩm" class="input-style"></div>
-                            <div class="button-group">
-                                <button type="submit" id="submit-button" class="btn btn-primary full-width"><i class="fas fa-plus"></i>Thêm Vật tư</button>
-                                <button type="button" id="cancel-edit-button" class="btn btn-secondary full-width hidden"><i class="fas fa-times"></i>Hủy</button>
+                            <div>
+                                <label for="material-notes" class="form-label">Ghi chú</label>
+                                <input type="text" id="material-notes" class="input-style" placeholder="Vd: Khổ 1220x2440, chống ẩm">
+                            </div>
+                            <div class="button-group" style="justify-content: flex-end;">
+                                <button type="button" id="cancel-edit-button" class="btn btn-secondary hidden">Hủy</button>
+                                <button type="submit" class="btn btn-primary"><i class="fas fa-plus mr-2"></i> Thêm Vật tư</button>
                             </div>
                         </form>
                         <div class="table-container">
-                            <h3 class="table-header">Danh sách Vật tư</h3>
+                             <h3 class="table-header">Danh sách Vật tư</h3>
                             <div class="table-wrapper">
                                 <table class="data-table">
-                                    <thead><tr><th class="th-style">Tên</th><th class="th-style">Loại</th><th class="th-style">Đơn giá</th><th class="th-style">Ghi chú</th><th class="th-style text-center">Hành động</th></tr></thead>
-                                    <tbody id="materials-table-body"></tbody>
+                                    <thead>
+                                        <tr>
+                                            <th class="th-style">Tên</th>
+                                            <th class="th-style">Loại</th>
+                                            <th class="th-style">Đơn giá</th>
+                                            <th class="th-style">Ghi chú</th>
+                                            <th class="th-style text-center">Thao tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="materials-table-body">
+                                        <!-- JS will render here -->
+                                    </tbody>
                                 </table>
                             </div>
                         </div>
                     </div>
-                    <div class="login-prompt-view"><i class="fas fa-lock icon-prompt"></i><h3>Vui lòng đăng nhập</h3><p>Đăng nhập để quản lý kho vật tư của bạn.</p></div>
+                    <div class="login-prompt-view">
+                        <div class="icon-prompt"><i class="fas fa-boxes"></i></div>
+                        <h3>Quản lý vật tư của bạn</h3>
+                        <p>Vui lòng đăng nhập để thêm, sửa, xóa các loại vật tư cho xưởng của mình.</p>
+                    </div>
                 </div>
             </div>
-            
-            <!-- Tab 3: AI Assistant -->
+
+            <!-- Tab 3: Trợ lý AI -->
             <div id="assistant-tab" class="tab-pane hidden">
                 <div class="card">
-                     <div class="content-wrapper assistant-content">
-                        <h2 class="card-header">Trò chuyện với Trợ lý AI</h2>
-                        <div class="chat-container">
+                    <h2 class="card-header">Trò chuyện với Trợ lý AI</h2>
+                    <div class="content-wrapper assistant-content">
+                        <div id="chat-container" class="chat-container">
                             <div id="chat-messages" class="chat-messages">
-                                <!-- Chat messages will be rendered here -->
+                                <!-- Messages will be rendered here by JS -->
                             </div>
                             <form id="chat-form" class="chat-input-area">
-                                <input type="text" id="chat-input" class="input-style chat-input" placeholder="Dạy AI hoặc đặt câu hỏi ở đây..." autocomplete="off">
-                                <button id="send-chat-btn" type="submit" class="btn btn-primary">
+                                <input type="text" id="chat-input" class="input-style chat-input" placeholder="Dạy AI hoặc đặt câu hỏi..." autocomplete="off">
+                                <button type="submit" id="send-chat-btn" class="btn btn-primary">
                                     <i class="fas fa-paper-plane"></i>
                                     <span>Gửi</span>
                                 </button>
                             </form>
                         </div>
                     </div>
-                    <div class="login-prompt-view"><i class="fas fa-lock icon-prompt"></i><h3>Vui lòng đăng nhập</h3><p>Đăng nhập để trò chuyện và dạy Trợ lý AI.</p></div>
+                    <div class="login-prompt-view">
+                        <div class="icon-prompt"><i class="fas fa-robot"></i></div>
+                        <h3>Trợ lý AI cá nhân</h3>
+                        <p>Vui lòng đăng nhập để bắt đầu trò chuyện và huấn luyện trợ lý AI.</p>
+                    </div>
                 </div>
             </div>
 
             <!-- Tab 4: Dự án đã lưu -->
             <div id="saved-tab" class="tab-pane hidden">
                  <div class="card">
-                     <div class="content-wrapper saved-items-content">
-                        <h2 class="card-header">Các Dự án đã lưu</h2>
-                        <div class="table-wrapper">
-                            <table class="data-table">
-                                <thead><tr><th class="th-style">Tên Dự án</th><th class="th-style">Ngày tạo</th><th class="th-style text-center">Hành động</th></tr></thead>
-                                <tbody id="saved-items-table-body"></tbody>
-                            </table>
+                    <h2 class="card-header">Dự án Đã Lưu</h2>
+                    <div class="content-wrapper saved-items-content">
+                        <div class="table-container">
+                            <div class="table-wrapper">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="th-style">Tên dự án</th>
+                                            <th class="th-style">Ngày tạo</th>
+                                            <th class="th-style text-center">Thao tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="saved-items-table-body">
+                                        <!-- JS will render here -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
-                    <div class="login-prompt-view"><i class="fas fa-lock icon-prompt"></i><h3>Vui lòng đăng nhập</h3><p>Đăng nhập để xem các dự án đã lưu.</p></div>
-                 </div>
+                    <div class="login-prompt-view">
+                        <div class="icon-prompt"><i class="fas fa-folder-open"></i></div>
+                        <h3>Lưu trữ các dự án của bạn</h3>
+                        <p>Vui lòng đăng nhập để xem lại các dự án đã tính toán.</p>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -221,22 +313,42 @@
     <div id="login-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="modal-close-btn">&times;</button>
-            <h3 class="modal-title">Đăng nhập / Đăng ký</h3>
-            <p id="login-error" class="error-message"></p>
-            <p class="confirm-text" style="text-align: center; margin-bottom: 1.5rem;">Sử dụng tài khoản Google của bạn để truy cập tất cả các tính năng.</p>
-            <button type="button" id="google-login-btn" class="google-btn full-width" style="justify-content: center;">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google icon">Đăng nhập với Google
-            </button>
+            <h3 class="modal-title">Chào mừng bạn!</h3>
+            <p style="text-align: center; color: var(--text-light); margin-bottom: 1.5rem;">Đăng nhập để lưu vật tư, dự án và sử dụng Trợ lý AI.</p>
+            <div id="login-form-container">
+                <button id="google-login-btn" class="google-btn full-width"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google logo" width="18" height="18"> Đăng nhập với Google</button>
+                <p id="login-error" class="error-message"></p>
+            </div>
         </div>
     </div>
-    <div id="view-item-modal" class="modal-overlay hidden"><div class="modal-content modal-lg"><button class="modal-close-btn">&times;</button><h3 id="view-item-title" class="modal-title"></h3><div id="view-item-content" class="modal-body"></div></div></div>
-    <div id="confirm-modal" class="modal-overlay hidden"><div class="modal-content"><h3 class="modal-title-sm">Xác nhận hành động</h3><p id="confirm-message" class="confirm-text"></p><div class="confirm-actions"><button id="confirm-cancel-btn" class="btn btn-secondary">Hủy</button><button id="confirm-ok-btn" class="btn btn-danger">Xác nhận</button></div></div></div>
+
+    <div id="view-item-modal" class="modal-overlay hidden">
+        <div class="modal-content modal-lg">
+            <button class="modal-close-btn">&times;</button>
+            <h3 id="view-item-title" class="modal-title">Chi tiết Dự án</h3>
+            <div id="view-item-content" class="modal-body">
+                <!-- JS will render content here -->
+            </div>
+        </div>
+    </div>
     
-    <!-- Toast Notification Container -->
+    <div id="confirm-modal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width: 400px;">
+            <h3 class="modal-title-sm" style="text-align: center;">Xác nhận</h3>
+            <p id="confirm-message" class="confirm-text" style="text-align: center;">Bạn có chắc chắn muốn thực hiện hành động này?</p>
+            <div class="confirm-actions">
+                <button id="confirm-cancel-btn" class="btn btn-secondary">Hủy</button>
+                <button id="confirm-ok-btn" class="btn btn-danger">Đồng ý</button>
+            </div>
+        </div>
+    </div>
+    
     <div id="toast-container"></div>
+    
+    <footer class="footer">
+        <p>&copy; 2024 Giá Thành Pro. Một sản phẩm được tăng tốc bởi AI.</p>
+    </footer>
 
-    <footer class="footer"><p>Được tạo bởi Gemini & bạn</p></footer>
-
-    <script type="module" src="script.js"></script>
+    <script src="script.js" type="module"></script>
 </body>
 </html>
