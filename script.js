@@ -6,11 +6,11 @@ import {
 } from './firebase.js';
 
 import { 
-    openModal, showConfirm, showToast, updateUIVisibility, 
+    openModal, closeModal, showConfirm, showToast, updateUIVisibility, 
     initializeImageUploader, initializeTabs, initializeModals 
 } from './ui.js';
 
-// --- DOM Elements (Feature-specific) ---
+// --- DOM Elements ---
 const logoutBtn = document.getElementById('logout-btn');
 const materialForm = document.getElementById('material-form');
 const materialsTableBody = document.getElementById('materials-table-body');
@@ -30,10 +30,11 @@ const chatInput = document.getElementById('chat-input');
 const sendChatBtn = document.getElementById('send-chat-btn');
 const chatMessagesContainer = document.getElementById('chat-messages');
 const viewItemModal = document.getElementById('view-item-modal');
+const viewItemTitle = document.getElementById('view-item-title');
+const viewItemContent = document.getElementById('view-item-content');
 const cuttingLayoutSection = document.getElementById('cutting-layout-section');
 const cuttingLayoutContainer = document.getElementById('cutting-layout-container');
 const cuttingLayoutSummary = document.getElementById('cutting-layout-summary');
-
 
 // --- Global State ---
 let currentUserId = null;
@@ -48,8 +49,6 @@ let addedAccessories = [];
 let uploadedImage = null;
 let chatHistory = [];
 let isAwaitingChatResponse = false;
-let currentCalculation = { breakdown: [], totalCost: 0 };
-
 
 // --- Sample Data for New Users ---
 const sampleMaterials = [
@@ -84,7 +83,6 @@ async function checkAndAddSampleData(userId) {
     }
 }
 
-
 // --- Auth & App Initialization ---
 onAuthStateChanged(auth, async (user) => {
     const loggedIn = !!user;
@@ -115,17 +113,15 @@ function clearLocalData() {
     localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [] };
     localSavedItems = [];
     chatHistory = [];
-    chatMessagesContainer.innerHTML = '';
+    if (chatMessagesContainer) chatMessagesContainer.innerHTML = '';
     renderMaterials([]);
     renderSavedItems([]);
     populateSelects();
-    updateClientSideCosts();
 }
 
 logoutBtn.addEventListener('click', () => signOut(auth));
 
-
-// --- AI Calculation Helper Functions ---
+// --- Helper & Renderer Functions ---
 
 function getPanelPieces() {
     const length = parseFloat(document.getElementById('item-length').value) || 0;
@@ -133,29 +129,22 @@ function getPanelPieces() {
     const height = parseFloat(document.getElementById('item-height').value) || 0;
     const type = document.getElementById('item-type').value;
     const backPanelSelect = document.getElementById('material-back-panel');
-    const usesMainWoodForBack = !backPanelSelect.value || backPanelSelect.value === 'none';
+    const usesMainWoodForBack = !backPanelSelect.value || backPanelSelect.value === '';
 
     const pieces = [];
-
     if (!length || !width || !height) return [];
 
-    // Thùng
     pieces.push({ name: 'Hông Trái', width: width, height: height });
     pieces.push({ name: 'Hông Phải', width: width, height: height });
     pieces.push({ name: 'Đáy', width: length, height: width });
     
-    // Nóc: Hầu hết các loại tủ đều có nóc, trừ tủ bếp dưới (thường là mặt đá)
     if (type !== 'tu-bep-duoi') {
         pieces.push({ name: 'Nóc', width: length, height: width });
     }
-
-    // Cánh tủ, giả định 2 cánh cho các loại tủ (trừ hộp 'khac')
     if (type.includes('tu-')) {
          pieces.push({ name: 'Cánh Trái', width: Math.round(length / 2), height: height });
          pieces.push({ name: 'Cánh Phải', width: Math.round(length / 2), height: height });
     }
-    
-    // Hậu tủ, chỉ tính vào ván chính nếu không có hậu riêng và không phải loại không có hậu
     if (usesMainWoodForBack && type !== 'tu-ao' && type !== 'khac') {
         pieces.push({ name: 'Hậu', width: length, height: height });
     }
@@ -163,11 +152,11 @@ function getPanelPieces() {
     return pieces.filter(p => p.width > 0 && p.height > 0).map(p => ({...p, width: Math.round(p.width), height: Math.round(p.height)}));
 }
 
-
 function renderCuttingLayout(layoutData) {
     if (!layoutData || !layoutData.sheets || layoutData.totalSheetsUsed === 0) {
         cuttingLayoutSummary.innerHTML = `<p>AI không thể tạo sơ đồ cắt ván tối ưu từ thông tin được cung cấp.</p>`;
         cuttingLayoutSection.classList.remove('hidden');
+        cuttingLayoutContainer.innerHTML = '';
         return;
     }
 
@@ -181,32 +170,24 @@ function renderCuttingLayout(layoutData) {
     layoutData.sheets.forEach(sheetData => {
         const wrapper = document.createElement('div');
         wrapper.className = 'cutting-sheet-wrapper';
-
         const title = document.createElement('h4');
         title.className = 'cutting-sheet-title';
         title.textContent = `Sơ đồ Tấm ván #${sheetData.sheetNumber}`;
         wrapper.appendChild(title);
-
         const sheetEl = document.createElement('div');
         sheetEl.className = 'cutting-sheet';
-
         sheetData.pieces.forEach(piece => {
             const pieceEl = document.createElement('div');
             pieceEl.className = 'cutting-piece';
-            
-            const w = piece.width;
-            const h = piece.height;
-            
+            const w = piece.width, h = piece.height;
             const left = (piece.x / STANDARD_WIDTH) * 100;
             const top = (piece.y / STANDARD_HEIGHT) * 100;
             const pieceWidth = (w / STANDARD_WIDTH) * 100;
             const pieceHeight = (h / STANDARD_HEIGHT) * 100;
-
             pieceEl.style.left = `${left}%`;
             pieceEl.style.top = `${top}%`;
             pieceEl.style.width = `${pieceWidth}%`;
             pieceEl.style.height = `${pieceHeight}%`;
-
             const label = document.createElement('div');
             label.className = 'cutting-piece-label';
             if (pieceWidth > 5 && pieceHeight > 5) {
@@ -215,7 +196,6 @@ function renderCuttingLayout(layoutData) {
             pieceEl.appendChild(label);
             sheetEl.appendChild(pieceEl);
         });
-
         wrapper.appendChild(sheetEl);
         cuttingLayoutContainer.appendChild(wrapper);
     });
@@ -223,22 +203,37 @@ function renderCuttingLayout(layoutData) {
     cuttingLayoutSection.classList.remove('hidden');
 }
 
-function renderCostBreakdown(breakdown) {
+function renderCostBreakdown(breakdown, container) {
+    if (!breakdown || breakdown.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
     let breakdownHtml = '<ul class="cost-list">';
     breakdown.forEach(item => {
         breakdownHtml += `
             <li>
                 <span class="cost-item-name">${item.name}</span>
-                <span class="cost-item-value">${item.cost.toLocaleString('vi-VN')}đ</span>
+                <span class="cost-item-value">${(item.cost || 0).toLocaleString('vi-VN')}đ</span>
                 ${item.reason ? `<p class="cost-item-reason">${item.reason}</p>` : ''}
             </li>
         `;
     });
     breakdownHtml += '</ul>';
-    costBreakdownContainer.innerHTML = breakdownHtml;
-    costBreakdownContainer.classList.remove('hidden');
+    container.innerHTML = breakdownHtml;
+    container.classList.remove('hidden');
 }
 
+function renderFormattedText(text) {
+    const sections = text.split(/(\*\*.*?\*\*)/g); // Split by bold markdown
+    return sections.map(part => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+            const strong = document.createElement('strong');
+            strong.textContent = part.slice(2, -2);
+            return strong.outerHTML;
+        }
+        return part.replace(/\n/g, '<br>');
+    }).join('');
+}
 
 // --- Materials Management ---
 function listenForMaterials() {
@@ -259,7 +254,7 @@ function listenForMaterials() {
 function renderMaterials(materials) {
     materialsTableBody.innerHTML = '';
     if (materials.length === 0) {
-        materialsTableBody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-gray-400">Chưa có vật tư nào. Bắt đầu bằng cách thêm vật tư ở trên.</td></tr>`;
+        materialsTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 1rem; color: var(--text-light);">Chưa có vật tư nào.</td></tr>`;
         return;
     }
     materials.forEach(m => {
@@ -356,7 +351,7 @@ function populateSelects() {
         s.el.innerHTML = '';
         if (s.optional) s.el.add(new Option('Dùng chung ván chính', ''));
         localMaterials[s.type].forEach(m => s.el.add(new Option(`${m.name} (${Number(m.price).toLocaleString('vi-VN')}đ)`, m.id)));
-        s.el.value = currentVal;
+        if (currentVal) s.el.value = currentVal;
     });
 }
 
@@ -413,222 +408,212 @@ accessoriesList.addEventListener('change', e => {
         const accessory = addedAccessories.find(a => a.id === id);
         if (accessory && newQuantity > 0) {
             accessory.quantity = newQuantity;
-        } else {
+        } else if (accessory) {
             e.target.value = accessory.quantity; // revert if invalid
         }
     }
 });
 
-// --- Main Calculation Logic ---
-function updateClientSideCosts() {
-    const length = parseFloat(document.getElementById('item-length').value) || 0;
-    const width = parseFloat(document.getElementById('item-width').value) || 0;
-    const height = parseFloat(document.getElementById('item-height').value) || 0;
-    const breakdown = [];
-    let totalCost = 0;
+function clearInputs() {
+    document.getElementById('item-length').value = '';
+    document.getElementById('item-width').value = '';
+    document.getElementById('item-height').value = '';
+    document.getElementById('item-name').value = '';
+    document.getElementById('product-description').value = '';
+    document.getElementById('profit-margin').value = '50';
+    addedAccessories = [];
+    renderAccessories();
+    lastGeminiResult = null;
+    document.querySelector('#remove-image-btn').click();
 
-    // Ván chính
-    const woodMaterialId = document.getElementById('material-wood').value;
-    const woodMaterial = localMaterials['Ván'].find(m => m.id === woodMaterialId);
-    if (woodMaterial) {
-        const woodArea = (length * width * 2 + length * height * 2 + width * height * 2) / 1000000;
-        const cost = woodArea * woodMaterial.price / 2.9768 * 1.3; // 1220x2440mm, hao hụt 30%
-        breakdown.push({ id: 'main-wood', name: `Ván chính (Ước tính)`, cost });
-        totalCost += cost;
-    }
-
-    // Ván hậu
-    const backPanelId = document.getElementById('material-back-panel').value;
-    const backPanelMaterial = localMaterials['Ván'].find(m => m.id === backPanelId);
-    if (backPanelMaterial) {
-        const backArea = (length * height) / 1000000;
-        const cost = backArea * backPanelMaterial.price / 2.9768 * 1.1; // hao hụt 10%
-        breakdown.push({ name: 'Ván hậu', cost });
-        totalCost += cost;
-    }
-
-    // Nẹp cạnh
-    const edgeMaterialId = document.getElementById('material-edge').value;
-    const edgeMaterial = localMaterials['Cạnh'].find(m => m.id === edgeMaterialId);
-    if (edgeMaterial) {
-        const edgeLength = (length * 4 + width * 4 + height * 4) / 1000;
-        const cost = edgeLength * edgeMaterial.price;
-        breakdown.push({ name: 'Nẹp cạnh', cost });
-        totalCost += cost;
-    }
-    
-    // Phụ kiện
-    addedAccessories.forEach(acc => {
-        const cost = acc.price * acc.quantity;
-        breakdown.push({ name: `${acc.name} (x${acc.quantity})`, cost });
-        totalCost += cost;
-    });
-
-    currentCalculation = {
-        breakdown: breakdown.map(item => ({...item, cost: Math.round(item.cost)})),
-        totalCost: Math.round(totalCost)
-    };
-    return currentCalculation;
+    // Reset result areas
+    resultContainer.innerHTML = '<p>Kết quả phân tích từ AI sẽ xuất hiện ở đây sau khi bạn nhấn nút.</p>';
+    costBreakdownContainer.innerHTML = '';
+    costBreakdownContainer.classList.add('hidden');
+    priceSummaryContainer.classList.add('hidden');
+    cuttingLayoutSection.classList.add('hidden');
+    cuttingLayoutContainer.innerHTML = '';
+    cuttingLayoutSummary.innerHTML = '';
+    saveItemBtn.disabled = true;
 }
 
-
-function updatePriceSummary(totalCost) {
-    const profitMargin = parseFloat(document.getElementById('profit-margin').value) / 100 || 0.5;
-    const suggestedPrice = totalCost / (1 - profitMargin);
-    const estimatedProfit = suggestedPrice - totalCost;
-
-    totalCostValue.textContent = `${Math.round(totalCost).toLocaleString('vi-VN')}đ`;
-    suggestedPriceValue.textContent = `${Math.round(suggestedPrice).toLocaleString('vi-VN')}đ`;
-    estimatedProfitValue.textContent = `${Math.round(estimatedProfit).toLocaleString('vi-VN')}đ`;
-    priceSummaryContainer.classList.remove('hidden');
-}
-
-function showLoadingState(isLoading) {
-    if (isLoading) {
-        calculateBtn.disabled = true;
-        calculateBtn.innerHTML = '<div class="spinner-sm"></div> Đang phân tích...';
-        resultContainer.innerHTML = '<p>Trợ lý AI đang phân tích, vui lòng chờ trong giây lát...</p>';
-        costBreakdownContainer.classList.add('hidden');
-        cuttingLayoutSection.classList.add('hidden');
-        priceSummaryContainer.classList.add('hidden');
-    } else {
-        calculateBtn.disabled = false;
-        calculateBtn.innerHTML = '<i class="fas fa-cogs"></i> Nhờ AI Phân tích';
-    }
-}
-
+// --- AI Calculation Logic ---
 calculateBtn.addEventListener('click', async () => {
-    const itemName = document.getElementById('item-name').value || 'Sản phẩm chưa đặt tên';
-    const length = document.getElementById('item-length').value;
-    const width = document.getElementById('item-width').value;
-    const height = document.getElementById('item-height').value;
-    const itemType = document.getElementById('item-type').options[document.getElementById('item-type').selectedIndex].text;
-    const description = document.getElementById('product-description').value;
-
-    if (!length || !width || !height) {
-        showToast('Vui lòng nhập đủ kích thước sản phẩm.', 'error');
+    if (!currentUserId) {
+        showToast('Vui lòng đăng nhập để sử dụng tính năng này.', 'error');
         return;
     }
 
-    showLoadingState(true);
-    updateClientSideCosts(); // Calculate preliminary costs to send to AI
+    const itemName = document.getElementById('item-name').value.trim();
+    if (!itemName) {
+        showToast('Vui lòng nhập Tên sản phẩm / dự án.', 'error');
+        return;
+    }
+    
+    // Show loading state
+    calculateBtn.disabled = true;
+    calculateBtn.innerHTML = `<span class="spinner-sm"></span> Đang phân tích...`;
+    resultContainer.innerHTML = '<div class="flex justify-center items-center h-full"><div class="spinner"></div></div>';
+    priceSummaryContainer.classList.add('hidden');
+    costBreakdownContainer.classList.add('hidden');
+    cuttingLayoutSection.classList.add('hidden');
+
+    const inputs = {
+        name: itemName,
+        length: document.getElementById('item-length').value,
+        width: document.getElementById('item-width').value,
+        height: document.getElementById('item-height').value,
+        type: document.getElementById('item-type').value,
+        description: document.getElementById('product-description').value,
+        profitMargin: document.getElementById('profit-margin').value,
+    };
+
+    const mainWoodId = document.getElementById('material-wood').value;
+    const backPanelId = document.getElementById('material-back-panel').value;
+    const edgeId = document.getElementById('material-edge').value;
+    
+    const mainWood = localMaterials['Ván'].find(m => m.id === mainWoodId);
+    const backPanel = localMaterials['Ván'].find(m => m.id === backPanelId);
+    const edge = localMaterials['Cạnh'].find(m => m.id === edgeId);
+
+    if (!mainWood || !edge) {
+        showToast('Vui lòng chọn vật liệu Ván chính và Nẹp cạnh.', 'error');
+        calculateBtn.disabled = false;
+        calculateBtn.innerHTML = '<i class="fas fa-cogs"></i> Nhờ AI Phân tích';
+        return;
+    }
 
     const panelPieces = getPanelPieces();
-    const piecesJSON = JSON.stringify(panelPieces, null, 2);
+    
+    const prompt = `
+    TASK: You are an expert AI assistant for a woodworking shop in Vietnam. Your goal is to provide a detailed cost analysis, optimization suggestions, and a precise cutting layout (2D bin packing) for a given product.
 
-    const prompt = `BẠN LÀ MỘT TRỢ LÝ AI CHUYÊN GIA TÍNH TOÁN GIÁ THÀNH VÀ TỐI ƯU SẢN XUẤT NỘI THẤT.
-Dựa trên thông tin sản phẩm và danh sách vật tư, hãy thực hiện các nhiệm vụ sau:
-
-NHIỆM VỤ 1: TÍNH TOÁN CHI PHÍ ẨN
-Phân tích các chi phí có thể bị bỏ sót như: nhân công, quản lý, thiết kế, vận chuyển, lắp đặt, khấu hao máy móc. Trình bày dưới dạng danh sách JSON.
-
-NHIỆM VỤ 2: TỐI ƯU HÓA CẮT VÁN (2D BIN PACKING)
-Sắp xếp các chi tiết (pieces) sau đây vào các tấm ván 1220mm x 2440mm một cách hiệu quả nhất. Các chi tiết CÓ THỂ XOAY 90 độ. Trả về số tấm ván cần dùng và toạ độ các chi tiết.
-
-NHIỆM VỤ 3: GỢI Ý & TƯ VẤN
-Đưa ra các đề xuất để tối ưu hóa chi phí hoặc cải thiện sản phẩm.
-
-YÊU CẦU ĐỊNH DẠNG ĐẦU RA:
-BẮT BUỘC trả lời bằng một đối tượng JSON DUY NHẤT, không có văn bản nào khác. Cấu trúc JSON phải như sau:
-{
-  "hiddenCosts": [ { "name": "string", "cost": number, "reason": "string" } ],
-  "recommendations": "string",
-  "cuttingLayout": {
-    "totalSheetsUsed": number,
-    "sheets": [
-      {
-        "sheetNumber": number,
-        "pieces": [ { "name": "string", "width": number, "height": number, "x": number, "y": number } ]
+    RESPONSE FORMAT: You MUST respond with a single JSON object. Do not include any text, notes, or markdown fences like \`\`\`json\`\`\` outside of the JSON object. The JSON object must have the following structure:
+    {
+      "costBreakdown": {
+        "materialCosts": [
+          { "name": "Ván chính MDF An Cường", "cost": 1100000, "reason": "Cần 2 tấm" },
+          { "name": "Ván hậu Plywood", "cost": 250000, "reason": "Cần 1 tấm" },
+          { "name": "Nẹp cạnh PVC", "cost": 150000, "reason": "Ước tính 30 mét" },
+          { "name": "Phụ kiện (Bản lề, ray...)", "cost": 270000, "reason": "Tổng hợp từ danh sách" }
+        ],
+        "hiddenCosts": [
+          { "name": "Hao hụt vật tư & Cắt lỗi", "cost": 150000, "reason": "Dựa trên độ phức tạp của sản phẩm" },
+          { "name": "Nhân công sản xuất", "cost": 800000, "reason": "Ước tính 2 ngày công" },
+          { "name": "Vận chuyển & Lắp đặt", "cost": 300000, "reason": "Áp dụng cho sản phẩm lớn" }
+        ],
+        "totalCost": 3020000,
+        "suggestedPrice": 4530000,
+        "estimatedProfit": 1510000
+      },
+      "aiSuggestions": "Your text analysis and suggestions here. Be helpful, professional, and address the user directly. Provide optimization ideas, potential issues, and upsell opportunities. Format with markdown bolding (**text**).",
+      "cuttingLayout": {
+        "totalSheetsUsed": 2,
+        "sheets": [
+          {
+            "sheetNumber": 1,
+            "pieces": [
+              { "name": "Hông Trái", "x": 0, "y": 0, "width": 600, "height": 750 },
+              { "name": "Hông Phải", "x": 600, "y": 0, "width": 600, "height": 750 }
+            ]
+          }
+        ]
       }
-    ]
-  }
-}
+    }
 
---- DỮ LIỆU ĐẦU VÀO ---
+    INPUT DATA:
+    - Product Name: ${inputs.name}
+    - Dimensions (LxWxH): ${inputs.length} x ${inputs.width} x ${inputs.height} mm
+    - Product Type: ${inputs.type}
+    - User Notes: ${inputs.description}
+    - Desired Profit Margin: ${inputs.profitMargin}%
+    - Main Wood: ${mainWood.name} (${mainWood.price} VND/${mainWood.unit})
+    - Back Panel Wood: ${backPanel ? `${backPanel.name} (${backPanel.price} VND/${backPanel.unit})` : 'Use main wood'}
+    - Edge Banding: ${edge.name} (${edge.price} VND/mét)
+    - Accessories: ${addedAccessories.map(a => `${a.name} (SL: ${a.quantity}, Đơn giá: ${a.price})`).join(', ')}
+    - Image provided: ${uploadedImage ? 'Yes' : 'No'}
 
-1. THÔNG TIN SẢN PHẨM:
-Tên: ${itemName}
-Kích thước (Dài x Rộng x Cao): ${length} x ${width} x ${height} mm
-Loại: ${itemType}
-Mô tả: ${description}
-Chi phí vật tư sơ bộ (ước tính): ${currentCalculation.totalCost.toLocaleString('vi-VN')}đ
-Chi tiết vật tư sơ bộ:
-${currentCalculation.breakdown.map(item => `- ${item.name}: ${item.cost.toLocaleString('vi-VN')}đ`).join('\n')}
-
-2. DANH SÁCH CHI TIẾT CẦN CẮT TỪ VÁN CHÍNH:
-${piecesJSON}
-`;
-
+    INSTRUCTIONS:
+    1.  **Cutting Layout (Bin Packing):**
+        - The standard panel size is 1220mm x 2440mm.
+        - The list of pieces to be cut from the MAIN WOOD is: ${JSON.stringify(panelPieces)}.
+        - Perform a 2D bin packing algorithm to fit these pieces onto the minimum number of standard panels.
+        - The (x, y) coordinates should be the top-left corner of each piece on the panel.
+        - Populate the "cuttingLayout" object in the JSON response with the results. Set "totalSheetsUsed" to the total number of main wood panels needed. This is the MOST important calculation.
+    2.  **Cost Calculation:**
+        - Calculate the cost of the main wood based on the exact "totalSheetsUsed" from your cutting layout, not an estimate.
+        - If a separate back panel is specified, assume 1 panel is needed. If not, the back panel pieces are included in the main wood cutting list.
+        - Estimate the total length of edge banding required.
+        - Sum the cost of all specified accessories.
+        - Calculate "hiddenCosts" like labor, transport, and waste based on product size, complexity, and the provided image if available. Be realistic.
+        - Sum all costs to get "totalCost".
+        - Calculate "suggestedPrice" by applying the user's desired profit margin to the "totalCost".
+        - Calculate "estimatedProfit" as suggestedPrice - totalCost.
+    3.  **AI Suggestions:**
+        - Write a friendly and professional analysis in the "aiSuggestions" field.
+        - If an image was provided, mention that you've analyzed it.
+        - Offer suggestions for material savings, structural improvements, or alternative accessories.
+    `;
+    
     try {
         const response = await fetch('/api/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt, image: uploadedImage }),
+            body: JSON.stringify({ prompt: prompt, image: uploadedImage })
         });
+        
+        const data = await response.json();
 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Lỗi không xác định từ máy chủ');
-        }
-
-        const parsedData = await response.json();
-        lastGeminiResult = parsedData;
-
-        // -- Start of new cost calculation flow --
-        
-        // 1. Update wood cost based on AI's cutting layout
-        if (parsedData.cuttingLayout && parsedData.cuttingLayout.totalSheetsUsed > 0) {
-            const mainWoodSelect = document.getElementById('material-wood');
-            const selectedWoodId = mainWoodSelect.value;
-            const mainWoodMaterial = localMaterials['Ván'].find(m => m.id === selectedWoodId);
-            if (mainWoodMaterial) {
-                const totalSheets = parsedData.cuttingLayout.totalSheetsUsed;
-                const newMainWoodCost = totalSheets * mainWoodMaterial.price;
-                const woodBreakdownItem = currentCalculation.breakdown.find(item => item.id === 'main-wood');
-                if (woodBreakdownItem) {
-                    woodBreakdownItem.cost = newMainWoodCost;
-                    woodBreakdownItem.name = `Ván chính (${totalSheets} tấm)`;
-                }
+            // Specific check for overload error from our API
+            if (data.error && (data.error.includes('overloaded') || data.error.includes('UNAVAILABLE') || data.error.includes('503'))) {
+                showToast('AI đang quá tải, vui lòng thử lại sau giây lát.', 'info');
+            } else {
+                 throw new Error(data.error || `Lỗi máy chủ: ${response.status}`);
             }
-        }
-        
-        // 2. Add hidden costs to the breakdown list
-        if (parsedData.hiddenCosts) {
-            parsedData.hiddenCosts.forEach(cost => {
-                currentCalculation.breakdown.push({ name: cost.name, cost: cost.cost, reason: cost.reason });
-            });
+            return;
         }
 
-        // 3. Recalculate final total cost from the updated breakdown
-        const finalTotalCost = currentCalculation.breakdown.reduce((sum, item) => sum + item.cost, 0);
-        currentCalculation.totalCost = finalTotalCost;
-
-        // 4. Render all UI components with the final, accurate data
-        updatePriceSummary(finalTotalCost);
-        renderCostBreakdown(currentCalculation.breakdown);
+        lastGeminiResult = data;
         
-        if (parsedData.recommendations) {
-             resultContainer.innerHTML = `<h4><i class="fas fa-lightbulb"></i> Gợi ý & Tối ưu</h4><p>${parsedData.recommendations}</p>`;
-        } else {
-             resultContainer.innerHTML = `<p>AI không có gợi ý nào cho sản phẩm này.</p>`;
+        const { costBreakdown, aiSuggestions, cuttingLayout } = data;
+
+        // Render results
+        if (costBreakdown) {
+            const allCosts = [
+                ...(costBreakdown.materialCosts || []),
+                ...(costBreakdown.hiddenCosts || [])
+            ];
+            renderCostBreakdown(allCosts, costBreakdownContainer);
+            
+            totalCostValue.textContent = (costBreakdown.totalCost || 0).toLocaleString('vi-VN') + 'đ';
+            suggestedPriceValue.textContent = (costBreakdown.suggestedPrice || 0).toLocaleString('vi-VN') + 'đ';
+            estimatedProfitValue.textContent = (costBreakdown.estimatedProfit || 0).toLocaleString('vi-VN') + 'đ';
+            priceSummaryContainer.classList.remove('hidden');
         }
-       
-        if (parsedData.cuttingLayout) {
-             renderCuttingLayout(parsedData.cuttingLayout);
+
+        resultContainer.innerHTML = renderFormattedText(aiSuggestions || 'Không có gợi ý nào từ AI.');
+        
+        if (cuttingLayout) {
+            renderCuttingLayout(cuttingLayout);
         }
 
         saveItemBtn.disabled = false;
 
     } catch (error) {
-        console.error('Error calling AI:', error);
-        resultContainer.innerHTML = `<p class="error-message">Lỗi: ${error.message}</p>`;
-        showToast(`Lỗi khi gọi AI: ${error.message}`, 'error');
+        console.error("Error calling AI:", error);
+        // This is a fallback for network errors, but the check above handles API errors more gracefully.
+        if (error.message.includes('503') || error.message.includes('overloaded')) {
+             showToast('AI đang quá tải, vui lòng thử lại sau giây lát.', 'info');
+        } else {
+             showToast(`Lỗi khi phân tích: ${error.message}`, 'error');
+        }
+        resultContainer.innerHTML = `<p style="color: var(--danger-color);">Đã xảy ra lỗi khi giao tiếp với AI. Vui lòng thử lại.</p>`;
     } finally {
-        showLoadingState(false);
+        calculateBtn.disabled = false;
+        calculateBtn.innerHTML = '<i class="fas fa-cogs"></i> Nhờ AI Phân tích';
     }
 });
-
-
 
 // --- Saved Items Management ---
 function listenForSavedItems() {
@@ -642,18 +627,18 @@ function listenForSavedItems() {
 function renderSavedItems(items) {
     savedItemsTableBody.innerHTML = '';
     if (items.length === 0) {
-        savedItemsTableBody.innerHTML = `<tr><td colspan="3" class="text-center p-4 text-gray-400">Chưa có dự án nào được lưu.</td></tr>`;
+        savedItemsTableBody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 1rem; color: var(--text-light);">Chưa có dự án nào được lưu.</td></tr>`;
         return;
     }
-    items.sort((a, b) => b.createdAt?.toMillis() - a.createdAt?.toMillis());
+    items.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
     items.forEach(item => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${item.name}</td>
-            <td>${item.createdAt ? new Date(item.createdAt.seconds * 1000).toLocaleDateString('vi-VN') : 'Không rõ'}</td>
+            <td>${item.inputs.name || 'Dự án không tên'}</td>
+            <td>${new Date(item.createdAt.toDate()).toLocaleString('vi-VN')}</td>
             <td class="text-center">
-                <button class="view-btn text-green-500 hover:text-green-700 mr-2" data-id="${item.id}"><i class="fas fa-eye"></i></button>
-                <button class="delete-saved-btn text-red-500 hover:text-red-700" data-id="${item.id}"><i class="fas fa-trash"></i></button>
+                <button class="view-btn text-blue-500 hover:text-blue-700 mr-2" data-id="${item.id}"><i class="fas fa-eye"></i></button>
+                <button class="delete-saved-item-btn text-red-500 hover:text-red-700" data-id="${item.id}"><i class="fas fa-trash"></i></button>
             </td>
         `;
         savedItemsTableBody.appendChild(tr);
@@ -661,31 +646,33 @@ function renderSavedItems(items) {
 }
 
 saveItemBtn.addEventListener('click', async () => {
-    if (!currentUserId || !lastGeminiResult) return;
-    const itemName = document.getElementById('item-name').value || 'Dự án chưa đặt tên';
-    const itemToSave = {
-        name: itemName,
+    if (!currentUserId || !lastGeminiResult) {
+        showToast('Không có kết quả phân tích để lưu.', 'error');
+        return;
+    }
+    
+    const itemData = {
         inputs: {
+            name: document.getElementById('item-name').value,
             length: document.getElementById('item-length').value,
             width: document.getElementById('item-width').value,
             height: document.getElementById('item-height').value,
             type: document.getElementById('item-type').value,
             description: document.getElementById('product-description').value,
             profitMargin: document.getElementById('profit-margin').value,
-            materials: {
-                wood: document.getElementById('material-wood').value,
-                backPanel: document.getElementById('material-back-panel').value,
-                edge: document.getElementById('material-edge').value,
-            },
+            mainWoodId: document.getElementById('material-wood').value,
+            backPanelId: document.getElementById('material-back-panel').value,
+            edgeId: document.getElementById('material-edge').value,
             accessories: addedAccessories
         },
-        result: lastGeminiResult,
-        costBreakdown: currentCalculation,
+        ...lastGeminiResult,
         createdAt: serverTimestamp()
     };
+    
     try {
-        await addDoc(savedItemsCollectionRef, itemToSave);
+        await addDoc(savedItemsCollectionRef, itemData);
         showToast('Lưu dự án thành công!', 'success');
+        clearInputs();
     } catch (error) {
         showToast('Lỗi khi lưu dự án.', 'error');
         console.error("Error saving item:", error);
@@ -694,136 +681,214 @@ saveItemBtn.addEventListener('click', async () => {
 
 savedItemsTableBody.addEventListener('click', async e => {
     const viewBtn = e.target.closest('.view-btn');
-    const deleteBtn = e.target.closest('.delete-saved-btn');
+    const deleteBtn = e.target.closest('.delete-saved-item-btn');
+
     if (viewBtn) {
-        const id = viewBtn.dataset.id;
-        const item = localSavedItems.find(i => i.id === id);
-        if (item) renderItemDetailsToModal(item);
+        renderItemDetailsToModal(viewBtn.dataset.id);
     } else if (deleteBtn) {
         const id = deleteBtn.dataset.id;
         const confirmed = await showConfirm('Bạn có chắc chắn muốn xóa dự án này?');
         if (confirmed) {
-            await deleteDoc(doc(db, `users/${currentUserId}/savedItems`, id));
-            showToast('Xóa dự án thành công.', 'success');
+            try {
+                await deleteDoc(doc(db, `users/${currentUserId}/savedItems`, id));
+                showToast('Xóa dự án thành công.', 'success');
+            } catch (error) {
+                showToast('Lỗi khi xóa dự án.', 'error');
+                console.error("Error deleting saved item:", error);
+            }
         }
     }
 });
 
-function renderItemDetailsToModal(item) {
-    const titleEl = document.getElementById('view-item-title');
-    const contentEl = document.getElementById('view-item-content');
+/**
+ * Renders the details of a saved item to a modal.
+ * This function is now robust and handles potentially missing data from older saved items.
+ * @param {string} itemId The ID of the item to render.
+ */
+function renderItemDetailsToModal(itemId) {
+    const item = localSavedItems.find(i => i.id === itemId);
+    if (!item) {
+        showToast('Không tìm thấy dự án.', 'error');
+        return;
+    }
+
+    // Safely access properties using optional chaining and default values
+    const inputs = item.inputs || {};
+    const costBreakdown = item.costBreakdown || {};
+    const cuttingLayout = item.cuttingLayout || {};
     
-    titleEl.textContent = `Chi tiết: ${item.name}`;
+    viewItemTitle.textContent = `Chi tiết dự án: ${inputs.name || 'Không tên'}`;
 
-    const totalCost = item.costBreakdown.totalCost;
-    const profitMargin = parseFloat(item.inputs.profitMargin) / 100 || 0.5;
-    const suggestedPrice = totalCost / (1 - profitMargin);
-    const profit = suggestedPrice - totalCost;
+    const mainWood = localMaterials['Ván'].find(m => m.id === inputs.mainWoodId)?.name || 'Không rõ';
+    const backPanel = localMaterials['Ván'].find(m => m.id === inputs.backPanelId)?.name || 'Dùng ván chính';
+    const edge = localMaterials['Cạnh'].find(m => m.id === inputs.edgeId)?.name || 'Không rõ';
 
-    let html = `
-        <h4><i class="fas fa-ruler-combined"></i> Thông số & Yêu cầu</h4>
-        <ul>
-            <li><strong>Kích thước:</strong> ${item.inputs.length}x${item.inputs.width}x${item.inputs.height} mm</li>
-            <li><strong>Mô tả:</strong> ${item.inputs.description || 'Không có'}</li>
-            <li><strong>Lợi nhuận mong muốn:</strong> ${item.inputs.profitMargin}%</li>
-        </ul>
-        
-        <div class="final-price-recommendation">
-            <div class="final-price-label">Giá Bán Đề Xuất</div>
-            <div class="final-price-value">${Math.round(suggestedPrice).toLocaleString('vi-VN')}đ</div>
-            <p class="final-price-summary">Tổng chi phí vật tư & chi phí ẩn: ${totalCost.toLocaleString('vi-VN')}đ • Lợi nhuận ước tính: ${Math.round(profit).toLocaleString('vi-VN')}đ</p>
-        </div>
+    let accessoriesHtml = 'Không có';
+    if (inputs.accessories && inputs.accessories.length > 0) {
+        accessoriesHtml = '<ul>' + inputs.accessories.map(a => `<li>${a.name} (SL: ${a.quantity})</li>`).join('') + '</ul>';
+    }
 
-        <h4><i class="fas fa-list-alt"></i> Bảng Kê Chi Phí Chi Tiết</h4>
-    `;
-    
-    let breakdownHtml = '<ul class="cost-list">';
-    item.costBreakdown.breakdown.forEach(b => {
-        breakdownHtml += `<li><span class="cost-item-name">${b.name}</span> <span class="cost-item-value">${b.cost.toLocaleString('vi-VN')}đ</span></li>`;
-    });
-    breakdownHtml += '</ul>';
-    html += breakdownHtml;
-
-    if (item.result.recommendations) {
-        html += `<h4><i class="fas fa-lightbulb"></i> Gợi ý từ AI</h4><p>${item.result.recommendations}</p>`;
+    let breakdownHtml = '<p>Không có phân tích chi phí.</p>';
+    if (costBreakdown.materialCosts || costBreakdown.hiddenCosts) {
+        const allCosts = [
+            ...(costBreakdown.materialCosts || []),
+            ...(costBreakdown.hiddenCosts || [])
+        ];
+        // Create a temporary div to use the render function
+        const tempContainer = document.createElement('div');
+        renderCostBreakdown(allCosts, tempContainer);
+        breakdownHtml = tempContainer.innerHTML;
     }
     
-    contentEl.innerHTML = html;
+    let layoutHtml = '<p>Không có sơ đồ cắt ván.</p>';
+    if (cuttingLayout.sheets) {
+        const tempContainer = document.createElement('div');
+        const tempSummary = document.createElement('div');
+        // Temporarily re-assign globals for the render function
+        const oldContainer = cuttingLayoutContainer;
+        const oldSummary = cuttingLayoutSummary;
+        cuttingLayoutContainer = tempContainer;
+        cuttingLayoutSummary = tempSummary;
+        renderCuttingLayout(cuttingLayout);
+        layoutHtml = tempSummary.outerHTML + tempContainer.innerHTML;
+        // Restore globals
+        cuttingLayoutContainer = oldContainer;
+        cuttingLayoutSummary = oldSummary;
+    }
+
+    viewItemContent.innerHTML = `
+        <div class="final-price-recommendation">
+            <div class="final-price-label">Giá Bán Đề Xuất</div>
+            <div class="final-price-value">${(costBreakdown.suggestedPrice || 0).toLocaleString('vi-VN')}đ</div>
+            <p class="final-price-summary">
+                Tổng chi phí: <strong>${(costBreakdown.totalCost || 0).toLocaleString('vi-VN')}đ</strong> | 
+                Lợi nhuận ước tính: <strong>${(costBreakdown.estimatedProfit || 0).toLocaleString('vi-VN')}đ</strong>
+            </p>
+        </div>
+
+        <h4><i class="fas fa-ruler-combined"></i>Thông số Đầu vào</h4>
+        <ul>
+            <li><strong>Kích thước (D x R x C):</strong> ${inputs.length || 'N/A'} x ${inputs.width || 'N/A'} x ${inputs.height || 'N/A'} mm</li>
+            <li><strong>Loại sản phẩm:</strong> ${inputs.type || 'N/A'}</li>
+            <li><strong>Mô tả:</strong> ${inputs.description || 'Không có'}</li>
+            <li><strong>Lợi nhuận mong muốn:</strong> ${inputs.profitMargin || 'N/A'}%</li>
+        </ul>
+
+        <h4><i class="fas fa-boxes"></i>Vật tư Sử dụng</h4>
+        <ul>
+            <li><strong>Ván chính:</strong> ${mainWood}</li>
+            <li><strong>Ván hậu:</strong> ${backPanel}</li>
+            <li><strong>Nẹp cạnh:</strong> ${edge}</li>
+            <li><strong>Phụ kiện:</strong> ${accessoriesHtml}</li>
+        </ul>
+        
+        <h4><i class="fas fa-file-invoice-dollar"></i>Phân tích Chi phí Chi tiết</h4>
+        ${breakdownHtml}
+
+        <h4><i class="fas fa-lightbulb"></i>Gợi ý từ AI</h4>
+        <div class="result-content-inner" style="min-height: auto;">
+           ${renderFormattedText(item.aiSuggestions || 'Không có gợi ý.')}
+        </div>
+        
+        <div class="result-box" style="margin-top: 1.5rem;">
+             <h3 class="result-box-header"><i class="fas fa-th-large"></i> Sơ đồ Cắt ván Gợi ý</h3>
+             ${layoutHtml}
+        </div>
+    `;
+
     openModal(viewItemModal);
 }
 
-// --- AI Chat Assistant ---
+// --- AI Chat ---
 function initializeChat() {
-    chatHistory = [
-        { role: 'user', parts: [{ text: 'CONTEXT: Tôi là chủ một xưởng mộc. Bạn là trợ lý AI chuyên gia về tính giá và tư vấn sản xuất nội thất. Hãy ghi nhớ các cuộc trò chuyện của chúng ta để áp dụng vào các lần tính giá sau này. Bắt đầu cuộc trò chuyện một cách thân thiện.' }] },
-        { role: 'model', parts: [{ text: 'Chào bạn! Tôi là trợ lý AI, sẵn sàng giúp bạn tính toán giá thành và tối ưu hóa sản xuất. Hãy bắt đầu bằng cách cho tôi biết bạn cần gì nhé!' }] }
-    ];
-    renderChatHistory();
+    chatHistory = [{
+        role: "system",
+        parts: [{ text: "You are a helpful AI assistant for woodworking cost estimation. Keep your answers concise and relevant to furniture making in Vietnam. The user is likely asking for advice on materials, pricing, or production techniques. All conversations are persisted." }],
+    }];
+    renderChatMessage('Chào bạn, tôi là trợ lý AI. Tôi có thể giúp gì cho việc tính giá sản phẩm của bạn?', 'model');
 }
 
-function renderChatHistory() {
-    chatMessagesContainer.innerHTML = '';
-    chatHistory.slice(1).forEach(msg => appendChatMessage(msg.role, msg.parts[0].text));
-}
-
-function appendChatMessage(role, text, isTyping = false) {
-    const messageEl = document.createElement('div');
-    messageEl.classList.add('chat-message', role);
+function renderChatMessage(message, role) {
+    if (isAwaitingChatResponse && role === 'model') {
+        const placeholder = chatMessagesContainer.querySelector('.typing-indicator-wrapper');
+        if (placeholder) placeholder.remove();
+    }
     
-    const iconClass = role === 'user' ? 'fa-user' : 'fa-robot';
-    const content = isTyping 
-        ? `<div class="typing-indicator"><span></span><span></span><span></span></div>`
-        : text.replace(/\n/g, '<br>');
-
-    messageEl.innerHTML = `
-        <div class="icon"><i class="fas ${iconClass}"></i></div>
-        <div class="message-content">${content}</div>
-    `;
-    chatMessagesContainer.appendChild(messageEl);
+    const messageWrapper = document.createElement('div');
+    messageWrapper.className = `chat-message ${role}`;
+    
+    const icon = document.createElement('div');
+    icon.className = 'icon';
+    icon.innerHTML = `<i class="fas fa-${role === 'user' ? 'user' : 'robot'}"></i>`;
+    
+    const content = document.createElement('div');
+    content.className = 'message-content';
+    content.innerHTML = renderFormattedText(message);
+    
+    messageWrapper.appendChild(icon);
+    messageWrapper.appendChild(content);
+    chatMessagesContainer.appendChild(messageWrapper);
     chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
 }
 
-chatForm.addEventListener('submit', async e => {
+chatForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (isAwaitingChatResponse) return;
     const message = chatInput.value.trim();
-    if (!message || isAwaitingChatResponse) return;
-
-    chatInput.value = '';
+    if (!message) return;
+    
     isAwaitingChatResponse = true;
+    chatInput.value = '';
+    chatInput.disabled = true;
     sendChatBtn.disabled = true;
 
-    appendChatMessage('user', message);
+    renderChatMessage(message, 'user');
     chatHistory.push({ role: 'user', parts: [{ text: message }] });
-    appendChatMessage('model', '', true);
+
+    // Add typing indicator
+    const typingIndicatorWrapper = document.createElement('div');
+    typingIndicatorWrapper.className = 'chat-message model typing-indicator-wrapper';
+    typingIndicatorWrapper.innerHTML = `
+        <div class="icon"><i class="fas fa-robot"></i></div>
+        <div class="message-content typing-indicator">
+            <span></span><span></span><span></span>
+        </div>
+    `;
+    chatMessagesContainer.appendChild(typingIndicatorWrapper);
+    chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
 
     try {
         const response = await fetch('/api/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chatHistory: chatHistory, newChatMessage: true }),
+            body: JSON.stringify({ newChatMessage: true, chatHistory: chatHistory })
         });
-        if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Lỗi không xác định');
+        }
         
-        document.querySelector('.chat-message.model:last-child').remove();
-        appendChatMessage('model', data.text);
-        chatHistory.push({ role: 'model', parts: [{ text: data.text }] });
-
+        const aiResponse = data.text;
+        renderChatMessage(aiResponse, 'model');
+        chatHistory.push({ role: 'model', parts: [{ text: aiResponse }] });
+        
     } catch (error) {
-        console.error('Chat error:', error);
-        document.querySelector('.chat-message.model:last-child').remove();
-        appendChatMessage('model', 'Xin lỗi, tôi đang gặp sự cố. Vui lòng thử lại sau.');
+        console.error("Chat error:", error);
+        renderChatMessage(`Xin lỗi, tôi gặp sự cố: ${error.message}`, 'model');
     } finally {
         isAwaitingChatResponse = false;
+        chatInput.disabled = false;
         sendChatBtn.disabled = false;
+        chatInput.focus();
     }
 });
 
-
-// --- Image Upload Initialization ---
-initializeImageUploader(
-    (imageData) => uploadedImage = imageData, 
-    () => uploadedImage = null
-);
-initializeTabs();
-initializeModals();
+// --- App Initialization ---
+document.addEventListener('DOMContentLoaded', () => {
+    initializeTabs();
+    initializeModals();
+    initializeImageUploader(
+        (imageData) => { uploadedImage = imageData; },
+        () => { uploadedImage = null; }
+    );
+});
