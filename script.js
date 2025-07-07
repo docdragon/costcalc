@@ -365,8 +365,10 @@ function populateSelects() {
     const selects = { 'material-wood': 'Ván', 'material-edge': 'Cạnh', 'material-accessories': 'Phụ kiện' };
     for (const [selectId, type] of Object.entries(selects)) {
         const selectEl = document.getElementById(selectId);
+        const currentValue = selectEl.value;
         selectEl.innerHTML = '<option value="">-- Chọn --</option>';
         localMaterials[type].forEach(m => { selectEl.innerHTML += `<option value="${m.id}">${m.name}</option>`; });
+        selectEl.value = currentValue;
     }
 }
 
@@ -432,6 +434,7 @@ function updateClientSideCosts() {
     const width = parseFloat(document.getElementById('item-width').value) || 0;
     const height = parseFloat(document.getElementById('item-height').value) || 0;
     const profitMargin = parseFloat(document.getElementById('profit-margin').value) || 0;
+    const itemType = document.getElementById('item-type').value;
 
     const woodId = document.getElementById('material-wood').value;
     const edgeId = document.getElementById('material-edge').value;
@@ -443,10 +446,26 @@ function updateClientSideCosts() {
 
     // 2. Calculate
     // Wood
-    if (wood && length > 0 && width > 0) {
-        const woodSurfaceArea = (length * width) + 2 * (length * height) + 2 * (width * height);
+    if (wood && length > 0 && width > 0 && height > 0) {
+        let woodSurfaceArea = 0;
+        switch (itemType) {
+            case 'tu-bep-duoi': // bottom, 2 sides, front-material, 1 shelf. No top, no back.
+                woodSurfaceArea = (2 * length * width) + (2 * width * height) + (length * height);
+                break;
+            case 'tu-bep-tren': // top, bottom, 2 sides, front-material, 1 shelf. No back.
+                woodSurfaceArea = (3 * length * width) + (2 * width * height) + (length * height);
+                break;
+            case 'tu-ao': // Full 6-sided box (carcass + doors)
+                woodSurfaceArea = 2 * ((length * width) + (length * height) + (width * height));
+                break;
+            case 'khac':
+            default: // Standard 5-sided cabinet (carcass: top, bottom, 2 sides, back. no front)
+                woodSurfaceArea = (2 * length * width) + (2 * width * height) + (length * height);
+                break;
+        }
+
         const standardPanelArea = 1220 * 2440;
-        const wasteFactor = 1.25;
+        const wasteFactor = 1.3; // Using a slightly more generous waste factor
         const panelsNeeded = (woodSurfaceArea / standardPanelArea) * wasteFactor;
         const woodCost = panelsNeeded * wood.price;
         if (woodCost > 0) {
@@ -456,7 +475,7 @@ function updateClientSideCosts() {
     }
 
     // Edge banding
-    if (edge && length > 0 && width > 0) {
+    if (edge && length > 0 && width > 0 && height > 0) {
         const edgeLength = (4 * length) + (4 * width) + (4 * height);
         const edgeLengthMeters = edgeLength / 1000;
         const edgeCost = edgeLengthMeters * edge.price;
@@ -497,7 +516,7 @@ function updateClientSideCosts() {
 
 const calculatorInputs = ['item-length', 'item-width', 'item-height', 'profit-margin'];
 calculatorInputs.forEach(id => document.getElementById(id).addEventListener('input', updateClientSideCosts));
-const calculatorSelects = ['material-wood', 'material-edge'];
+const calculatorSelects = ['material-wood', 'material-edge', 'item-type'];
 calculatorSelects.forEach(id => document.getElementById(id).addEventListener('change', updateClientSideCosts));
 
 
@@ -693,6 +712,7 @@ saveItemBtn.addEventListener('click', async () => {
         length: document.getElementById('item-length').value,
         width: document.getElementById('item-width').value,
         height: document.getElementById('item-height').value,
+        itemType: document.getElementById('item-type').value,
         woodId: document.getElementById('material-wood').value,
         edgeId: document.getElementById('material-edge').value,
         accessories: addedAccessories,
@@ -735,6 +755,7 @@ savedItemsTableBody.addEventListener('click', async e => {
             document.getElementById('item-length').value = item.formData.length || '';
             document.getElementById('item-width').value = item.formData.width || '';
             document.getElementById('item-height').value = item.formData.height || '';
+            document.getElementById('item-type').value = item.formData.itemType || 'khac';
             document.getElementById('material-wood').value = item.formData.woodId || '';
             document.getElementById('material-edge').value = item.formData.edgeId || '';
             document.getElementById('product-description').value = item.formData.description || '';
