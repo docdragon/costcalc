@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 
 // This is a Vercel Serverless Function.
@@ -20,19 +21,19 @@ export default async function handler(request, response) {
 
         // --- Handle Chat Request ---
         if (newChatMessage) {
-            // We receive the full history and the new message separately to avoid duplication
-            // The last message in chatHistory is the new user message, so we exclude it from the history passed to create()
+            // We receive the full history and the new message separately.
+            // The last message in chatHistory is the new user message, so we exclude it from the history passed to create().
             const historyForChat = chatHistory ? chatHistory.slice(0, -1) : [];
             const chat = ai.chats.create({ model, history: historyForChat });
-            const result = await chat.sendMessage({ message: newChatMessage });
+            
+            // sendMessage expects the message string or parts directly.
+            const result = await chat.sendMessage(newChatMessage);
             return response.status(200).json({ text: result.text });
         }
 
         // --- Handle Calculator Request ---
         if (prompt) {
-             // Construct the prompt parts for the calculator request.
-             // We deliberately DO NOT use chatHistory here to keep the context clean.
-            const promptParts = [];
+             const promptParts = [];
             if (image && image.data && image.mimeType) {
                 promptParts.push({
                     inlineData: {
@@ -45,26 +46,36 @@ export default async function handler(request, response) {
 
             const genAIResponse = await ai.models.generateContent({
                 model: model,
-                contents: { parts: promptParts }, // Send as a single-turn request
+                contents: { parts: promptParts },
                 config: { responseMimeType: "application/json" }
             });
 
-            // The response from Gemini should already be JSON text because of responseMimeType
             let jsonStr = genAIResponse.text.trim();
+            
+            // First, try to remove markdown fences if they exist
             const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
             const match = jsonStr.match(fenceRegex);
             if (match && match[2]) {
                 jsonStr = match[2].trim();
             }
+
+            // After removing fences, the string might still have leading/trailing text.
+            // Find the first '{' and the last '}' to extract the JSON object. This is more robust.
+            const startIndex = jsonStr.indexOf('{');
+            const endIndex = jsonStr.lastIndexOf('}');
+
+            if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+                jsonStr = jsonStr.substring(startIndex, endIndex + 1);
+            }
             
             try {
                 const parsedData = JSON.parse(jsonStr);
-                // Send the parsed data back to the client
                 return response.status(200).json(parsedData);
             } catch(parseError) {
                 console.error("Serverless function: Failed to parse JSON from Gemini response.", parseError);
-                console.error("Original text from Gemini:", jsonStr);
-                return response.status(500).json({ error: `Phản hồi từ AI không phải là JSON hợp lệ. Nội dung: ${jsonStr}`});
+                // Log the original text from Gemini for better debugging
+                console.error("Original text from Gemini:", genAIResponse.text);
+                return response.status(500).json({ error: `Phản hồi từ AI không phải là JSON hợp lệ. Nội dung: ${genAIResponse.text}`});
             }
         }
 
@@ -72,7 +83,6 @@ export default async function handler(request, response) {
 
     } catch (error) {
         console.error("Error in serverless function:", error);
-        // Provide a more specific error message if available
         const errorMessage = error.message || "Đã xảy ra lỗi không xác định trên máy chủ.";
         response.status(500).json({ error: `Lỗi nội bộ máy chủ: ${errorMessage}` });
     }
