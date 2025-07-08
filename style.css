@@ -676,7 +676,7 @@ td button { transition: color 0.2s; }
 /* --- AI Cutting Layout --- */
 .cutting-layout-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 1.5rem;
     margin-top: 1rem;
 }
