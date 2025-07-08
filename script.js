@@ -33,8 +33,8 @@ const viewItemModal = document.getElementById('view-item-modal');
 const viewItemTitle = document.getElementById('view-item-title');
 const viewItemContent = document.getElementById('view-item-content');
 const cuttingLayoutSection = document.getElementById('cutting-layout-section');
-const cuttingLayoutContainer = document.getElementById('cutting-layout-container');
-const cuttingLayoutSummary = document.getElementById('cutting-layout-summary');
+let cuttingLayoutContainer = document.getElementById('cutting-layout-container');
+let cuttingLayoutSummary = document.getElementById('cutting-layout-summary');
 
 // --- Global State ---
 let currentUserId = null;
@@ -630,20 +630,28 @@ function renderSavedItems(items) {
         savedItemsTableBody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 1rem; color: var(--text-light);">Chưa có dự án nào được lưu.</td></tr>`;
         return;
     }
-    items.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+    // Safely sort by timestamp
+    items.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+
     items.forEach(item => {
         const tr = document.createElement('tr');
+        // Safely access potentially missing data
+        const itemName = (item.inputs && item.inputs.name) ? item.inputs.name : 'Dự án không tên';
+        const createdAt = item.createdAt ? new Date(item.createdAt.toDate()).toLocaleString('vi-VN') : 'Không rõ';
+        
         tr.innerHTML = `
-            <td>${item.inputs.name || 'Dự án không tên'}</td>
-            <td>${new Date(item.createdAt.toDate()).toLocaleString('vi-VN')}</td>
+            <td>${itemName}</td>
+            <td>${createdAt}</td>
             <td class="text-center">
-                <button class="view-btn text-blue-500 hover:text-blue-700 mr-2" data-id="${item.id}"><i class="fas fa-eye"></i></button>
-                <button class="delete-saved-item-btn text-red-500 hover:text-red-700" data-id="${item.id}"><i class="fas fa-trash"></i></button>
+                <button class="load-btn text-green-500 hover:text-green-700 mr-2" data-id="${item.id}" title="Tải lại dự án này"><i class="fas fa-upload"></i></button>
+                <button class="view-btn text-blue-500 hover:text-blue-700 mr-2" data-id="${item.id}" title="Xem chi tiết"><i class="fas fa-eye"></i></button>
+                <button class="delete-saved-item-btn text-red-500 hover:text-red-700" data-id="${item.id}" title="Xóa dự án"><i class="fas fa-trash"></i></button>
             </td>
         `;
         savedItemsTableBody.appendChild(tr);
     });
 }
+
 
 saveItemBtn.addEventListener('click', async () => {
     if (!currentUserId || !lastGeminiResult) {
@@ -682,8 +690,17 @@ saveItemBtn.addEventListener('click', async () => {
 savedItemsTableBody.addEventListener('click', async e => {
     const viewBtn = e.target.closest('.view-btn');
     const deleteBtn = e.target.closest('.delete-saved-item-btn');
+    const loadBtn = e.target.closest('.load-btn');
 
-    if (viewBtn) {
+    if (loadBtn) {
+        const id = loadBtn.dataset.id;
+        const itemToLoad = localSavedItems.find(i => i.id === id);
+        if (itemToLoad) {
+            loadItemIntoForm(itemToLoad);
+        } else {
+            showToast('Không tìm thấy dự án để tải.', 'error');
+        }
+    } else if (viewBtn) {
         renderItemDetailsToModal(viewBtn.dataset.id);
     } else if (deleteBtn) {
         const id = deleteBtn.dataset.id;
@@ -699,6 +716,59 @@ savedItemsTableBody.addEventListener('click', async e => {
         }
     }
 });
+
+
+/**
+ * Loads a saved item's data back into the main calculator form.
+ * @param {object} item The saved item object from Firestore.
+ */
+function loadItemIntoForm(item) {
+    clearInputs(); // Start with a clean slate
+
+    const inputs = item.inputs || {};
+
+    // Populate text/number inputs
+    document.getElementById('item-length').value = inputs.length || '';
+    document.getElementById('item-width').value = inputs.width || '';
+    document.getElementById('item-height').value = inputs.height || '';
+    document.getElementById('item-name').value = inputs.name || '';
+    document.getElementById('item-type').value = inputs.type || 'khac';
+    document.getElementById('product-description').value = inputs.description || '';
+    document.getElementById('profit-margin').value = inputs.profitMargin || '50';
+
+    // Populate selects. This assumes `populateSelects` has already run.
+    document.getElementById('material-wood').value = inputs.mainWoodId || '';
+    document.getElementById('material-back-panel').value = inputs.backPanelId || '';
+    document.getElementById('material-edge').value = inputs.edgeId || '';
+    
+    // Populate accessories
+    if (inputs.accessories && Array.isArray(inputs.accessories)) {
+        // Create a deep copy to avoid modifying the original saved item object
+        addedAccessories = JSON.parse(JSON.stringify(inputs.accessories));
+        renderAccessories();
+    }
+
+    // Restore AI result to allow re-saving if needed without re-calculating
+    lastGeminiResult = {
+        costBreakdown: item.costBreakdown,
+        aiSuggestions: item.aiSuggestions,
+        cuttingLayout: item.cuttingLayout,
+    };
+     if(lastGeminiResult) saveItemBtn.disabled = false;
+
+
+    // Switch to the calculator tab
+    const calculatorTabBtn = document.querySelector('button[data-tab="calculator"]');
+    if (calculatorTabBtn) {
+        calculatorTabBtn.click();
+    }
+
+    // Scroll to top for better UX
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    showToast('Đã tải dữ liệu dự án. Bạn có thể chỉnh sửa và phân tích lại.', 'info');
+}
+
 
 /**
  * Renders the details of a saved item to a modal.
@@ -741,16 +811,19 @@ function renderItemDetailsToModal(itemId) {
     }
     
     let layoutHtml = '<p>Không có sơ đồ cắt ván.</p>';
-    if (cuttingLayout.sheets) {
+    if (cuttingLayout && cuttingLayout.sheets) {
         const tempContainer = document.createElement('div');
         const tempSummary = document.createElement('div');
         // Temporarily re-assign globals for the render function
         const oldContainer = cuttingLayoutContainer;
         const oldSummary = cuttingLayoutSummary;
+        
         cuttingLayoutContainer = tempContainer;
         cuttingLayoutSummary = tempSummary;
+        
         renderCuttingLayout(cuttingLayout);
         layoutHtml = tempSummary.outerHTML + tempContainer.innerHTML;
+        
         // Restore globals
         cuttingLayoutContainer = oldContainer;
         cuttingLayoutSummary = oldSummary;

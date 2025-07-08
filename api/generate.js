@@ -6,7 +6,7 @@ import { GoogleGenAI } from "@google/genai";
 // It must be placed in the /api directory.
 export default async function handler(request, response) {
     if (request.method !== 'POST') {
-        return response.status(405).json({ error: 'Method Not Allowed' });
+        return response.status(405).json({ error: 'Phương thức không được phép' });
     }
 
     const apiKey = process.env.API_KEY;
@@ -82,7 +82,7 @@ export default async function handler(request, response) {
             }
         }
 
-        return response.status(400).json({ error: 'Invalid request. Missing "prompt" or "newChatMessage".' });
+        return response.status(400).json({ error: 'Yêu cầu không hợp lệ. Thiếu "prompt" hoặc "newChatMessage".' });
 
     } catch (error) {
         console.error("Error in serverless function:", error);
