@@ -10,6 +10,8 @@
     --success-hover: #15803d;
     --danger-color: #dc2626;
     --danger-hover: #b91c1c;
+    --warning-color: #f59e0b;
+    --warning-hover: #d97706;
     --text-dark: #1f2937;
     --text-light: #6b7280;
     --border-color: #d1d5db;
@@ -278,7 +280,7 @@ td button { transition: color 0.2s; }
 
 
 /* --- Result Display --- */
-#price-summary-container { margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+#price-summary-container { margin-top: 1rem; }
 .price-card { border: 1px solid; padding: 1rem; border-radius: 0.75rem; text-align: center; transition: all 0.3s ease-in-out; }
 .price-label { font-size: 0.875rem; font-weight: 500; }
 .price-value { font-size: 2.25rem; font-weight: 700; line-height: 1; margin-top: 0.25rem; }
@@ -299,20 +301,28 @@ td button { transition: color 0.2s; }
     border-top: 1px solid var(--border-color);
     padding-top: 1.5rem;
 }
-.result-content-inner {
-    background-color: #f9fafb;
+#initial-summary-section {
+    background-color: #fafafa;
+    border: 1px solid var(--border-color);
     border-radius: 0.5rem;
     padding: 1rem;
-    min-height: 150px;
-    position: relative;
-    white-space: normal; /* Changed from pre-wrap */
-    word-wrap: break-word;
-    font-size: 0.9rem;
-    line-height: 1.6;
+}
+.initial-total-cost {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px dashed var(--border-color);
+}
+.initial-total-cost strong {
+    color: var(--primary-color);
 }
 
 /* --- Structured Analysis & Modal Content Styling --- */
-.result-content-inner h4, .modal-body h4 {
+.modal-body h4 {
     font-size: 1rem;
     font-weight: 600;
     color: var(--primary-color);
@@ -321,35 +331,18 @@ td button { transition: color 0.2s; }
     display: flex;
     align-items: center;
 }
-.result-content-inner h4:first-child, .modal-body h4:first-child {
-    margin-top: 0;
-}
-.result-content-inner h4 i, .modal-body h4 i {
-    margin-right: 0.5rem;
-    color: var(--primary-hover);
-}
-.result-content-inner ul, .modal-body ul {
-    list-style-type: none;
-    padding-left: 1.5rem;
-    margin: 0 0 1rem 0;
-}
-.result-content-inner li, .modal-body li {
-    position: relative;
-    padding-bottom: 0.5rem;
-    color: var(--text-dark);
-}
-.result-content-inner li::before, .modal-body li::before {
+.modal-body h4:first-child { margin-top: 0; }
+.modal-body h4 i { margin-right: 0.5rem; color: var(--primary-hover); }
+.modal-body ul { list-style-type: none; padding-left: 1.5rem; margin: 0 0 1rem 0; }
+.modal-body li { position: relative; padding-bottom: 0.5rem; color: var(--text-dark); }
+.modal-body li::before {
     content: '✓';
     position: absolute;
     left: -1.5rem;
     color: var(--success-color);
     font-weight: bold;
 }
-.result-content-inner p, .modal-body p {
-    color: var(--text-light);
-    line-height: 1.6;
-    margin: 0;
-}
+.modal-body p { color: var(--text-light); line-height: 1.6; margin: 0; }
 
 /* New styles for Final Price Recommendation */
 .final-price-recommendation {
@@ -383,11 +376,11 @@ td button { transition: color 0.2s; }
     color: white !important; /* Override generic p color */
 }
 
-/* New styles for Cost List (Hidden Costs) */
+/* Cost List (for initial and final breakdown) */
 .cost-list {
     list-style-type: none;
     padding: 0;
-    margin: 0.5rem 0 1.5rem 0;
+    margin: 0.5rem 0 0 0;
     border: 1px solid var(--border-color);
     border-radius: 0.5rem;
     overflow: hidden;
@@ -402,42 +395,53 @@ td button { transition: color 0.2s; }
     position: static; /* Override default li styling */
     padding-bottom: 0.75rem; /* Override default li styling */
 }
-.cost-list li:last-child {
-    border-bottom: none;
-}
-.cost-list li::before {
-    content: none; /* Override default li styling */
-}
-.cost-item-name {
-    font-weight: 500;
-    flex-grow: 1;
-    margin-right: 1rem;
-}
-.cost-item-value {
-    font-weight: 600;
-    color: var(--primary-color);
-    white-space: nowrap;
-}
-.cost-item-reason {
-    width: 100%;
-    font-size: 0.8rem;
-    color: var(--text-light);
-    margin-top: 0.25rem;
-    padding-left: 0.25rem;
-    font-style: italic;
-}
-.cost-list li.total-cost-item {
-    background-color: #f9fafb;
-}
-.total-cost-item .cost-item-name,
-.total-cost-item .cost-item-value {
-    font-weight: 700;
-    color: var(--text-dark);
-}
+.cost-list li:last-child { border-bottom: none; }
+.cost-list li::before { content: none; /* Override default li styling */ }
+.cost-item-name { font-weight: 500; flex-grow: 1; margin-right: 1rem; }
+.cost-item-value { font-weight: 600; color: var(--primary-color); white-space: nowrap; }
+.cost-item-reason { width: 100%; font-size: 0.8rem; color: var(--text-light); margin-top: 0.25rem; padding-left: 0.25rem; font-style: italic; }
 
-.result-content-inner ul {
-    padding-left: 1.5rem; /* Keep padding for other lists */
+/* AI Suggestions specific styles */
+.ai-suggestions-container {
+    background-color: #f9fafb;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    font-size: 0.9rem;
+    line-height: 1.6;
 }
+.suggestion-summary {
+    font-style: italic;
+    color: var(--text-light);
+    border-left: 3px solid var(--primary-color);
+    padding-left: 1rem;
+    margin-bottom: 1.5rem;
+}
+.suggestion-points-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.suggestion-point {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+.suggestion-icon {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+}
+.suggestion-text { flex-grow: 1; }
+.icon-cost-saving { background-color: var(--success-color); }
+.icon-structural { background-color: var(--primary-color); }
+.icon-warning { background-color: var(--warning-color); }
+.icon-upsell { background-color: #9333ea; }
+.icon-generic { background-color: var(--text-light); }
 
 
 /* --- AI Assistant Chat --- */
@@ -672,8 +676,8 @@ td button { transition: color 0.2s; }
 /* --- AI Cutting Layout --- */
 .cutting-layout-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
     margin-top: 1rem;
 }
 
@@ -729,11 +733,12 @@ td button { transition: color 0.2s; }
 }
 
 .cutting-piece-label {
-    font-size: 10px;
+    font-size: 9px;
     color: var(--primary-color);
     font-weight: 500;
     text-align: center;
-    padding: 2px;
+    padding: 1px;
     white-space: normal;
     word-break: break-word;
+    line-height: 1.1;
 }

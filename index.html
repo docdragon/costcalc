@@ -124,40 +124,57 @@
                                 </div>
                                 <div class="button-group">
                                     <button id="calculate-btn" class="btn btn-primary full-width">
-                                        <i class="fas fa-cogs"></i> Nhờ AI Phân tích
+                                        <i class="fas fa-calculator"></i> Tính chi phí vật tư
                                     </button>
                                 </div>
                             </div>
-                            <div id="cost-breakdown-container" class="result-box"></div>
-                            <div id="price-summary-container" class="result-box hidden">
-                                <div class="grid-3-col">
-                                    <div class="price-card bg-indigo">
-                                        <div class="price-label">Tổng Chi Phí Vật Tư</div>
-                                        <div id="total-cost-value" class="price-value">0đ</div>
+
+                            <!-- Initial Calculation Result -->
+                            <div id="initial-summary-section" class="result-box hidden">
+                                <h3 class="result-box-header"><i class="fas fa-receipt"></i> Tóm tắt Chi phí Vật tư Ước tính</h3>
+                                <div id="initial-cost-breakdown-container"></div>
+                                <div class="initial-total-cost">
+                                    <span>Tổng chi phí vật tư ước tính:</span>
+                                    <strong id="initial-total-cost-value">0đ</strong>
+                                </div>
+                            </div>
+                            
+                            <!-- AI Full Analysis Result -->
+                            <div id="ai-analysis-section" class="hidden">
+                                <div id="price-summary-container" class="result-box">
+                                    <div class="grid-3-col">
+                                        <div class="price-card bg-indigo">
+                                            <div class="price-label">Tổng Chi Phí (Đã gồm chi phí ẩn)</div>
+                                            <div id="total-cost-value" class="price-value">0đ</div>
+                                        </div>
+                                        <div class="price-card bg-yellow">
+                                            <div class="price-label">Giá Bán Đề Xuất</div>
+                                            <div id="suggested-price-value" class="price-value">0đ</div>
+                                        </div>
+                                        <div class="price-card bg-green">
+                                            <div class="price-label">Lợi Nhuận Ước Tính</div>
+                                            <div id="estimated-profit-value" class="price-value">0đ</div>
+                                        </div>
                                     </div>
-                                    <div class="price-card bg-yellow">
-                                        <div class="price-label">Giá Bán Đề Xuất</div>
-                                        <div id="suggested-price-value" class="price-value">0đ</div>
+                                </div>
+                                <div id="cost-breakdown-container" class="result-box"></div>
+                                
+                                <div class="result-box">
+                                    <h3 class="result-box-header"><i class="fas fa-lightbulb"></i> Phân Tích & Gợi Ý từ AI</h3>
+                                    <div id="result-content">
+                                        <!-- New formatted AI suggestions will go here -->
                                     </div>
-                                    <div class="price-card bg-green">
-                                        <div class="price-label">Lợi Nhuận Ước Tính</div>
-                                        <div id="estimated-profit-value" class="price-value">0đ</div>
+                                </div>
+                                
+                                <div id="cutting-layout-section" class="result-box">
+                                    <h3 class="result-box-header"><i class="fas fa-th-large"></i> Sơ đồ Cắt ván Gợi ý từ AI</h3>
+                                    <div id="cutting-layout-summary"></div>
+                                    <div id="cutting-layout-container" class="cutting-layout-container">
+                                        <!-- AI-generated layouts will be rendered here -->
                                     </div>
                                 </div>
                             </div>
-                            <div class="result-box">
-                                <h3 class="result-box-header">Phân Tích & Gợi Ý từ AI</h3>
-                                <div id="result-content" class="result-content-inner">
-                                    <p>Kết quả phân tích từ AI sẽ xuất hiện ở đây sau khi bạn nhấn nút.</p>
-                                </div>
-                            </div>
-                            <div id="cutting-layout-section" class="result-box hidden">
-                                <h3 class="result-box-header"><i class="fas fa-th-large"></i> Sơ đồ Cắt ván Gợi ý từ AI</h3>
-                                <div id="cutting-layout-summary"></div>
-                                <div id="cutting-layout-container" class="cutting-layout-container">
-                                    <!-- AI-generated layouts will be rendered here -->
-                                </div>
-                            </div>
+
                             <div class="button-group">
                                 <button id="save-item-btn" class="btn btn-success full-width" disabled>
                                     <i class="fas fa-save"></i> Lưu Dự án
@@ -175,10 +192,9 @@
                         <div class="content-wrapper calculator-form-content">
                              <h4><i class="fas fa-lightbulb"></i> Mẹo sử dụng</h4>
                             <ul>
-                                <li><strong>Nhập Kích Thước:</strong> Bắt đầu bằng cách nhập kích thước cơ bản của sản phẩm.</li>
-                                <li><strong>Chọn Vật Tư:</strong> Chọn vật liệu từ danh sách đã có. Nếu chưa có, hãy thêm ở tab "Quản lý Vật tư".</li>
-                                <li><strong>Thêm Phụ Kiện:</strong> Đừng quên thêm các phụ kiện như bản lề, ray trượt.</li>
-                                <li><strong>Nhờ AI Phân Tích:</strong> Sau khi có chi phí sơ bộ, nhấn nút phân tích để AI tìm các chi phí ẩn, gợi ý tối ưu và tạo sơ đồ cắt ván chính xác.</li>
+                                <li><strong>Bước 1: Tính chi phí vật tư.</strong> Nhập đầy đủ thông tin sản phẩm và nhấn nút "Tính chi phí vật tư" để có ước tính ban đầu.</li>
+                                <li><strong>Bước 2: Nhờ AI phân tích.</strong> Sau khi có chi phí sơ bộ, nhấn nút "Nhờ AI Phân tích & Tối ưu" để AI tìm các chi phí ẩn, gợi ý tối ưu và tạo sơ đồ cắt ván chính xác.</li>
+                                <li><strong>Lưu & Tải lại:</strong> Lưu các dự án quan trọng để xem lại hoặc tải lại thông tin vào biểu mẫu để tính toán phiên bản mới.</li>
                                 <li><strong>Dạy AI:</strong> Sử dụng tab "Trợ lý AI" để dạy cho AI về cách tính giá đặc thù của xưởng bạn. Các cuộc trò chuyện sẽ được ghi nhớ.</li>
                             </ul>
                         </div>
