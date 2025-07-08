@@ -22,15 +22,32 @@ export default async function handler(request, response) {
 
         // --- Handle Chat Request ---
         if (newChatMessage) {
-            // The client sends the entire chat history, including the latest user message.
-            // The `chatHistory` array is already in the format required by `generateContent` for multi-turn conversations.
-            // This is a more robust, stateless approach than creating a new chat session for each message.
+            let systemInstruction = null;
+            let userAndModelHistory = chatHistory;
+
+            // The Gemini API expects system instructions in a separate field, not in the chat history.
+            // Find and extract the system instruction from our conventional history format.
+            const systemMessageIndex = chatHistory.findIndex(msg => msg.role === 'system');
+            if (systemMessageIndex !== -1) {
+                const systemMessage = chatHistory[systemMessageIndex];
+                // Assuming system instruction is simple text within the first part.
+                systemInstruction = systemMessage?.parts?.[0]?.text;
+                // Filter out the system message from the history that will be sent to the API's `contents` field.
+                userAndModelHistory = chatHistory.filter(msg => msg.role !== 'system');
+            }
+            
+            const config = {};
+            if (systemInstruction) {
+                config.systemInstruction = systemInstruction;
+            }
+
+            // The `contents` field should only contain 'user' and 'model' roles.
             const result = await ai.models.generateContent({
                 model: model,
-                contents: chatHistory,
+                contents: userAndModelHistory, // Send only user/model messages
+                config: config // Add system instruction here if it exists
             });
 
-            // The response from generateContent contains the text we need to send back.
             return response.status(200).json({ text: result.text });
         }
 

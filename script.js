@@ -759,14 +759,14 @@ function renderSavedItems(items) {
         savedItemsTableBody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 1rem; color: var(--text-light);">Chưa có dự án nào được lưu.</td></tr>`;
         return;
     }
-    // Safely sort by timestamp
-    items.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+    // Safely sort by timestamp, without optional chaining for better compatibility
+    items.sort((a, b) => (b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0) - (a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0));
 
     items.forEach(item => {
         const tr = document.createElement('tr');
-        // BUG FIX: Use optional chaining for safer access to nested properties on potentially old/malformed data.
-        const itemName = item?.inputs?.name || 'Dự án không tên';
-        const createdAt = item?.createdAt ? new Date(item.createdAt.toDate()).toLocaleString('vi-VN') : 'Không rõ';
+        // BUG FIX: Use standard checks for safer access to nested properties on potentially old/malformed data.
+        const itemName = (item && item.inputs && item.inputs.name) || 'Dự án không tên';
+        const createdAt = (item && item.createdAt) ? new Date(item.createdAt.toDate()).toLocaleString('vi-VN') : 'Không rõ';
         
         tr.innerHTML = `
             <td>${itemName}</td>
@@ -941,10 +941,15 @@ function renderItemDetailsToModal(itemId) {
     const cuttingLayout = item.cuttingLayout || {};
     
     viewItemTitle.textContent = `Chi tiết dự án: ${inputs.name || 'Không tên'}`;
+    
+    const mainWoodFound = localMaterials['Ván'].find(m => m.id === inputs.mainWoodId);
+    const mainWood = mainWoodFound ? mainWoodFound.name : 'Không rõ';
 
-    const mainWood = localMaterials['Ván'].find(m => m.id === inputs.mainWoodId)?.name || 'Không rõ';
-    const backPanel = localMaterials['Ván'].find(m => m.id === inputs.backPanelId)?.name || 'Dùng ván chính';
-    const edge = localMaterials['Cạnh'].find(m => m.id === inputs.edgeId)?.name || 'Không rõ';
+    const backPanelFound = localMaterials['Ván'].find(m => m.id === inputs.backPanelId);
+    const backPanel = backPanelFound ? backPanelFound.name : 'Dùng ván chính';
+    
+    const edgeFound = localMaterials['Cạnh'].find(m => m.id === inputs.edgeId);
+    const edge = edgeFound ? edgeFound.name : 'Không rõ';
 
     let accessoriesHtml = 'Không có';
     if (inputs.accessories && inputs.accessories.length > 0) {
