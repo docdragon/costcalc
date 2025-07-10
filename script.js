@@ -605,13 +605,25 @@ async function runAICalculation() {
     const edgeId = document.getElementById('material-edge').value;
 
     const mainWood = localMaterials['Ván'].find(m => m.id === mainWoodId);
-    const doorWood = localMaterials['Ván'].find(m => m.id === doorWoodId) || mainWood;
+    const doorWood = localMaterials['Ván'].find(m => m.id === doorWoodId) || mainWood; // Default to main wood
     const backPanel = localMaterials['Ván'].find(m => m.id === backPanelId);
     const edge = localMaterials['Cạnh'].find(m => m.id === edgeId);
 
+    // This is the crucial logic fix.
+    // Determine which pieces are cut from which material.
     const allPieces = getPanelPieces();
-    const bodyPieces = allPieces.filter(p => p.type === 'body');
-    const doorPieces = allPieces.filter(p => p.type === 'door');
+    const useSeparateDoorWood = !!doorWoodId && doorWood.id !== mainWood.id;
+
+    let mainWoodPieces = allPieces.filter(p => p.type === 'body');
+    let doorPiecesForPrompt = [];
+
+    if (useSeparateDoorWood) {
+        // If door wood is separate, its pieces are calculated separately.
+        doorPiecesForPrompt = allPieces.filter(p => p.type === 'door');
+    } else {
+        // If door wood is the same, its pieces are added to the main wood cutting list for optimal packing.
+        mainWoodPieces.push(...allPieces.filter(p => p.type === 'door'));
+    }
 
     const prompt = `
     NHIỆM VỤ: Bạn là một trợ lý AI chuyên gia cho một xưởng gỗ ở Việt Nam. Mục tiêu của bạn là cung cấp một phân tích chi phí chi tiết, các đề xuất tối ưu hóa, và một sơ đồ cắt ván chính xác (2D bin packing) cho một sản phẩm nhất định. TOÀN BỘ PHẢN HỒI PHẢI BẰNG TIẾNG VIỆT.
@@ -622,32 +634,32 @@ async function runAICalculation() {
     - Loại sản phẩm: ${inputs.type}
     - Ghi chú của người dùng: ${inputs.description}
     - Tỷ suất lợi nhuận mong muốn: ${inputs.profitMargin}%
-    - Gỗ chính (Thùng): ${mainWood.name} (${mainWood.price} VND/${mainWood.unit})
-    - Gỗ cánh: ${doorWood.name} (${doorWood.price} VND/${doorWood.unit})
-    - Gỗ hậu: ${backPanel ? `${backPanel.name} (${backPanel.price} VND/${backPanel.unit})` : 'Sử dụng gỗ chính'}
+    - Vật liệu VÁN CHÍNH (dùng cho Thùng và các chi tiết khác không quy định): ${mainWood.name} (${mainWood.price} VND/${mainWood.unit})
+    - Vật liệu VÁN CÁNH: ${useSeparateDoorWood ? `${doorWood.name} (${doorWood.price} VND/${doorWood.unit})` : 'Sử dụng chung vật liệu Ván Chính.'}
+    - Vật liệu VÁN HẬU: ${backPanel ? `${backPanel.name} (${backPanel.price} VND/${backPanel.unit})` : 'Sử dụng chung vật liệu Ván Chính.'}
     - Nẹp cạnh: ${edge.name} (${edge.price} VND/mét)
     - Phụ kiện: ${addedAccessories.map(a => `${a.name} (SL: ${a.quantity}, Đơn giá: ${a.price})`).join(', ')}
     - Có hình ảnh: ${uploadedImage ? 'Có' : 'Không'}
 
-    HƯỚNG DẪN:
-    1.  **Sơ đồ cắt ván (Bin Packing):** Đây là tính toán QUAN TRỌNG NHẤT. Tính toán này CHỈ dành cho VÁN CHÍNH (THÙNG).
+    HƯỚNG DẪN CHI TIẾT:
+    1.  **Sơ đồ cắt ván (Bin Packing) cho VÁN CHÍNH:**
         - Kích thước tấm ván tiêu chuẩn là 1220mm x 2440mm.
-        - Danh sách các miếng cần cắt từ VÁN CHÍNH (THÙNG) là: ${JSON.stringify(bodyPieces.map(({type, ...rest}) => rest))}.
-        - Thực hiện thuật toán sắp xếp 2D để xếp các miếng này vào số lượng tấm ván tiêu chuẩn ít nhất.
-        - Tọa độ (x, y) phải là góc trên cùng bên trái của mỗi miếng trên tấm ván.
-        - Điền vào đối tượng "cuttingLayout" với kết quả. "totalSheetsUsed" phải chính xác cho VÁN CHÍNH (THÙNG).
+        - Danh sách các miếng cần cắt từ VÁN CHÍNH là: ${JSON.stringify(mainWoodPieces.map(({type, ...rest}) => rest))}.
+        - Thực hiện thuật toán sắp xếp 2D để xếp các miếng này vào số lượng tấm ván tiêu chuẩn ít nhất có thể.
+        - Tọa độ (x, y) là góc trên cùng bên trái của mỗi miếng.
+        - Điền kết quả vào đối tượng "cuttingLayout". "totalSheetsUsed" phải là số tấm VÁN CHÍNH cần dùng. KHÔNG tạo sơ đồ cắt cho ván cánh nếu nó là vật liệu riêng.
+
     2.  **Tính toán chi phí:**
-        - Tính "materialCosts". Nó phải bao gồm chi phí cho VÁN CHÍNH, VÁN CÁNH, VÁN HẬU (nếu có), nẹp cạnh, và phụ kiện.
-        - Chi phí VÁN CHÍNH phải dựa trên "totalSheetsUsed" đã được tối ưu từ sơ đồ cắt.
-        - Chi phí VÁN CÁNH phải được ƯỚC TÍNH bằng cách tính tổng diện tích các miếng cánh (${JSON.stringify(doorPieces.map(({type, ...rest}) => rest))}) và chia cho diện tích tấm ván chuẩn (1220x2440), sau đó làm tròn lên và cộng thêm một chút hao hụt (~15%).
-        - Tính các "hiddenCosts" thực tế như nhân công, vận chuyển và hao hụt chung.
-        - Cộng tất cả các chi phí để có được "totalCost".
-        - Tính "suggestedPrice" bằng cách sử dụng tỷ suất lợi nhuận trên "totalCost".
-        - Tính "estimatedProfit" là suggestedPrice - totalCost.
+        - Tạo một danh sách chi phí trong "materialCosts".
+        - **Chi phí Ván chính:** Phải dựa trên "totalSheetsUsed" đã được tối ưu từ sơ đồ cắt ở trên, nhân với giá VÁN CHÍNH.
+        - **Chi phí Ván cánh:** CHỈ TÍNH NẾU DÙNG VẬT LIỆU RIÊNG. Ước tính số tấm cần dùng bằng cách tính tổng diện tích các miếng cánh sau: ${JSON.stringify(doorPiecesForPrompt.map(({type, ...rest}) => rest))}, chia cho diện tích tấm ván chuẩn (1220x2440), làm tròn lên, rồi nhân với giá VÁN CÁNH. Nếu không có miếng cánh nào hoặc dùng chung ván, chi phí này là 0.
+        - **Chi phí Ván hậu:** Nếu có ván hậu riêng, tính chi phí cho 1 tấm. Nếu không, chi phí này đã được tính vào ván chính.
+        - **Chi phí Nẹp cạnh và Phụ kiện:** Tính toán dựa trên dữ liệu đầu vào.
+        - Tính các "hiddenCosts" thực tế như nhân công, vận chuyển, hao hụt chung.
+        - Tính "totalCost", "suggestedPrice", "estimatedProfit".
+    
     3.  **Gợi ý từ AI:**
-        - Điền vào đối tượng aiSuggestions.
-        - summary: Cung cấp một tóm tắt rất ngắn gọn, chuyên nghiệp về phân tích của bạn.
-        - keyPoints: Cung cấp từ 2 đến 4 gợi ý quan trọng nhất. Đối với mỗi điểm, chọn một loại từ danh sách này: cost_saving (tiết kiệm chi phí), structural (kết cấu), warning (cảnh báo), upsell (bán thêm). Viết lời khuyên trong trường văn bản.
+        - Phân tích và đưa ra các gợi ý có giá trị trong "aiSuggestions".
     `;
     
     try {
