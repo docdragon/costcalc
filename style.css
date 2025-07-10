@@ -484,6 +484,12 @@ td button { transition: color 0.2s; }
     word-wrap: break-word;
     line-height: 1.6;
 }
+.message-content .loading-placeholder {
+    display: flex;
+    align-items: center;
+    color: var(--text-light);
+}
+
 .chat-message.user {
     align-self: flex-end;
     flex-direction: row-reverse;
@@ -517,12 +523,13 @@ td button { transition: color 0.2s; }
     color: var(--text-light);
     max-width: 100%;
 }
-
+.chat-input-container {
+    padding: 0.75rem;
+    border-top: 1px solid var(--border-color);
+}
 .chat-input-area {
     display: flex;
     gap: 0.5rem;
-    padding: 0.75rem;
-    border-top: 1px solid var(--border-color);
 }
 .chat-input {
     flex-grow: 1;

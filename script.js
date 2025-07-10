@@ -1065,10 +1065,10 @@ function initializeChat() {
         parts: [{ text: "Bạn là một trợ lý AI hữu ích chuyên về ước tính chi phí sản xuất đồ gỗ. Hãy trả lời ngắn gọn, tập trung vào lĩnh vực làm đồ gỗ tại Việt Nam. Toàn bộ các câu trả lời phải bằng tiếng Việt. Cuộc hội thoại này sẽ được lưu lại để tham khảo trong tương lai." }],
     }];
     chatMessagesContainer.innerHTML = ''; // Clear previous chat
-    renderChatMessage('Chào bạn, tôi là trợ lý AI. Tôi có thể giúp gì cho việc tính giá sản phẩm của bạn?', 'model');
+    renderChatMessage('Chào bạn, tôi là trợ lý AI. Tôi có thể giúp gì cho bạn?', 'model');
 }
 
-function renderChatMessage(message, role) {
+function renderChatMessage(message, role, options = {}) {
     const messageWrapper = document.createElement('div');
     messageWrapper.className = `chat-message ${role}`;
     
@@ -1078,41 +1078,29 @@ function renderChatMessage(message, role) {
     
     const content = document.createElement('div');
     content.className = 'message-content';
-    content.innerHTML = renderFormattedText(message);
+
+    if (options.isLoading) {
+        content.innerHTML = `<div class="loading-placeholder"><span class="spinner-sm" style="border-bottom-color: var(--primary-color);"></span> ${message}</div>`;
+    } else {
+        content.innerHTML = renderFormattedText(message);
+    }
     
     messageWrapper.appendChild(icon);
     messageWrapper.appendChild(content);
     chatMessagesContainer.appendChild(messageWrapper);
     chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+    return messageWrapper;
 }
 
-chatForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (isAwaitingChatResponse) return;
-    const message = chatInput.value.trim();
-    if (!message) return;
-    
-    isAwaitingChatResponse = true;
-    chatInput.value = '';
-    chatInput.disabled = true;
-    sendChatBtn.disabled = true;
 
+async function handleTextChat(message) {
     renderChatMessage(message, 'user');
     chatHistory.push({ role: 'user', parts: [{ text: message }] });
 
-    // Create the AI's message bubble, but keep it empty for now
-    const aiMessageWrapper = document.createElement('div');
-    aiMessageWrapper.className = 'chat-message model';
-    aiMessageWrapper.innerHTML = `
-        <div class="icon"><i class="fas fa-robot"></i></div>
-        <div class="message-content"></div>
-    `;
-    chatMessagesContainer.appendChild(aiMessageWrapper);
+    const aiMessageWrapper = renderChatMessage('Đang suy nghĩ...', 'model', { isLoading: true });
     const aiMessageContent = aiMessageWrapper.querySelector('.message-content');
-    chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
     
     let fullResponseText = '';
-
     try {
         const response = await fetch('/api/generate', {
             method: 'POST',
@@ -1127,6 +1115,7 @@ chatForm.addEventListener('submit', async (e) => {
         
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
+        aiMessageContent.innerHTML = ''; // Clear "thinking..."
 
         while (true) {
             const { value, done } = await reader.read();
@@ -1134,7 +1123,7 @@ chatForm.addEventListener('submit', async (e) => {
             
             const chunk = decoder.decode(value, { stream: true });
             fullResponseText += chunk;
-            aiMessageContent.innerHTML = renderFormattedText(fullResponseText); // Re-render content with formatting on each chunk
+            aiMessageContent.innerHTML = renderFormattedText(fullResponseText);
             chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
         }
 
@@ -1145,13 +1134,28 @@ chatForm.addEventListener('submit', async (e) => {
     } catch (error) {
         console.error("Chat error:", error);
         aiMessageContent.innerHTML = renderFormattedText(`Xin lỗi, tôi gặp sự cố: ${error.message}`);
-    } finally {
-        isAwaitingChatResponse = false;
-        chatInput.disabled = false;
-        sendChatBtn.disabled = false;
-        chatInput.focus();
     }
+}
+
+chatForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (isAwaitingChatResponse) return;
+    const message = chatInput.value.trim();
+    if (!message) return;
+    
+    isAwaitingChatResponse = true;
+    chatInput.value = '';
+    chatInput.disabled = true;
+    sendChatBtn.disabled = true;
+
+    await handleTextChat(message);
+
+    isAwaitingChatResponse = false;
+    chatInput.disabled = false;
+    sendChatBtn.disabled = false;
+    chatInput.focus();
 });
+
 
 // --- App Initialization ---
 document.addEventListener('DOMContentLoaded', () => {

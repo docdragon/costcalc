@@ -1,6 +1,3 @@
-
-
-
 import { GoogleGenAI, Type } from "@google/genai";
 
 // This is a Vercel Serverless Function.
@@ -16,8 +13,7 @@ export default async function handler(request, response) {
     }
 
     const ai = new GoogleGenAI({ apiKey });
-    const model = 'gemini-2.5-flash';
-
+    
     try {
         const { prompt, image, chatHistory, newChatMessage } = request.body;
 
@@ -44,7 +40,7 @@ export default async function handler(request, response) {
             });
 
             const streamResult = await ai.models.generateContentStream({
-                model: model,
+                model: 'gemini-2.5-flash',
                 contents: userAndModelHistory,
                 config: config
             });
@@ -140,7 +136,7 @@ export default async function handler(request, response) {
             };
 
             const genAIResponse = await ai.models.generateContent({
-                model: model,
+                model: 'gemini-2.5-flash',
                 contents: { parts: promptParts },
                 config: {
                     responseMimeType: "application/json",
