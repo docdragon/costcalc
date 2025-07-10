@@ -584,39 +584,38 @@ async function runAICalculation() {
     const edge = localMaterials['Cạnh'].find(m => m.id === edgeId);
     const panelPieces = getPanelPieces();
 
-    // The prompt is now much simpler because the structure is enforced by responseSchema
     const prompt = `
-    TASK: You are an expert AI assistant for a woodworking shop in Vietnam. Your goal is to provide a detailed cost analysis, optimization suggestions, and a precise cutting layout (2D bin packing) for a given product.
+    NHIỆM VỤ: Bạn là một trợ lý AI chuyên gia cho một xưởng gỗ ở Việt Nam. Mục tiêu của bạn là cung cấp một phân tích chi phí chi tiết, các đề xuất tối ưu hóa, và một sơ đồ cắt ván chính xác (2D bin packing) cho một sản phẩm nhất định. TOÀN BỘ PHẢN HỒI PHẢI BẰNG TIẾNG VIỆT.
 
-    INPUT DATA:
-    - Product Name: ${inputs.name}
-    - Dimensions (LxWxH): ${inputs.length} x ${inputs.width} x ${inputs.height} mm
-    - Product Type: ${inputs.type}
-    - User Notes: ${inputs.description}
-    - Desired Profit Margin: ${inputs.profitMargin}%
-    - Main Wood: ${mainWood.name} (${mainWood.price} VND/${mainWood.unit})
-    - Back Panel Wood: ${backPanel ? `${backPanel.name} (${backPanel.price} VND/${backPanel.unit})` : 'Use main wood'}
-    - Edge Banding: ${edge.name} (${edge.price} VND/mét)
-    - Accessories: ${addedAccessories.map(a => `${a.name} (SL: ${a.quantity}, Đơn giá: ${a.price})`).join(', ')}
-    - Image provided: ${uploadedImage ? 'Yes' : 'No'}
+    DỮ LIỆU ĐẦU VÀO:
+    - Tên sản phẩm: ${inputs.name}
+    - Kích thước (DxRxC): ${inputs.length} x ${inputs.width} x ${inputs.height} mm
+    - Loại sản phẩm: ${inputs.type}
+    - Ghi chú của người dùng: ${inputs.description}
+    - Tỷ suất lợi nhuận mong muốn: ${inputs.profitMargin}%
+    - Gỗ chính: ${mainWood.name} (${mainWood.price} VND/${mainWood.unit})
+    - Gỗ hậu: ${backPanel ? `${backPanel.name} (${backPanel.price} VND/${backPanel.unit})` : 'Sử dụng gỗ chính'}
+    - Nẹp cạnh: ${edge.name} (${edge.price} VND/mét)
+    - Phụ kiện: ${addedAccessories.map(a => `${a.name} (SL: ${a.quantity}, Đơn giá: ${a.price})`).join(', ')}
+    - Có hình ảnh: ${uploadedImage ? 'Có' : 'Không'}
 
-    INSTRUCTIONS:
-    1.  **Cutting Layout (Bin Packing):** This is the MOST important calculation.
-        - The standard panel size is 1220mm x 2440mm.
-        - The list of pieces to be cut from the MAIN WOOD is: ${JSON.stringify(panelPieces)}.
-        - Perform a 2D bin packing algorithm to fit these pieces onto the minimum number of standard panels.
-        - The (x, y) coordinates should be the top-left corner of each piece on the panel.
-        - Populate the "cuttingLayout" object with the results. "totalSheetsUsed" must be accurate.
-    2.  **Cost Calculation:**
-        - Calculate "materialCosts" based on the optimized "totalSheetsUsed", edge banding estimate, and provided accessory list.
-        - Calculate realistic "hiddenCosts" like labor, transport, and waste.
-        - Sum all costs to get "totalCost".
-        - Calculate "suggestedPrice" using the profit margin on "totalCost".
-        - Calculate "estimatedProfit" as suggestedPrice - totalCost.
-    3.  **AI Suggestions:**
-        - Populate the aiSuggestions object.
-        - summary: Provide a very brief, professional summary of your analysis.
-        - keyPoints: Provide 2 to 4 of the most important suggestions. For each point, choose a type from this list: cost_saving, structural, warning, upsell. Write the advice in the text field.
+    HƯỚNG DẪN:
+    1.  **Sơ đồ cắt ván (Bin Packing):** Đây là tính toán QUAN TRỌNG NHẤT.
+        - Kích thước tấm ván tiêu chuẩn là 1220mm x 2440mm.
+        - Danh sách các miếng cần cắt từ VÁN CHÍNH là: ${JSON.stringify(panelPieces)}.
+        - Thực hiện thuật toán sắp xếp 2D để xếp các miếng này vào số lượng tấm ván tiêu chuẩn ít nhất.
+        - Tọa độ (x, y) phải là góc trên cùng bên trái của mỗi miếng trên tấm ván.
+        - Điền vào đối tượng "cuttingLayout" với kết quả. "totalSheetsUsed" phải chính xác.
+    2.  **Tính toán chi phí:**
+        - Tính "materialCosts" dựa trên "totalSheetsUsed" đã được tối ưu, ước tính nẹp cạnh và danh sách phụ kiện được cung cấp.
+        - Tính các "hiddenCosts" thực tế như nhân công, vận chuyển và hao hụt.
+        - Cộng tất cả các chi phí để có được "totalCost".
+        - Tính "suggestedPrice" bằng cách sử dụng tỷ suất lợi nhuận trên "totalCost".
+        - Tính "estimatedProfit" là suggestedPrice - totalCost.
+    3.  **Gợi ý từ AI:**
+        - Điền vào đối tượng aiSuggestions.
+        - summary: Cung cấp một tóm tắt rất ngắn gọn, chuyên nghiệp về phân tích của bạn.
+        - keyPoints: Cung cấp từ 2 đến 4 gợi ý quan trọng nhất. Đối với mỗi điểm, chọn một loại từ danh sách này: cost_saving (tiết kiệm chi phí), structural (kết cấu), warning (cảnh báo), upsell (bán thêm). Viết lời khuyên trong trường văn bản.
     `;
     
     try {
@@ -988,7 +987,7 @@ function renderItemDetailsToModal(itemId) {
 function initializeChat() {
     chatHistory = [{
         role: "system",
-        parts: [{ text: "You are a helpful AI assistant for woodworking cost estimation. Keep your answers concise and relevant to furniture making in Vietnam. The user is likely asking for advice on materials, pricing, or production techniques. All conversations are persisted." }],
+        parts: [{ text: "Bạn là một trợ lý AI hữu ích chuyên về ước tính chi phí sản xuất đồ gỗ. Hãy trả lời ngắn gọn, tập trung vào lĩnh vực làm đồ gỗ tại Việt Nam. Toàn bộ các câu trả lời phải bằng tiếng Việt. Cuộc hội thoại này sẽ được lưu lại để tham khảo trong tương lai." }],
     }];
     chatMessagesContainer.innerHTML = ''; // Clear previous chat
     renderChatMessage('Chào bạn, tôi là trợ lý AI. Tôi có thể giúp gì cho việc tính giá sản phẩm của bạn?', 'model');

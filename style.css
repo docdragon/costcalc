@@ -658,9 +658,16 @@ td button { transition: color 0.2s; }
 /* --- AI Cutting Layout --- */
 .cutting-layout-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem; /* Thu nhỏ khoảng cách trên di động */
     margin-top: 1rem;
+}
+
+@media (min-width: 1024px) {
+    .cutting-layout-container {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem; /* Trả lại khoảng cách gốc trên màn hình lớn */
+    }
 }
 
 #cutting-layout-summary {
