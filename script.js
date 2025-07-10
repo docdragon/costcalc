@@ -1147,6 +1147,7 @@ async function handleTextChat(message) {
 async function handleImageChat(prompt) {
     renderChatMessage(prompt, 'user');
     const aiMessageWrapper = renderChatMessage('Đang phác thảo ý tưởng...', 'model', { isLoading: true });
+    const contentDiv = aiMessageWrapper.querySelector('.message-content');
 
     try {
         const response = await fetch('/api/generate', {
@@ -1155,18 +1156,32 @@ async function handleImageChat(prompt) {
             body: JSON.stringify({ mode: 'image', prompt: prompt })
         });
 
-        const data = await response.json();
+        const contentType = response.headers.get("content-type");
 
-        if (!response.ok) {
-            throw new Error(data.error || 'Không thể tạo ảnh lúc này.');
+        if (contentType && contentType.includes("application/json")) {
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || `Lỗi từ máy chủ: ${response.status}`);
+            }
+            if (!data.image) {
+                throw new Error('API không trả về hình ảnh.');
+            }
+            const imageUrl = `data:image/jpeg;base64,${data.image}`;
+            
+            // Correctly update the message content
+            contentDiv.classList.add('image-container');
+            contentDiv.innerHTML = `<img src="${imageUrl}" alt="${prompt}">`;
+
+        } else {
+            const textError = await response.text();
+            throw new Error(`Phản hồi không hợp lệ từ máy chủ (${response.status}). Chi tiết: ${textError.substring(0, 150)}...`);
         }
-
-        const imageUrl = `data:image/jpeg;base64,${data.image}`;
-        aiMessageWrapper.querySelector('.message-content').innerHTML = `<img src="${imageUrl}" alt="${prompt}">`;
 
     } catch (error) {
         console.error("Image generation error:", error);
-        aiMessageWrapper.querySelector('.message-content').innerHTML = renderFormattedText(`Rất tiếc, không thể tạo ảnh: ${error.message}`);
+        if (contentDiv) {
+           contentDiv.innerHTML = renderFormattedText(`Rất tiếc, đã xảy ra lỗi khi tạo ảnh:\n${error.message}`);
+        }
     }
 }
 
