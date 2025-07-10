@@ -239,7 +239,7 @@ function renderAiSuggestions(suggestions) {
         cost_saving: { class: 'icon-cost-saving', i: 'fa-coins' },
         structural: { class: 'icon-structural', i: 'fa-tools' },
         warning: { class: 'icon-warning', i: 'fa-exclamation-triangle' },
-        upsell: { class: 'icon-upsell', i: 'fa-arrow-trend-up' }
+        upsell: { class: 'icon-upsell', i: 'fa-arrow-trend-up' },
     };
 
     let keyPointsHtml = '';
@@ -515,10 +515,12 @@ function calculateInitialCosts() {
     const mainWoodId = document.getElementById('material-wood').value;
     const doorWoodId = document.getElementById('material-door').value;
     const edgeId = document.getElementById('material-edge').value;
+    const backPanelId = document.getElementById('material-back-panel').value;
 
     const mainWood = localMaterials['Ván'].find(m => m.id === mainWoodId);
-    const doorWood = localMaterials['Ván'].find(m => m.id === doorWoodId) || mainWood;
+    const doorWood = localMaterials['Ván'].find(m => m.id === doorWoodId);
     const edge = localMaterials['Cạnh'].find(m => m.id === edgeId);
+    const backPanel = localMaterials['Ván'].find(m => m.id === backPanelId);
 
     if (!mainWood || !edge) {
         showToast('Vui lòng chọn vật liệu Ván chính và Nẹp cạnh.', 'error');
@@ -531,51 +533,71 @@ function calculateInitialCosts() {
         return null;
     }
 
+    const useSeparateDoorWood = !!doorWoodId && doorWood && doorWood.id !== mainWood.id;
+
     const bodyPieces = allPieces.filter(p => p.type === 'body');
     const doorPieces = allPieces.filter(p => p.type === 'door');
-
-    const backPanelId = document.getElementById('material-back-panel').value;
-    const backPanel = localMaterials['Ván'].find(m => m.id === backPanelId);
     
     const standardPanelArea = 1220 * 2440;
+    const breakdown = [];
+    let totalCost = 0;
 
-    // Estimate main wood sheets for body
-    const bodyPieceArea = bodyPieces.reduce((sum, p) => sum + p.width * p.height, 0);
-    const estimatedBodySheets = bodyPieceArea > 0 ? Math.ceil((bodyPieceArea / standardPanelArea) * 1.15) : 0;
-    const mainWoodCost = estimatedBodySheets * mainWood.price;
+    // --- Wood Panels Cost ---
+    const piecesForMainWood = useSeparateDoorWood ? bodyPieces : allPieces;
+    const mainWoodArea = piecesForMainWood.reduce((sum, p) => sum + p.width * p.height, 0);
+    const estimatedMainSheets = mainWoodArea > 0 ? Math.ceil((mainWoodArea / standardPanelArea) * 1.15) : 0;
+    
+    if (estimatedMainSheets > 0) {
+        const mainWoodCost = estimatedMainSheets * mainWood.price;
+        breakdown.push({
+            name: `Ván chính (${mainWood.name})`,
+            cost: mainWoodCost,
+            reason: `Ước tính ${estimatedMainSheets} tấm cho thùng ${useSeparateDoorWood ? '' : 'và cánh'}`
+        });
+        totalCost += mainWoodCost;
+    }
 
-    // Estimate door wood sheets
-    let doorWoodCost = 0;
-    let estimatedDoorSheets = 0;
-    if (doorWood && doorPieces.length > 0) {
+    if (useSeparateDoorWood && doorPieces.length > 0) {
         const doorPieceArea = doorPieces.reduce((sum, p) => sum + p.width * p.height, 0);
-        estimatedDoorSheets = doorPieceArea > 0 ? Math.ceil((doorPieceArea / standardPanelArea) * 1.15) : 0;
-        doorWoodCost = estimatedDoorSheets * doorWood.price;
+        const estimatedDoorSheets = doorPieceArea > 0 ? Math.ceil((doorPieceArea / standardPanelArea) * 1.15) : 0;
+        if (estimatedDoorSheets > 0) {
+            const doorWoodCost = estimatedDoorSheets * doorWood.price;
+            breakdown.push({
+                name: `Ván cánh (${doorWood.name})`,
+                cost: doorWoodCost,
+                reason: `Ước tính ${estimatedDoorSheets} tấm`
+            });
+            totalCost += doorWoodCost;
+        }
     }
 
-    // Estimate back panel sheets
-    let backPanelCost = 0;
-    if (backPanel) { // Assumes 1 sheet for back panel if specified
-        backPanelCost = backPanel.price;
+    // --- Back Panel Cost ---
+    if (backPanel) {
+        const backPanelCost = backPanel.price;
+        breakdown.push({
+            name: `Ván hậu (${backPanel.name})`,
+            cost: backPanelCost,
+            reason: 'Ước tính 1 tấm'
+        });
+        totalCost += backPanelCost;
     }
 
-    // Estimate edge banding
+    // --- Edge Banding Cost ---
     const totalPerimeter = allPieces.reduce((sum, p) => sum + 2 * (p.width + p.height), 0);
     const estimatedEdgeMeters = Math.ceil(totalPerimeter / 1000);
     const edgeCost = estimatedEdgeMeters * edge.price;
+    if(edgeCost > 0){
+         breakdown.push({ name: `Nẹp cạnh (${edge.name})`, cost: edgeCost, reason: `Ước tính ${estimatedEdgeMeters} mét` });
+         totalCost += edgeCost;
+    }
 
-    // Sum accessories cost
+    // --- Accessories Cost ---
     const accessoriesCost = addedAccessories.reduce((sum, acc) => sum + acc.quantity * acc.price, 0);
-
-    const breakdown = [
-        ...(estimatedBodySheets > 0 ? [{ name: `Ván chính (${mainWood.name})`, cost: mainWoodCost, reason: `Ước tính ${estimatedBodySheets} tấm` }] : []),
-        ...(estimatedDoorSheets > 0 ? [{ name: `Ván cánh (${doorWood.name})`, cost: doorWoodCost, reason: `Ước tính ${estimatedDoorSheets} tấm` }] : []),
-        ...(backPanel ? [{ name: `Ván hậu (${backPanel.name})`, cost: backPanelCost, reason: 'Ước tính 1 tấm' }] : []),
-        { name: `Nẹp cạnh (${edge.name})`, cost: edgeCost, reason: `Ước tính ${estimatedEdgeMeters} mét` },
-        { name: 'Tổng phụ kiện', cost: accessoriesCost, reason: `${addedAccessories.length} loại` }
-    ];
-
-    const totalCost = mainWoodCost + doorWoodCost + backPanelCost + edgeCost + accessoriesCost;
+    if (accessoriesCost > 0) {
+         breakdown.push({ name: 'Tổng phụ kiện', cost: accessoriesCost, reason: `${addedAccessories.length} loại` });
+         totalCost += accessoriesCost;
+    }
+    
     return { breakdown, totalCost };
 }
 
