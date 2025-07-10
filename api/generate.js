@@ -1,6 +1,7 @@
 
 
-import { GoogleGenAI } from "@google/genai";
+
+import { GoogleGenAI, Type } from "@google/genai";
 
 // This is a Vercel Serverless Function.
 // It must be placed in the /api directory.
@@ -15,24 +16,19 @@ export default async function handler(request, response) {
     }
 
     const ai = new GoogleGenAI({ apiKey });
-    const model = 'gemini-2.5-flash-preview-04-17';
+    const model = 'gemini-2.5-flash';
 
     try {
         const { prompt, image, chatHistory, newChatMessage } = request.body;
 
-        // --- Handle Chat Request ---
+        // --- Handle Chat Request (Streaming) ---
         if (newChatMessage) {
             let systemInstruction = null;
             let userAndModelHistory = chatHistory;
 
-            // The Gemini API expects system instructions in a separate field, not in the chat history.
-            // Find and extract the system instruction from our conventional history format.
             const systemMessageIndex = chatHistory.findIndex(msg => msg.role === 'system');
             if (systemMessageIndex !== -1) {
-                const systemMessage = chatHistory[systemMessageIndex];
-                // Assuming system instruction is simple text within the first part.
-                systemInstruction = systemMessage?.parts?.[0]?.text;
-                // Filter out the system message from the history that will be sent to the API's `contents` field.
+                systemInstruction = chatHistory[systemMessageIndex]?.parts?.[0]?.text;
                 userAndModelHistory = chatHistory.filter(msg => msg.role !== 'system');
             }
             
@@ -41,17 +37,26 @@ export default async function handler(request, response) {
                 config.systemInstruction = systemInstruction;
             }
 
-            // The `contents` field should only contain 'user' and 'model' roles.
-            const result = await ai.models.generateContent({
-                model: model,
-                contents: userAndModelHistory, // Send only user/model messages
-                config: config // Add system instruction here if it exists
+            // Set headers for streaming
+            response.writeHead(200, {
+                'Content-Type': 'text/plain; charset=utf-8',
+                'Transfer-Encoding': 'chunked',
             });
 
-            return response.status(200).json({ text: result.text });
+            const streamResult = await ai.models.generateContentStream({
+                model: model,
+                contents: userAndModelHistory,
+                config: config
+            });
+
+            for await (const chunk of streamResult) {
+                response.write(chunk.text);
+            }
+            response.end();
+            return; // End the function after streaming is complete
         }
 
-        // --- Handle Calculator Request ---
+        // --- Handle Calculator Request (JSON with Schema) ---
         if (prompt) {
              const promptParts = [];
             if (image && image.data && image.mimeType) {
@@ -63,37 +68,91 @@ export default async function handler(request, response) {
                 });
             }
             promptParts.push({ text: prompt });
+            
+            // Define the strict schema for the JSON response
+            const responseSchema = {
+                type: Type.OBJECT,
+                properties: {
+                    costBreakdown: {
+                        type: Type.OBJECT,
+                        properties: {
+                            materialCosts: {
+                                type: Type.ARRAY,
+                                items: {
+                                    type: Type.OBJECT,
+                                    properties: { name: { type: Type.STRING }, cost: { type: Type.NUMBER }, reason: { type: Type.STRING } }
+                                }
+                            },
+                            hiddenCosts: {
+                                type: Type.ARRAY,
+                                items: {
+                                    type: Type.OBJECT,
+                                    properties: { name: { type: Type.STRING }, cost: { type: Type.NUMBER }, reason: { type: Type.STRING } }
+                                }
+                            },
+                            totalCost: { type: Type.NUMBER },
+                            suggestedPrice: { type: Type.NUMBER },
+                            estimatedProfit: { type: Type.NUMBER }
+                        }
+                    },
+                    aiSuggestions: {
+                        type: Type.OBJECT,
+                        properties: {
+                            summary: { type: Type.STRING },
+                            keyPoints: {
+                                type: Type.ARRAY,
+                                items: {
+                                    type: Type.OBJECT,
+                                    properties: { type: { type: Type.STRING }, text: { type: Type.STRING } }
+                                }
+                            }
+                        }
+                    },
+                    cuttingLayout: {
+                        type: Type.OBJECT,
+                        properties: {
+                            totalSheetsUsed: { type: Type.INTEGER },
+                            sheets: {
+                                type: Type.ARRAY,
+                                items: {
+                                    type: Type.OBJECT,
+                                    properties: {
+                                        sheetNumber: { type: Type.INTEGER },
+                                        pieces: {
+                                            type: Type.ARRAY,
+                                            items: {
+                                                type: Type.OBJECT,
+                                                properties: {
+                                                    name: { type: Type.STRING },
+                                                    x: { type: Type.INTEGER },
+                                                    y: { type: Type.INTEGER },
+                                                    width: { type: Type.INTEGER },
+                                                    height: { type: Type.INTEGER }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
 
             const genAIResponse = await ai.models.generateContent({
                 model: model,
                 contents: { parts: promptParts },
-                config: { responseMimeType: "application/json" }
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: responseSchema,
+                }
             });
 
-            let jsonStr = genAIResponse.text.trim();
-            
-            // First, try to remove markdown fences if they exist
-            const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
-            const match = jsonStr.match(fenceRegex);
-            if (match && match[2]) {
-                jsonStr = match[2].trim();
-            }
-
-            // After removing fences, the string might still have leading/trailing text.
-            // Find the first '{' and the last '}' to extract the JSON object. This is more robust.
-            const startIndex = jsonStr.indexOf('{');
-            const endIndex = jsonStr.lastIndexOf('}');
-
-            if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
-                jsonStr = jsonStr.substring(startIndex, endIndex + 1);
-            }
-            
             try {
-                const parsedData = JSON.parse(jsonStr);
+                const parsedData = JSON.parse(genAIResponse.text);
                 return response.status(200).json(parsedData);
             } catch(parseError) {
                 console.error("Serverless function: Failed to parse JSON from Gemini response.", parseError);
-                // Log the original text from Gemini for better debugging
                 console.error("Original text from Gemini:", genAIResponse.text);
                 return response.status(500).json({ error: `Phản hồi từ AI không phải là JSON hợp lệ. Nội dung: ${genAIResponse.text}`});
             }
@@ -104,6 +163,11 @@ export default async function handler(request, response) {
     } catch (error) {
         console.error("Error in serverless function:", error);
         const errorMessage = error.message || "Đã xảy ra lỗi không xác định trên máy chủ.";
-        response.status(500).json({ error: `Lỗi nội bộ máy chủ: ${errorMessage}` });
+        // Avoid sending a response if headers already sent (for streaming errors)
+        if (!response.headersSent) {
+            response.status(500).json({ error: `Lỗi nội bộ máy chủ: ${errorMessage}` });
+        } else {
+             response.end(); // Gracefully end the stream on error
+        }
     }
 }

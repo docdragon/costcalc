@@ -266,12 +266,17 @@ function renderAiSuggestions(suggestions) {
 
 
 function renderFormattedText(text) {
-    const sections = text.split(/(\*\*.*?\*\*)/g); // Split by bold markdown
+    // This is a simplified version. For full markdown, a library would be better.
+    // It handles bold and newlines.
+    const sections = text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .split(/(\*\*.*?\*\*)/g); 
+        
     return sections.map(part => {
         if (part.startsWith('**') && part.endsWith('**')) {
-            const strong = document.createElement('strong');
-            strong.textContent = part.slice(2, -2);
-            return strong.outerHTML;
+            return `<strong>${part.slice(2, -2)}</strong>`;
         }
         return part.replace(/\n/g, '<br>');
     }).join('');
@@ -579,49 +584,9 @@ async function runAICalculation() {
     const edge = localMaterials['Cạnh'].find(m => m.id === edgeId);
     const panelPieces = getPanelPieces();
 
+    // The prompt is now much simpler because the structure is enforced by responseSchema
     const prompt = `
     TASK: You are an expert AI assistant for a woodworking shop in Vietnam. Your goal is to provide a detailed cost analysis, optimization suggestions, and a precise cutting layout (2D bin packing) for a given product.
-
-    RESPONSE FORMAT: You MUST respond with a single JSON object. Do not include any text, notes, or markdown fences like \`\`\`json\`\`\` outside of the JSON object. The JSON object must have the following structure:
-    {
-      "costBreakdown": {
-        "materialCosts": [
-          { "name": "Ván chính MDF An Cường", "cost": 1100000, "reason": "Cần 2 tấm (tối ưu từ sơ đồ cắt)" },
-          { "name": "Ván hậu Plywood", "cost": 250000, "reason": "Cần 1 tấm" },
-          { "name": "Nẹp cạnh PVC", "cost": 150000, "reason": "Ước tính 30 mét" },
-          { "name": "Phụ kiện (Bản lề, ray...)", "cost": 270000, "reason": "Tổng hợp từ danh sách" }
-        ],
-        "hiddenCosts": [
-          { "name": "Hao hụt vật tư & Cắt lỗi", "cost": 150000, "reason": "Dựa trên độ phức tạp của sản phẩm" },
-          { "name": "Nhân công sản xuất", "cost": 800000, "reason": "Ước tính 2 ngày công" },
-          { "name": "Vận chuyển & Lắp đặt", "cost": 300000, "reason": "Áp dụng cho sản phẩm lớn" }
-        ],
-        "totalCost": 3020000,
-        "suggestedPrice": 4530000,
-        "estimatedProfit": 1510000
-      },
-      "aiSuggestions": {
-        "summary": "A concise, one-or-two sentence summary of the key findings.",
-        "keyPoints": [
-          { "type": "cost_saving", "text": "Specific cost saving advice." },
-          { "type": "structural", "text": "A structural suggestion for improvement." },
-          { "type": "warning", "text": "A potential issue or warning to consider." },
-          { "type": "upsell", "text": "An idea for upselling to the client." }
-        ]
-      },
-      "cuttingLayout": {
-        "totalSheetsUsed": 2,
-        "sheets": [
-          {
-            "sheetNumber": 1,
-            "pieces": [
-              { "name": "Hông Trái", "x": 0, "y": 0, "width": 600, "height": 750 },
-              { "name": "Hông Phải", "x": 600, "y": 0, "width": 600, "height": 750 }
-            ]
-          }
-        ]
-      }
-    }
 
     INPUT DATA:
     - Product Name: ${inputs.name}
@@ -1025,15 +990,11 @@ function initializeChat() {
         role: "system",
         parts: [{ text: "You are a helpful AI assistant for woodworking cost estimation. Keep your answers concise and relevant to furniture making in Vietnam. The user is likely asking for advice on materials, pricing, or production techniques. All conversations are persisted." }],
     }];
+    chatMessagesContainer.innerHTML = ''; // Clear previous chat
     renderChatMessage('Chào bạn, tôi là trợ lý AI. Tôi có thể giúp gì cho việc tính giá sản phẩm của bạn?', 'model');
 }
 
 function renderChatMessage(message, role) {
-    if (isAwaitingChatResponse && role === 'model') {
-        const placeholder = chatMessagesContainer.querySelector('.typing-indicator-wrapper');
-        if (placeholder) placeholder.remove();
-    }
-    
     const messageWrapper = document.createElement('div');
     messageWrapper.className = `chat-message ${role}`;
     
@@ -1065,17 +1026,18 @@ chatForm.addEventListener('submit', async (e) => {
     renderChatMessage(message, 'user');
     chatHistory.push({ role: 'user', parts: [{ text: message }] });
 
-    // Add typing indicator
-    const typingIndicatorWrapper = document.createElement('div');
-    typingIndicatorWrapper.className = 'chat-message model typing-indicator-wrapper';
-    typingIndicatorWrapper.innerHTML = `
+    // Create the AI's message bubble, but keep it empty for now
+    const aiMessageWrapper = document.createElement('div');
+    aiMessageWrapper.className = 'chat-message model';
+    aiMessageWrapper.innerHTML = `
         <div class="icon"><i class="fas fa-robot"></i></div>
-        <div class="message-content typing-indicator">
-            <span></span><span></span><span></span>
-        </div>
+        <div class="message-content"></div>
     `;
-    chatMessagesContainer.appendChild(typingIndicatorWrapper);
+    chatMessagesContainer.appendChild(aiMessageWrapper);
+    const aiMessageContent = aiMessageWrapper.querySelector('.message-content');
     chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+    
+    let fullResponseText = '';
 
     try {
         const response = await fetch('/api/generate', {
@@ -1083,18 +1045,32 @@ chatForm.addEventListener('submit', async (e) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ newChatMessage: true, chatHistory: chatHistory })
         });
-        const data = await response.json();
+
         if (!response.ok) {
-            throw new Error(data.error || 'Lỗi không xác định');
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Lỗi không xác định từ server');
         }
         
-        const aiResponse = data.text;
-        renderChatMessage(aiResponse, 'model');
-        chatHistory.push({ role: 'model', parts: [{ text: aiResponse }] });
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            
+            const chunk = decoder.decode(value, { stream: true });
+            fullResponseText += chunk;
+            aiMessageContent.innerHTML = renderFormattedText(fullResponseText); // Re-render content with formatting on each chunk
+            chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+        }
+
+        if (fullResponseText) {
+            chatHistory.push({ role: 'model', parts: [{ text: fullResponseText }] });
+        }
         
     } catch (error) {
         console.error("Chat error:", error);
-        renderChatMessage(`Xin lỗi, tôi gặp sự cố: ${error.message}`, 'model');
+        aiMessageContent.innerHTML = renderFormattedText(`Xin lỗi, tôi gặp sự cố: ${error.message}`);
     } finally {
         isAwaitingChatResponse = false;
         chatInput.disabled = false;
