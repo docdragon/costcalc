@@ -605,14 +605,13 @@ async function runAICalculation() {
     const edgeId = document.getElementById('material-edge').value;
 
     const mainWood = localMaterials['Ván'].find(m => m.id === mainWoodId);
-    const doorWood = localMaterials['Ván'].find(m => m.id === doorWoodId) || mainWood; // Default to main wood
+    const doorWood = localMaterials['Ván'].find(m => m.id === doorWoodId); // Find door wood specifically
     const backPanel = localMaterials['Ván'].find(m => m.id === backPanelId);
     const edge = localMaterials['Cạnh'].find(m => m.id === edgeId);
 
-    // This is the crucial logic fix.
     // Determine which pieces are cut from which material.
     const allPieces = getPanelPieces();
-    const useSeparateDoorWood = !!doorWoodId && doorWood.id !== mainWood.id;
+    const useSeparateDoorWood = !!doorWoodId && doorWood && doorWood.id !== mainWood.id;
 
     let mainWoodPieces = allPieces.filter(p => p.type === 'body');
     let doorPiecesForPrompt = [];
@@ -621,7 +620,7 @@ async function runAICalculation() {
         // If door wood is separate, its pieces are calculated separately.
         doorPiecesForPrompt = allPieces.filter(p => p.type === 'door');
     } else {
-        // If door wood is the same, its pieces are added to the main wood cutting list for optimal packing.
+        // If door wood is the same or not specified, its pieces are added to the main wood cutting list.
         mainWoodPieces.push(...allPieces.filter(p => p.type === 'door'));
     }
 
@@ -634,32 +633,36 @@ async function runAICalculation() {
     - Loại sản phẩm: ${inputs.type}
     - Ghi chú của người dùng: ${inputs.description}
     - Tỷ suất lợi nhuận mong muốn: ${inputs.profitMargin}%
-    - Vật liệu VÁN CHÍNH (dùng cho Thùng và các chi tiết khác không quy định): ${mainWood.name} (${mainWood.price} VND/${mainWood.unit})
+    - Vật liệu VÁN CHÍNH (dùng cho Thùng và các chi tiết được liệt kê bên dưới): ${mainWood.name} (${mainWood.price} VND/${mainWood.unit})
     - Vật liệu VÁN CÁNH: ${useSeparateDoorWood ? `${doorWood.name} (${doorWood.price} VND/${doorWood.unit})` : 'Sử dụng chung vật liệu Ván Chính.'}
-    - Vật liệu VÁN HẬU: ${backPanel ? `${backPanel.name} (${backPanel.price} VND/${backPanel.unit})` : 'Sử dụng chung vật liệu Ván Chính.'}
+    - Vật liệu VÁN HẬU: ${backPanel ? `${backPanel.name} (${backPanel.price} VND/${backPanel.unit})` : 'Không có hoặc đã được gộp vào Ván Chính.'}
     - Nẹp cạnh: ${edge.name} (${edge.price} VND/mét)
     - Phụ kiện: ${addedAccessories.map(a => `${a.name} (SL: ${a.quantity}, Đơn giá: ${a.price})`).join(', ')}
     - Có hình ảnh: ${uploadedImage ? 'Có' : 'Không'}
 
+    DANH SÁCH CHI TIẾT VÀ VẬT LIỆU TƯƠNG ỨNG:
+    - Chi tiết cắt từ VÁN CHÍNH: ${JSON.stringify(mainWoodPieces.map(({type, ...rest}) => rest))}
+    - Chi tiết cắt từ VÁN CÁNH (chỉ áp dụng nếu có vật liệu riêng): ${JSON.stringify(doorPiecesForPrompt.map(({type, ...rest}) => rest))}
+
     HƯỚNG DẪN CHI TIẾT:
     1.  **Sơ đồ cắt ván (Bin Packing) cho VÁN CHÍNH:**
+        - Chỉ tạo sơ đồ cắt cho các chi tiết trong danh sách "Chi tiết cắt từ VÁN CHÍNH".
         - Kích thước tấm ván tiêu chuẩn là 1220mm x 2440mm.
-        - Danh sách các miếng cần cắt từ VÁN CHÍNH là: ${JSON.stringify(mainWoodPieces.map(({type, ...rest}) => rest))}.
         - Thực hiện thuật toán sắp xếp 2D để xếp các miếng này vào số lượng tấm ván tiêu chuẩn ít nhất có thể.
         - Tọa độ (x, y) là góc trên cùng bên trái của mỗi miếng.
-        - Điền kết quả vào đối tượng "cuttingLayout". "totalSheetsUsed" phải là số tấm VÁN CHÍNH cần dùng. KHÔNG tạo sơ đồ cắt cho ván cánh nếu nó là vật liệu riêng.
+        - Điền kết quả vào đối tượng "cuttingLayout". "totalSheetsUsed" phải là số tấm VÁN CHÍNH cần dùng.
 
     2.  **Tính toán chi phí:**
         - Tạo một danh sách chi phí trong "materialCosts".
         - **Chi phí Ván chính:** Phải dựa trên "totalSheetsUsed" đã được tối ưu từ sơ đồ cắt ở trên, nhân với giá VÁN CHÍNH.
-        - **Chi phí Ván cánh:** CHỈ TÍNH NẾU DÙNG VẬT LIỆU RIÊNG. Ước tính số tấm cần dùng bằng cách tính tổng diện tích các miếng cánh sau: ${JSON.stringify(doorPiecesForPrompt.map(({type, ...rest}) => rest))}, chia cho diện tích tấm ván chuẩn (1220x2440), làm tròn lên, rồi nhân với giá VÁN CÁNH. Nếu không có miếng cánh nào hoặc dùng chung ván, chi phí này là 0.
-        - **Chi phí Ván hậu:** Nếu có ván hậu riêng, tính chi phí cho 1 tấm. Nếu không, chi phí này đã được tính vào ván chính.
+        - **Chi phí Ván cánh:** Nếu danh sách "Chi tiết cắt từ VÁN CÁNH" không rỗng, hãy ước tính số tấm ván cánh cần dùng và tính chi phí. Cách ước tính: tính tổng diện tích các miếng, chia cho diện tích tấm ván chuẩn (1220x2440), làm tròn lên, rồi nhân với giá VÁN CÁNH.
+        - **Chi phí Ván hậu:** Nếu có ván hậu riêng (${backPanel ? 'có' : 'không'}), tính chi phí cho 1 tấm. Nếu không, chi phí này đã được tính vào ván chính (nếu có miếng 'Hậu' trong danh sách chi tiết ván chính).
         - **Chi phí Nẹp cạnh và Phụ kiện:** Tính toán dựa trên dữ liệu đầu vào.
         - Tính các "hiddenCosts" thực tế như nhân công, vận chuyển, hao hụt chung.
         - Tính "totalCost", "suggestedPrice", "estimatedProfit".
     
     3.  **Gợi ý từ AI:**
-        - Phân tích và đưa ra các gợi ý có giá trị trong "aiSuggestions".
+        - Dựa trên TOÀN BỘ các chi tiết của sản phẩm (cả ván chính và ván cánh nếu có), phân tích và đưa ra các gợi ý có giá trị trong "aiSuggestions".
     `;
     
     try {
