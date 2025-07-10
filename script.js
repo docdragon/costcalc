@@ -141,23 +141,24 @@ function getPanelPieces() {
     const pieces = [];
     if (!length || !width || !height) return [];
 
-    pieces.push({ name: 'Hông Trái', width: width, height: height });
-    pieces.push({ name: 'Hông Phải', width: width, height: height });
-    pieces.push({ name: 'Đáy', width: length, height: width });
+    pieces.push({ name: 'Hông Trái', width: width, height: height, type: 'body' });
+    pieces.push({ name: 'Hông Phải', width: width, height: height, type: 'body' });
+    pieces.push({ name: 'Đáy', width: length, height: width, type: 'body' });
     
     if (type !== 'tu-bep-duoi') {
-        pieces.push({ name: 'Nóc', width: length, height: width });
+        pieces.push({ name: 'Nóc', width: length, height: width, type: 'body' });
     }
     if (type.includes('tu-')) {
-         pieces.push({ name: 'Cánh Trái', width: Math.round(length / 2), height: height });
-         pieces.push({ name: 'Cánh Phải', width: Math.round(length / 2), height: height });
+         pieces.push({ name: 'Cánh Trái', width: Math.round(length / 2), height: height, type: 'door' });
+         pieces.push({ name: 'Cánh Phải', width: Math.round(length / 2), height: height, type: 'door' });
     }
     if (usesMainWoodForBack && type !== 'tu-ao' && type !== 'khac') {
-        pieces.push({ name: 'Hậu', width: length, height: height });
+        pieces.push({ name: 'Hậu', width: length, height: height, type: 'body' }); // Add to body pieces if using main wood
     }
 
     return pieces.filter(p => p.width > 0 && p.height > 0).map(p => ({...p, width: Math.round(p.width), height: Math.round(p.height)}));
 }
+
 
 // REFACTORED: Takes container elements as arguments to avoid global side-effects.
 function renderCuttingLayout(layoutData, containerEl, summaryEl) {
@@ -389,6 +390,7 @@ function resetMaterialForm() {
 function populateSelects() {
     const selects = [
         { el: document.getElementById('material-wood'), type: 'Ván' },
+        { el: document.getElementById('material-door'), type: 'Ván', optional: true },
         { el: document.getElementById('material-back-panel'), type: 'Ván', optional: true },
         { el: document.getElementById('material-edge'), type: 'Cạnh' },
         { el: document.getElementById('material-accessories'), type: 'Phụ kiện' }
@@ -468,6 +470,7 @@ function clearInputs() {
     document.getElementById('item-name').value = '';
     document.getElementById('product-description').value = '';
     document.getElementById('profit-margin').value = '50';
+    document.getElementById('material-door').value = ''; // Reset door material
     addedAccessories = [];
     renderAccessories();
     lastGeminiResult = null;
@@ -510,27 +513,45 @@ function updateCalculateButton() {
 
 function calculateInitialCosts() {
     const mainWoodId = document.getElementById('material-wood').value;
+    const doorWoodId = document.getElementById('material-door').value;
     const edgeId = document.getElementById('material-edge').value;
+
     const mainWood = localMaterials['Ván'].find(m => m.id === mainWoodId);
+    const doorWood = localMaterials['Ván'].find(m => m.id === doorWoodId) || mainWood;
     const edge = localMaterials['Cạnh'].find(m => m.id === edgeId);
+
     if (!mainWood || !edge) {
         showToast('Vui lòng chọn vật liệu Ván chính và Nẹp cạnh.', 'error');
         return null;
     }
 
-    const panelPieces = getPanelPieces();
-    if (panelPieces.length === 0) {
+    const allPieces = getPanelPieces();
+    if (allPieces.length === 0) {
         showToast('Vui lòng nhập kích thước sản phẩm.', 'error');
         return null;
     }
+
+    const bodyPieces = allPieces.filter(p => p.type === 'body');
+    const doorPieces = allPieces.filter(p => p.type === 'door');
+
     const backPanelId = document.getElementById('material-back-panel').value;
     const backPanel = localMaterials['Ván'].find(m => m.id === backPanelId);
     
-    // Estimate main wood sheets
-    const totalPieceArea = panelPieces.reduce((sum, p) => sum + p.width * p.height, 0);
     const standardPanelArea = 1220 * 2440;
-    const estimatedSheets = Math.ceil((totalPieceArea / standardPanelArea) * 1.15); // 15% waste factor
-    const mainWoodCost = estimatedSheets * mainWood.price;
+
+    // Estimate main wood sheets for body
+    const bodyPieceArea = bodyPieces.reduce((sum, p) => sum + p.width * p.height, 0);
+    const estimatedBodySheets = bodyPieceArea > 0 ? Math.ceil((bodyPieceArea / standardPanelArea) * 1.15) : 0;
+    const mainWoodCost = estimatedBodySheets * mainWood.price;
+
+    // Estimate door wood sheets
+    let doorWoodCost = 0;
+    let estimatedDoorSheets = 0;
+    if (doorWood && doorPieces.length > 0) {
+        const doorPieceArea = doorPieces.reduce((sum, p) => sum + p.width * p.height, 0);
+        estimatedDoorSheets = doorPieceArea > 0 ? Math.ceil((doorPieceArea / standardPanelArea) * 1.15) : 0;
+        doorWoodCost = estimatedDoorSheets * doorWood.price;
+    }
 
     // Estimate back panel sheets
     let backPanelCost = 0;
@@ -539,23 +560,25 @@ function calculateInitialCosts() {
     }
 
     // Estimate edge banding
-    const totalPerimeter = panelPieces.reduce((sum, p) => sum + 2 * (p.width + p.height), 0);
-    const estimatedEdgeMeters = Math.ceil(totalPerimeter / 1000); // convert mm to m
+    const totalPerimeter = allPieces.reduce((sum, p) => sum + 2 * (p.width + p.height), 0);
+    const estimatedEdgeMeters = Math.ceil(totalPerimeter / 1000);
     const edgeCost = estimatedEdgeMeters * edge.price;
 
     // Sum accessories cost
     const accessoriesCost = addedAccessories.reduce((sum, acc) => sum + acc.quantity * acc.price, 0);
 
     const breakdown = [
-        { name: `Ván chính (${mainWood.name})`, cost: mainWoodCost, reason: `Ước tính ${estimatedSheets} tấm` },
+        ...(estimatedBodySheets > 0 ? [{ name: `Ván chính (${mainWood.name})`, cost: mainWoodCost, reason: `Ước tính ${estimatedBodySheets} tấm` }] : []),
+        ...(estimatedDoorSheets > 0 ? [{ name: `Ván cánh (${doorWood.name})`, cost: doorWoodCost, reason: `Ước tính ${estimatedDoorSheets} tấm` }] : []),
         ...(backPanel ? [{ name: `Ván hậu (${backPanel.name})`, cost: backPanelCost, reason: 'Ước tính 1 tấm' }] : []),
         { name: `Nẹp cạnh (${edge.name})`, cost: edgeCost, reason: `Ước tính ${estimatedEdgeMeters} mét` },
         { name: 'Tổng phụ kiện', cost: accessoriesCost, reason: `${addedAccessories.length} loại` }
     ];
 
-    const totalCost = mainWoodCost + backPanelCost + edgeCost + accessoriesCost;
+    const totalCost = mainWoodCost + doorWoodCost + backPanelCost + edgeCost + accessoriesCost;
     return { breakdown, totalCost };
 }
+
 
 async function runAICalculation() {
     calculationState = 'calculating_ai';
@@ -577,12 +600,18 @@ async function runAICalculation() {
     };
 
     const mainWoodId = document.getElementById('material-wood').value;
+    const doorWoodId = document.getElementById('material-door').value;
     const backPanelId = document.getElementById('material-back-panel').value;
     const edgeId = document.getElementById('material-edge').value;
+
     const mainWood = localMaterials['Ván'].find(m => m.id === mainWoodId);
+    const doorWood = localMaterials['Ván'].find(m => m.id === doorWoodId) || mainWood;
     const backPanel = localMaterials['Ván'].find(m => m.id === backPanelId);
     const edge = localMaterials['Cạnh'].find(m => m.id === edgeId);
-    const panelPieces = getPanelPieces();
+
+    const allPieces = getPanelPieces();
+    const bodyPieces = allPieces.filter(p => p.type === 'body');
+    const doorPieces = allPieces.filter(p => p.type === 'door');
 
     const prompt = `
     NHIỆM VỤ: Bạn là một trợ lý AI chuyên gia cho một xưởng gỗ ở Việt Nam. Mục tiêu của bạn là cung cấp một phân tích chi phí chi tiết, các đề xuất tối ưu hóa, và một sơ đồ cắt ván chính xác (2D bin packing) cho một sản phẩm nhất định. TOÀN BỘ PHẢN HỒI PHẢI BẰNG TIẾNG VIỆT.
@@ -593,22 +622,25 @@ async function runAICalculation() {
     - Loại sản phẩm: ${inputs.type}
     - Ghi chú của người dùng: ${inputs.description}
     - Tỷ suất lợi nhuận mong muốn: ${inputs.profitMargin}%
-    - Gỗ chính: ${mainWood.name} (${mainWood.price} VND/${mainWood.unit})
+    - Gỗ chính (Thùng): ${mainWood.name} (${mainWood.price} VND/${mainWood.unit})
+    - Gỗ cánh: ${doorWood.name} (${doorWood.price} VND/${doorWood.unit})
     - Gỗ hậu: ${backPanel ? `${backPanel.name} (${backPanel.price} VND/${backPanel.unit})` : 'Sử dụng gỗ chính'}
     - Nẹp cạnh: ${edge.name} (${edge.price} VND/mét)
     - Phụ kiện: ${addedAccessories.map(a => `${a.name} (SL: ${a.quantity}, Đơn giá: ${a.price})`).join(', ')}
     - Có hình ảnh: ${uploadedImage ? 'Có' : 'Không'}
 
     HƯỚNG DẪN:
-    1.  **Sơ đồ cắt ván (Bin Packing):** Đây là tính toán QUAN TRỌNG NHẤT.
+    1.  **Sơ đồ cắt ván (Bin Packing):** Đây là tính toán QUAN TRỌNG NHẤT. Tính toán này CHỈ dành cho VÁN CHÍNH (THÙNG).
         - Kích thước tấm ván tiêu chuẩn là 1220mm x 2440mm.
-        - Danh sách các miếng cần cắt từ VÁN CHÍNH là: ${JSON.stringify(panelPieces)}.
+        - Danh sách các miếng cần cắt từ VÁN CHÍNH (THÙNG) là: ${JSON.stringify(bodyPieces.map(({type, ...rest}) => rest))}.
         - Thực hiện thuật toán sắp xếp 2D để xếp các miếng này vào số lượng tấm ván tiêu chuẩn ít nhất.
         - Tọa độ (x, y) phải là góc trên cùng bên trái của mỗi miếng trên tấm ván.
-        - Điền vào đối tượng "cuttingLayout" với kết quả. "totalSheetsUsed" phải chính xác.
+        - Điền vào đối tượng "cuttingLayout" với kết quả. "totalSheetsUsed" phải chính xác cho VÁN CHÍNH (THÙNG).
     2.  **Tính toán chi phí:**
-        - Tính "materialCosts" dựa trên "totalSheetsUsed" đã được tối ưu, ước tính nẹp cạnh và danh sách phụ kiện được cung cấp.
-        - Tính các "hiddenCosts" thực tế như nhân công, vận chuyển và hao hụt.
+        - Tính "materialCosts". Nó phải bao gồm chi phí cho VÁN CHÍNH, VÁN CÁNH, VÁN HẬU (nếu có), nẹp cạnh, và phụ kiện.
+        - Chi phí VÁN CHÍNH phải dựa trên "totalSheetsUsed" đã được tối ưu từ sơ đồ cắt.
+        - Chi phí VÁN CÁNH phải được ƯỚC TÍNH bằng cách tính tổng diện tích các miếng cánh (${JSON.stringify(doorPieces.map(({type, ...rest}) => rest))}) và chia cho diện tích tấm ván chuẩn (1220x2440), sau đó làm tròn lên và cộng thêm một chút hao hụt (~15%).
+        - Tính các "hiddenCosts" thực tế như nhân công, vận chuyển và hao hụt chung.
         - Cộng tất cả các chi phí để có được "totalCost".
         - Tính "suggestedPrice" bằng cách sử dụng tỷ suất lợi nhuận trên "totalCost".
         - Tính "estimatedProfit" là suggestedPrice - totalCost.
@@ -762,6 +794,7 @@ saveItemBtn.addEventListener('click', async () => {
             description: document.getElementById('product-description').value,
             profitMargin: document.getElementById('profit-margin').value,
             mainWoodId: document.getElementById('material-wood').value,
+            doorWoodId: document.getElementById('material-door').value,
             backPanelId: document.getElementById('material-back-panel').value,
             edgeId: document.getElementById('material-edge').value,
             accessories: addedAccessories
@@ -831,6 +864,7 @@ function loadItemIntoForm(item) {
 
     // Populate selects. This assumes `populateSelects` has already run.
     document.getElementById('material-wood').value = inputs.mainWoodId || '';
+    document.getElementById('material-door').value = inputs.doorWoodId || '';
     document.getElementById('material-back-panel').value = inputs.backPanelId || '';
     document.getElementById('material-edge').value = inputs.edgeId || '';
     
@@ -909,6 +943,9 @@ function renderItemDetailsToModal(itemId) {
     const mainWoodFound = localMaterials['Ván'].find(m => m.id === inputs.mainWoodId);
     const mainWood = mainWoodFound ? mainWoodFound.name : 'Không rõ';
 
+    const doorWoodFound = localMaterials['Ván'].find(m => m.id === inputs.doorWoodId);
+    const doorWood = doorWoodFound ? doorWoodFound.name : 'Dùng ván chính';
+
     const backPanelFound = localMaterials['Ván'].find(m => m.id === inputs.backPanelId);
     const backPanel = backPanelFound ? backPanelFound.name : 'Dùng ván chính';
     
@@ -963,6 +1000,7 @@ function renderItemDetailsToModal(itemId) {
         <h4><i class="fas fa-boxes"></i>Vật tư Sử dụng</h4>
         <ul>
             <li><strong>Ván chính:</strong> ${mainWood}</li>
+            <li><strong>Ván cánh:</strong> ${doorWood}</li>
             <li><strong>Ván hậu:</strong> ${backPanel}</li>
             <li><strong>Nẹp cạnh:</strong> ${edge}</li>
             <li><strong>Phụ kiện:</strong> ${accessoriesHtml}</li>
