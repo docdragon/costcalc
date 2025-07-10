@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Công Cụ Tính Giá Thành & Sáng Tạo Sản Phẩm</title>
+    <title>Công Cụ Tính Giá Thành</title>
     <!-- KHÔNG CẦN TAILWIND CDN NỮA -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="style.css">
@@ -286,13 +286,23 @@
                             <div id="chat-messages" class="chat-messages">
                                 <!-- Messages will be rendered here by JS -->
                             </div>
-                            <form id="chat-form" class="chat-input-area">
-                                <input type="text" id="chat-input" class="input-style chat-input" placeholder="Dạy AI hoặc đặt câu hỏi..." autocomplete="off">
-                                <button type="submit" id="send-chat-btn" class="btn btn-primary">
-                                    <i class="fas fa-paper-plane"></i>
-                                    <span>Gửi</span>
-                                </button>
-                            </form>
+                            <div class="chat-input-container">
+                                <div class="chat-mode-selector">
+                                    <button id="chat-mode-text" class="mode-btn active" data-mode="text" title="Chế độ Trò chuyện">
+                                        <i class="fas fa-comment-dots"></i><span class="mode-text">Trò chuyện</span>
+                                    </button>
+                                    <button id="chat-mode-image" class="mode-btn" data-mode="image" title="Chế độ Tạo ảnh">
+                                        <i class="fas fa-image"></i><span class="mode-text">Tạo ảnh</span>
+                                    </button>
+                                </div>
+                                <form id="chat-form" class="chat-input-area">
+                                    <input type="text" id="chat-input" class="input-style chat-input" placeholder="Dạy AI hoặc đặt câu hỏi..." autocomplete="off">
+                                    <button type="submit" id="send-chat-btn" class="btn btn-primary">
+                                        <i class="fas fa-paper-plane"></i>
+                                        <span>Gửi</span>
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                     <div class="login-prompt-view">
@@ -372,7 +382,7 @@
     <div id="toast-container"></div>
     
     <footer class="footer">
-        <p>&copy; 2024 Giá Thành Pro. Một sản phẩm được tăng tốc bởi AI.</p>
+        <p>&copy; 2025 Giá Thành Pro.</p>
     </footer>
 
     <script src="script.js" type="module"></script>

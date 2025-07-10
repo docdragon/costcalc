@@ -1,6 +1,3 @@
-
-
-
 import { GoogleGenAI, Type } from "@google/genai";
 
 // This is a Vercel Serverless Function.
@@ -16,10 +13,45 @@ export default async function handler(request, response) {
     }
 
     const ai = new GoogleGenAI({ apiKey });
-    const model = 'gemini-2.5-flash';
-
+    
     try {
-        const { prompt, image, chatHistory, newChatMessage } = request.body;
+        const { prompt, image, chatHistory, newChatMessage, mode } = request.body;
+
+        // --- Handle Image Generation Request ---
+        if (mode === 'image') {
+            if (!prompt) {
+                 return response.status(400).json({ error: 'Mô tả hình ảnh không được để trống.' });
+            }
+            
+            // Step 1: Use Gemini to create a better prompt for Imagen
+            const promptEnhancerResponse = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: `Translate and enhance the following user request into a detailed, descriptive English prompt for an AI image generation model. The prompt should be a single, concise paragraph focusing on visual details. User request: "${prompt}"`,
+                 config: {
+                    // Lower temperature for more predictable prompt translation
+                    temperature: 0.2,
+                }
+            });
+            const enhancedPrompt = promptEnhancerResponse.text.trim();
+
+            // Step 2: Generate the image with the enhanced prompt
+            const imageResponse = await ai.models.generateImages({
+                model: 'imagen-3.0-generate-002',
+                prompt: enhancedPrompt,
+                config: {
+                    numberOfImages: 1,
+                    outputMimeType: 'image/jpeg',
+                    aspectRatio: '1:1',
+                },
+            });
+
+            if (!imageResponse.generatedImages || imageResponse.generatedImages.length === 0) {
+                 return response.status(500).json({ error: 'AI không thể tạo ảnh từ mô tả này.' });
+            }
+
+            const base64ImageBytes = imageResponse.generatedImages[0].image.imageBytes;
+            return response.status(200).json({ image: base64ImageBytes });
+        }
 
         // --- Handle Chat Request (Streaming) ---
         if (newChatMessage) {
@@ -44,7 +76,7 @@ export default async function handler(request, response) {
             });
 
             const streamResult = await ai.models.generateContentStream({
-                model: model,
+                model: 'gemini-2.5-flash',
                 contents: userAndModelHistory,
                 config: config
             });
@@ -140,7 +172,7 @@ export default async function handler(request, response) {
             };
 
             const genAIResponse = await ai.models.generateContent({
-                model: model,
+                model: 'gemini-2.5-flash',
                 contents: { parts: promptParts },
                 config: {
                     responseMimeType: "application/json",
@@ -158,7 +190,7 @@ export default async function handler(request, response) {
             }
         }
 
-        return response.status(400).json({ error: 'Yêu cầu không hợp lệ. Thiếu "prompt" hoặc "newChatMessage".' });
+        return response.status(400).json({ error: 'Yêu cầu không hợp lệ. Thiếu "prompt", "newChatMessage", hoặc "mode".' });
 
     } catch (error) {
         console.error("Error in serverless function:", error);
