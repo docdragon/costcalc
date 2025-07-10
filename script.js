@@ -1168,7 +1168,6 @@ async function handleImageChat(prompt) {
             }
             const imageUrl = `data:image/jpeg;base64,${data.image}`;
             
-            // Correctly update the message content
             contentDiv.classList.add('image-container');
             contentDiv.innerHTML = `<img src="${imageUrl}" alt="${prompt}">`;
 
@@ -1179,8 +1178,20 @@ async function handleImageChat(prompt) {
 
     } catch (error) {
         console.error("Image generation error:", error);
+        let userFriendlyError = `Rất tiếc, đã xảy ra lỗi khi tạo ảnh.`;
+
+        // Check for specific, common API errors and provide helpful messages
+        if (error.message && error.message.includes("billed users")) {
+            userFriendlyError = "Tính năng tạo ảnh yêu cầu tài khoản Google AI đã kích hoạt thanh toán. Vui lòng kiểm tra lại cấu hình API key của bạn trên máy chủ.";
+        } else if (error.message && error.message.includes('API key not valid')) {
+            userFriendlyError = "API Key không hợp lệ. Vui lòng kiểm tra lại cấu hình API key của bạn trên máy chủ.";
+        } else {
+            // Keep it generic for other, less common errors
+            userFriendlyError = `Rất tiếc, không thể tạo ảnh vào lúc này. Vui lòng thử lại sau.`;
+        }
+        
         if (contentDiv) {
-           contentDiv.innerHTML = renderFormattedText(`Rất tiếc, đã xảy ra lỗi khi tạo ảnh:\n${error.message}`);
+           contentDiv.innerHTML = renderFormattedText(userFriendlyError);
         }
     }
 }
