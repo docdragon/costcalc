@@ -100,7 +100,7 @@ body {
 .button-group { display: flex; gap: 0.75rem; margin-top: 1.5rem; }
 .full-width { width: 100%; }
 .material-form { border-bottom: 1px solid var(--border-color); padding-bottom: 2rem; margin-bottom: 2rem; }
-.material-form > * + * { margin-top: 1rem; } /* Sửa lỗi các ô dính liền */
+.material-form > * + * { margin-top: 1rem; }
 .form-title { font-size: 1.25rem; font-weight: 600; text-align: center; margin-bottom: 1rem; }
 
 /* --- Accessory Adder --- */
@@ -269,7 +269,6 @@ tbody tr:last-child td { border-bottom: none; }
 .text-center { text-align: center; }
 .text-right { text-align: right; }
 .font-semibold { font-weight: 600; }
-/* Table action button styles */
 td button { transition: color 0.2s; }
 .text-blue-500 { color: var(--primary-color); }
 .hover\:text-blue-700:hover { color: var(--primary-hover); }
@@ -278,10 +277,59 @@ td button { transition: color 0.2s; }
 .text-green-500 { color: var(--success-color); }
 .hover\:text-green-700:hover { color: var(--success-hover); }
 
+/* --- Responsive Tables --- */
+@media (max-width: 768px) {
+    .data-table thead {
+        display: none;
+    }
+    .data-table, .data-table tbody, .data-table tr, .data-table td {
+        display: block;
+        width: 100%;
+    }
+    .data-table tr {
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05);
+        padding: 0.5rem;
+    }
+    .data-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0.5rem;
+        text-align: right;
+        border-bottom: 1px dashed var(--secondary-color);
+    }
+    .data-table tr td:last-child {
+        border-bottom: none;
+    }
+    .data-table td::before {
+        content: attr(data-label);
+        font-weight: 500;
+        text-align: left;
+        margin-right: 1rem;
+        color: var(--text-dark);
+    }
+    .data-table td.text-center {
+        justify-content: flex-end;
+    }
+}
 
 /* --- Result Display --- */
 #price-summary-container { margin-top: 1rem; }
-.price-card { border: 1px solid; padding: 1rem; border-radius: 0.75rem; text-align: center; transition: all 0.3s ease-in-out; }
+.price-card { 
+    border: 1px solid; 
+    padding: 1rem; 
+    border-radius: 0.75rem; 
+    text-align: center; 
+    transition: all 0.3s ease-in-out;
+    transform: scale(1);
+}
+.price-card:hover {
+    transform: scale(1.03);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
 .price-label { font-size: 0.875rem; font-weight: 500; }
 .price-value { font-size: 2.25rem; font-weight: 700; line-height: 1; margin-top: 0.25rem; }
 .bg-indigo { background-color: #eef2ff; border-color: #c7d2fe; }
@@ -344,7 +392,6 @@ td button { transition: color 0.2s; }
 }
 .modal-body p { color: var(--text-light); line-height: 1.6; margin: 0; }
 
-/* New styles for Final Price Recommendation */
 .final-price-recommendation {
     background-color: var(--primary-color);
     color: white;
@@ -392,11 +439,11 @@ td button { transition: color 0.2s; }
     align-items: center;
     padding: 0.75rem 1rem;
     border-bottom: 1px solid var(--border-color);
-    position: static; /* Override default li styling */
-    padding-bottom: 0.75rem; /* Override default li styling */
+    position: static;
+    padding-bottom: 0.75rem;
 }
 .cost-list li:last-child { border-bottom: none; }
-.cost-list li::before { content: none; /* Override default li styling */ }
+.cost-list li::before { content: none; }
 .cost-item-name { font-weight: 500; flex-grow: 1; margin-right: 1rem; }
 .cost-item-value { font-weight: 600; color: var(--primary-color); white-space: nowrap; }
 .cost-item-reason { width: 100%; font-size: 0.8rem; color: var(--text-light); margin-top: 0.25rem; padding-left: 0.25rem; font-style: italic; }
@@ -448,7 +495,7 @@ td button { transition: color 0.2s; }
 .chat-container {
     display: flex;
     flex-direction: column;
-    height: 70vh; /* Adjust height as needed */
+    height: 70vh;
     max-height: 500px;
     background-color: #f9fafb;
     border: 1px solid var(--border-color);
@@ -570,7 +617,7 @@ td button { transition: color 0.2s; }
     width: 90%; max-width: 420px; position: relative;
     animation: slideIn 0.3s ease-out;
 }
-.modal-content.modal-lg { max-width: 800px; }
+.modal-content.modal-lg { max-width: 900px; }
 @keyframes slideIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
 .modal-close-btn {
     position: absolute; top: 10px; right: 15px;
@@ -583,17 +630,28 @@ td button { transition: color 0.2s; }
 .error-message { color: var(--danger-color); font-size: 0.875rem; text-align: center; height: 1.25rem; margin-bottom: 1rem; }
 .confirm-text { color: var(--text-light); margin-bottom: 1.5rem; }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 0.75rem; }
-.separator {
-    margin-top: 1rem; margin-bottom: 1rem;
-    display: flex; align-items: center;
-    color: #9ca3af; font-size: 0.75rem;
+
+/* --- Settings Form --- */
+.settings-intro {
+    background-color: #eef2ff;
+    border-left: 4px solid var(--primary-color);
+    padding: 1rem;
+    margin-bottom: 2rem;
+    font-size: 0.9rem;
+    color: #3730a3;
+    border-radius: 0 0.5rem 0.5rem 0;
 }
-.separator::before, .separator::after {
-    content: ''; flex-grow: 1;
-    border-bottom: 1px solid var(--secondary-color);
+.form-divider {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 2rem 0;
 }
-.separator::before { margin-right: 0.5rem; }
-.separator::after { margin-left: 0.5rem; }
+.form-text {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-light);
+}
 
 /* --- Initial Loader --- */
 .loading-overlay {
@@ -646,7 +704,7 @@ td button { transition: color 0.2s; }
 .toast--info .toast-icon { color: #17a2b8; }
 
 /* --- Login/Disabled Placeholders --- */
-.login-prompt-view, .calculator-form-content, .materials-form-content, .saved-items-content, .assistant-content {
+.login-prompt-view, .calculator-form-content, .materials-form-content, .saved-items-content, .assistant-content, .settings-form-content {
     display: none;
 }
 .login-prompt-view { text-align: center; padding: 2.5rem 0; }
@@ -665,16 +723,9 @@ td button { transition: color 0.2s; }
 /* --- AI Cutting Layout --- */
 .cutting-layout-container {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem; /* Thu nhỏ khoảng cách trên di động */
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 1rem;
     margin-top: 1rem;
-}
-
-@media (min-width: 1024px) {
-    .cutting-layout-container {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 1.5rem; /* Trả lại khoảng cách gốc trên màn hình lớn */
-    }
 }
 
 #cutting-layout-summary {
@@ -708,7 +759,6 @@ td button { transition: color 0.2s; }
     position: relative;
     width: 100%;
     height: 0;
-    /* Aspect ratio for 1220x2440 -> 2440/1220 = 2 */
     padding-bottom: 200%; 
     background-color: #f9fafb;
     border: 1px solid var(--border-color);

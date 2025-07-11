@@ -52,6 +52,7 @@
                 <button data-tab="materials" class="tab-btn"><i class="fas fa-boxes"></i>Quản lý Vật tư</button>
                 <button data-tab="assistant" class="tab-btn"><i class="fas fa-robot"></i>Trợ lý AI</button>
                 <button data-tab="saved" class="tab-btn"><i class="fas fa-folder-open"></i>Dự án đã lưu</button>
+                <button data-tab="settings" class="tab-btn"><i class="fas fa-cog"></i>Cấu hình Xưởng</button>
             </nav>
         </div>
 
@@ -197,8 +198,8 @@
                             <ul>
                                 <li><strong>Bước 1: Tính chi phí vật tư.</strong> Nhập đầy đủ thông tin sản phẩm và nhấn nút "Tính chi phí vật tư" để có ước tính ban đầu.</li>
                                 <li><strong>Bước 2: Nhờ AI phân tích.</strong> Sau khi có chi phí sơ bộ, nhấn nút "Nhờ AI Phân tích & Tối ưu" để AI tìm các chi phí ẩn, gợi ý tối ưu và tạo sơ đồ cắt ván chính xác.</li>
+                                <li><strong>Cấu hình Xưởng:</strong> Vào tab "Cấu hình Xưởng" để nhập các chi phí mặc định (nhân công, quản lý...). AI sẽ dựa vào đó để tính toán chính xác hơn.</li>
                                 <li><strong>Lưu & Tải lại:</strong> Lưu các dự án quan trọng để xem lại hoặc tải lại thông tin vào biểu mẫu để tính toán phiên bản mới.</li>
-                                <li><strong>Dạy AI:</strong> Sử dụng tab "Trợ lý AI" để dạy cho AI về cách tính giá đặc thù của xưởng bạn. Các cuộc trò chuyện sẽ được ghi nhớ.</li>
                             </ul>
                         </div>
                          <div class="login-prompt-view">
@@ -334,6 +335,66 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Tab 5: Cấu hình Xưởng -->
+            <div id="settings-tab" class="tab-pane hidden">
+                <div class="card">
+                    <h2 class="card-header">Cấu hình Thông số Mặc định cho Xưởng</h2>
+                    <div class="content-wrapper settings-form-content">
+                        <p class="settings-intro">Các thông số này sẽ được AI sử dụng để đưa ra tính toán chính xác hơn, phù hợp với xưởng của bạn. Hãy điền các giá trị mặc định mà bạn thường sử dụng.</p>
+                        <form id="settings-form">
+                            <div class="grid-2-col">
+                                <div class="form-group">
+                                    <label for="workshop-name" class="form-label">Tên xưởng</label>
+                                    <input type="text" id="workshop-name" class="input-style" placeholder="Vd: Xưởng Gỗ An Phát">
+                                </div>
+                                <div class="form-group">
+                                    <label for="workshop-address" class="form-label">Địa chỉ</label>
+                                    <input type="text" id="workshop-address" class="input-style" placeholder="Vd: 123 Đường ABC, Quận 1, TP. HCM">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="workshop-logo-url" class="form-label">URL Logo (để dùng cho báo giá trong tương lai)</label>
+                                <input type="url" id="workshop-logo-url" class="input-style" placeholder="https://example.com/logo.png">
+                            </div>
+                            <hr class="form-divider">
+                            <div class="grid-3-col">
+                                <div class="form-group">
+                                    <label for="workshop-labor-cost" class="form-label">Chi phí nhân công (VND/m²)</label>
+                                    <input type="number" id="workshop-labor-cost" class="input-style" placeholder="Vd: 300000">
+                                     <small class="form-text">Chi phí nhân công tính trên mỗi mét vuông sản phẩm hoàn thiện.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="workshop-management-cost" class="form-label">Chi phí quản lý (%)</label>
+                                    <input type="number" id="workshop-management-cost" class="input-style" placeholder="Vd: 10">
+                                     <small class="form-text">Phần trăm chi phí quản lý, mặt bằng, điện nước...</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="workshop-shipping-cost" class="form-label">Chi phí vận chuyển (%)</label>
+                                    <input type="number" id="workshop-shipping-cost" class="input-style" placeholder="Vd: 5">
+                                    <small class="form-text">Phần trăm chi phí vận chuyển và lắp đặt.</small>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="workshop-waste-margin" class="form-label">Tỷ lệ hao hụt ván mặc định (%)</label>
+                                <input type="number" id="workshop-waste-margin" class="input-style" placeholder="Vd: 15">
+                                 <small class="form-text">AI sẽ dùng con số này để ước tính hao hụt khi tính sơ bộ, trước khi có sơ đồ cắt chính xác.</small>
+                            </div>
+                            <div class="button-group" style="justify-content: flex-end;">
+                                <button type="submit" id="save-settings-btn" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Lưu Cấu hình
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="login-prompt-view">
+                        <div class="icon-prompt"><i class="fas fa-cog"></i></div>
+                        <h3>Cấu hình cho xưởng của bạn</h3>
+                        <p>Vui lòng đăng nhập để lưu lại các thông số mặc định.</p>
+                    </div>
+                </div>
+            </div>
+
         </main>
     </div>
 

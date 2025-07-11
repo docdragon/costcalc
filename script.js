@@ -2,7 +2,7 @@
 import { 
     db, auth, collection, onSnapshot, addDoc, doc, updateDoc, 
     deleteDoc, serverTimestamp, getDocs, query, limit, onAuthStateChanged, 
-    signOut 
+    signOut, setDoc
 } from './firebase.js';
 
 import { 
@@ -39,6 +39,7 @@ const initialSummarySection = document.getElementById('initial-summary-section')
 const initialCostBreakdownContainer = document.getElementById('initial-cost-breakdown-container');
 const initialTotalCostValue = document.getElementById('initial-total-cost-value');
 const aiAnalysisSection = document.getElementById('ai-analysis-section');
+const settingsForm = document.getElementById('settings-form');
 
 
 // --- Global State ---
@@ -49,6 +50,7 @@ let unsubscribeMaterials = null;
 let unsubscribeSavedItems = null;
 let localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [] };
 let localSavedItems = [];
+let workshopSettings = {};
 let lastGeminiResult = null;
 let addedAccessories = [];
 let uploadedImage = null;
@@ -100,6 +102,7 @@ onAuthStateChanged(auth, async (user) => {
         await checkAndAddSampleData(currentUserId);
         initializeChat();
         listenForData();
+        listenForWorkshopSettings();
     } else {
         currentUserId = null;
         if (unsubscribeMaterials) unsubscribeMaterials();
@@ -119,11 +122,13 @@ function listenForData() {
 function clearLocalData() {
     localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [] };
     localSavedItems = [];
+    workshopSettings = {};
     chatHistory = [];
     if (chatMessagesContainer) chatMessagesContainer.innerHTML = '';
     renderMaterials([]);
     renderSavedItems([]);
     populateSelects();
+    populateSettingsForm();
 }
 
 logoutBtn.addEventListener('click', () => signOut(auth));
@@ -283,6 +288,63 @@ function renderFormattedText(text) {
     }).join('');
 }
 
+// --- Settings Management ---
+function listenForWorkshopSettings() {
+    if (!currentUserId) return;
+    const settingsDocRef = doc(db, `users/${currentUserId}/config`, 'workshop');
+    onSnapshot(settingsDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            workshopSettings = docSnap.data();
+            populateSettingsForm();
+        } else {
+            console.log("No workshop settings found for user.");
+            workshopSettings = {}; 
+            populateSettingsForm();
+        }
+    }, (error) => {
+        console.error("Error listening to workshop settings:", error);
+    });
+}
+
+function populateSettingsForm() {
+    if (!settingsForm) return;
+    settingsForm['workshop-name'].value = workshopSettings.name || '';
+    settingsForm['workshop-address'].value = workshopSettings.address || '';
+    settingsForm['workshop-logo-url'].value = workshopSettings.logoUrl || '';
+    settingsForm['workshop-labor-cost'].value = workshopSettings.laborCost || '';
+    settingsForm['workshop-management-cost'].value = workshopSettings.managementCost || '';
+    settingsForm['workshop-shipping-cost'].value = workshopSettings.shippingCost || '';
+    settingsForm['workshop-waste-margin'].value = workshopSettings.wasteMargin || '';
+}
+
+if (settingsForm) {
+    settingsForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!currentUserId) {
+            showToast('Vui lòng đăng nhập để lưu cấu hình.', 'error');
+            return;
+        }
+        const settingsData = {
+            name: settingsForm['workshop-name'].value.trim(),
+            address: settingsForm['workshop-address'].value.trim(),
+            logoUrl: settingsForm['workshop-logo-url'].value.trim(),
+            laborCost: Number(settingsForm['workshop-labor-cost'].value) || 0,
+            managementCost: Number(settingsForm['workshop-management-cost'].value) || 0,
+            shippingCost: Number(settingsForm['workshop-shipping-cost'].value) || 0,
+            wasteMargin: Number(settingsForm['workshop-waste-margin'].value) || 0,
+        };
+        
+        const settingsDocRef = doc(db, `users/${currentUserId}/config`, 'workshop');
+        try {
+            await setDoc(settingsDocRef, settingsData, { merge: true });
+            showToast('Cấu hình đã được lưu thành công!', 'success');
+        } catch (error) {
+            console.error("Error saving settings:", error);
+            showToast(`Lỗi khi lưu cấu hình: ${error.message}`, 'error');
+        }
+    });
+}
+
 // --- Materials Management ---
 function listenForMaterials() {
     if (unsubscribeMaterials) unsubscribeMaterials(); 
@@ -308,11 +370,11 @@ function renderMaterials(materials) {
     materials.forEach(m => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${m.name}</td>
-            <td><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">${m.type}</span></td>
-            <td>${Number(m.price).toLocaleString('vi-VN')}đ / ${m.unit}</td>
-            <td>${m.notes || ''}</td>
-            <td class="text-center">
+            <td data-label="Tên">${m.name}</td>
+            <td data-label="Loại"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">${m.type}</span></td>
+            <td data-label="Đơn giá">${Number(m.price).toLocaleString('vi-VN')}đ / ${m.unit}</td>
+            <td data-label="Ghi chú">${m.notes || ''}</td>
+            <td data-label="Thao tác" class="text-center">
                 <button class="edit-btn text-blue-500 hover:text-blue-700 mr-2" data-id="${m.id}"><i class="fas fa-edit"></i></button>
                 <button class="delete-btn text-red-500 hover:text-red-700" data-id="${m.id}"><i class="fas fa-trash"></i></button>
             </td>
@@ -631,7 +693,6 @@ async function runAICalculation() {
     const backPanel = localMaterials['Ván'].find(m => m.id === backPanelId);
     const edge = localMaterials['Cạnh'].find(m => m.id === edgeId);
 
-    // Determine which pieces are cut from which material.
     const allPieces = getPanelPieces();
     const useSeparateDoorWood = !!doorWoodId && doorWood && doorWood.id !== mainWood.id;
 
@@ -639,15 +700,23 @@ async function runAICalculation() {
     let doorPiecesForPrompt = [];
 
     if (useSeparateDoorWood) {
-        // If door wood is separate, its pieces are calculated separately.
         doorPiecesForPrompt = allPieces.filter(p => p.type === 'door');
     } else {
-        // If door wood is the same or not specified, its pieces are added to the main wood cutting list.
         mainWoodPieces.push(...allPieces.filter(p => p.type === 'door'));
     }
 
+    const workshopSettingsPrompt = `
+    THÔNG SỐ MẶC ĐỊNH CỦA XƯỞNG (sử dụng các giá trị này để tính chi phí ẩn):
+    - Chi phí nhân công: ${workshopSettings.laborCost || 350000} VND/m² (tính trên tổng diện tích bề mặt sản phẩm, bao gồm cả cắt, dán cạnh, lắp ráp)
+    - Chi phí quản lý: ${workshopSettings.managementCost || 10}% (tính trên tổng chi phí vật tư)
+    - Chi phí vận chuyển & lắp đặt: ${workshopSettings.shippingCost || 5}% (tính trên tổng chi phí vật tư)
+    - Hao hụt vật tư chung: ${workshopSettings.wasteMargin || 15}% (sử dụng khi ước tính sơ bộ nếu cần)
+    `;
+
     const prompt = `
     NHIỆM VỤ: Bạn là một trợ lý AI chuyên gia cho một xưởng gỗ ở Việt Nam. Mục tiêu của bạn là cung cấp một phân tích chi phí chi tiết, các đề xuất tối ưu hóa, và một sơ đồ cắt ván chính xác (2D bin packing) cho một sản phẩm nhất định. TOÀN BỘ PHẢN HỒI PHẢI BẰNG TIẾNG VIỆT.
+
+    ${workshopSettingsPrompt}
 
     DỮ LIỆU ĐẦU VÀO:
     - Tên sản phẩm: ${inputs.name}
@@ -678,13 +747,13 @@ async function runAICalculation() {
         - Tạo một danh sách chi phí trong "materialCosts".
         - **Chi phí Ván chính:** Phải dựa trên "totalSheetsUsed" đã được tối ưu từ sơ đồ cắt ở trên, nhân với giá VÁN CHÍNH.
         - **Chi phí Ván cánh:** Nếu danh sách "Chi tiết cắt từ VÁN CÁNH" không rỗng, hãy ước tính số tấm ván cánh cần dùng và tính chi phí. Cách ước tính: tính tổng diện tích các miếng, chia cho diện tích tấm ván chuẩn (1220x2440), làm tròn lên, rồi nhân với giá VÁN CÁNH.
-        - **Chi phí Ván hậu:** Nếu có ván hậu riêng (${backPanel ? 'có' : 'không'}), tính chi phí cho 1 tấm. Nếu không, chi phí này đã được tính vào ván chính (nếu có miếng 'Hậu' trong danh sách chi tiết ván chính).
+        - **Chi phí Ván hậu:** Nếu có ván hậu riêng (${backPanel ? 'có' : 'không'}), tính chi phí cho 1 tấm.
         - **Chi phí Nẹp cạnh và Phụ kiện:** Tính toán dựa trên dữ liệu đầu vào.
-        - Tính các "hiddenCosts" thực tế như nhân công, vận chuyển, hao hụt chung.
+        - Tính các "hiddenCosts" dựa trên **THÔNG SỐ MẶC ĐỊNH CỦA XƯỞNG** đã cung cấp.
         - Tính "totalCost", "suggestedPrice", "estimatedProfit".
     
     3.  **Gợi ý từ AI:**
-        - Dựa trên TOÀN BỘ các chi tiết của sản phẩm (cả ván chính và ván cánh nếu có), phân tích và đưa ra các gợi ý có giá trị trong "aiSuggestions".
+        - Dựa trên TOÀN BỘ các chi tiết của sản phẩm, phân tích và đưa ra các gợi ý có giá trị trong "aiSuggestions".
     `;
     
     try {
@@ -792,19 +861,17 @@ function renderSavedItems(items) {
         savedItemsTableBody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 1rem; color: var(--text-light);">Chưa có dự án nào được lưu.</td></tr>`;
         return;
     }
-    // Safely sort by timestamp, without optional chaining for better compatibility
     items.sort((a, b) => (b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0) - (a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0));
 
     items.forEach(item => {
         const tr = document.createElement('tr');
-        // BUG FIX: Use standard checks for safer access to nested properties on potentially old/malformed data.
         const itemName = (item && item.inputs && item.inputs.name) || 'Dự án không tên';
         const createdAt = (item && item.createdAt) ? new Date(item.createdAt.toDate()).toLocaleString('vi-VN') : 'Không rõ';
         
         tr.innerHTML = `
-            <td>${itemName}</td>
-            <td>${createdAt}</td>
-            <td class="text-center">
+            <td data-label="Tên dự án">${itemName}</td>
+            <td data-label="Ngày tạo">${createdAt}</td>
+            <td data-label="Thao tác" class="text-center">
                 <button class="load-btn text-green-500 hover:text-green-700 mr-2" data-id="${item.id}" title="Tải lại dự án này"><i class="fas fa-upload"></i></button>
                 <button class="view-btn text-blue-500 hover:text-blue-700 mr-2" data-id="${item.id}" title="Xem chi tiết"><i class="fas fa-eye"></i></button>
                 <button class="delete-saved-item-btn text-red-500 hover:text-red-700" data-id="${item.id}" title="Xóa dự án"><i class="fas fa-trash"></i></button>
