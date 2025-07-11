@@ -308,9 +308,6 @@ function listenForWorkshopSettings() {
 
 function populateSettingsForm() {
     if (!settingsForm) return;
-    settingsForm['workshop-name'].value = workshopSettings.name || '';
-    settingsForm['workshop-address'].value = workshopSettings.address || '';
-    settingsForm['workshop-logo-url'].value = workshopSettings.logoUrl || '';
     settingsForm['workshop-labor-cost'].value = workshopSettings.laborCost || '';
     settingsForm['workshop-management-cost'].value = workshopSettings.managementCost || '';
     settingsForm['workshop-shipping-cost'].value = workshopSettings.shippingCost || '';
@@ -325,9 +322,6 @@ if (settingsForm) {
             return;
         }
         const settingsData = {
-            name: settingsForm['workshop-name'].value.trim(),
-            address: settingsForm['workshop-address'].value.trim(),
-            logoUrl: settingsForm['workshop-logo-url'].value.trim(),
             laborCost: Number(settingsForm['workshop-labor-cost'].value) || 0,
             managementCost: Number(settingsForm['workshop-management-cost'].value) || 0,
             shippingCost: Number(settingsForm['workshop-shipping-cost'].value) || 0,
