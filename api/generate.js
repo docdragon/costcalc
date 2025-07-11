@@ -15,8 +15,51 @@ export default async function handler(request, response) {
     const ai = new GoogleGenAI({ apiKey });
     
     try {
-        const { prompt, image, chatHistory, newChatMessage, analyzeDimensions } = request.body;
+        const { prompt, image, chatHistory, newChatMessage, analyzeDimensions, configureFromText, text } = request.body;
         
+        // --- New: Handle Form Configuration from Text Request ---
+        if (configureFromText) {
+            if (!text) {
+                return response.status(400).json({ error: 'Yêu cầu cấu hình từ văn bản thiếu nội dung.' });
+            }
+            const configPrompt = `Bạn là một trợ lý AI chuyên nghiệp cho một xưởng mộc ở Việt Nam. Nhiệm vụ của bạn là đọc một mô tả sản phẩm bằng tiếng Việt và trích xuất các thông tin chi tiết vào một cấu trúc JSON.
+- Phân tích văn bản để tìm 'length' (dài), 'width' (rộng), 'height' (cao), 'itemName' (tên sản phẩm), 'itemType' (loại sản phẩm), và 'materialName' (tên vật liệu).
+- **Chuyển đổi đơn vị**: Chuyển đổi tất cả các đơn vị sang milimét (mm). Ví dụ: "2 mét", "2m", "2m2" -> 2000; "60 phân", "60cm" -> 600.
+- **Loại sản phẩm (itemType)**: Phải là một trong các giá trị sau: 'tu-bep-duoi', 'tu-bep-tren', 'tu-ao', 'khac'.
+- **Tên vật liệu (materialName)**: Trích xuất tên vật liệu chính được yêu cầu, ví dụ: "MDF An Cường", "HDF chống ẩm".
+- Nếu không tìm thấy thông tin nào, hãy bỏ qua khóa đó. Chỉ trả về JSON.`;
+            
+            const responseSchema = {
+                type: Type.OBJECT,
+                properties: {
+                    length: { type: Type.INTEGER, description: "Kích thước Dài (mm)" },
+                    width: { type: Type.INTEGER, description: "Kích thước Rộng (mm)" },
+                    height: { type: Type.INTEGER, description: "Kích thước Cao (mm)" },
+                    itemName: { type: Type.STRING, description: "Tên sản phẩm được trích xuất" },
+                    itemType: { type: Type.STRING, description: "Loại sản phẩm: 'tu-bep-duoi', 'tu-bep-tren', 'tu-ao', or 'khac'" },
+                    materialName: { type: Type.STRING, description: "Tên của vật liệu ván chính" },
+                }
+            };
+            
+            const genAIResponse = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: `${configPrompt}\n\nVăn bản của người dùng: "${text}"`,
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: responseSchema,
+                }
+            });
+            
+            try {
+                const parsedData = JSON.parse(genAIResponse.text);
+                return response.status(200).json(parsedData);
+            } catch (parseError) {
+                console.error("Serverless function (config): Failed to parse JSON from Gemini.", parseError);
+                console.error("Original text from Gemini:", genAIResponse.text);
+                return response.status(500).json({ error: `Phản hồi từ AI không hợp lệ: ${genAIResponse.text}` });
+            }
+        }
+
         // --- Handle Image Dimension Analysis Request ---
         if (analyzeDimensions) {
             if (!image || !image.data || !image.mimeType) {
@@ -203,7 +246,7 @@ Ví dụ phản hồi: {\"length\": 1200, \"height\": 750}`;
             }
         }
 
-        return response.status(400).json({ error: 'Yêu cầu không hợp lệ. Thiếu "prompt", "newChatMessage", hoặc "analyzeDimensions".' });
+        return response.status(400).json({ error: 'Yêu cầu không hợp lệ. Thiếu "prompt", "newChatMessage", "configureFromText" hoặc "analyzeDimensions".' });
 
     } catch (error) {
         console.error("Error in serverless function:", error);

@@ -42,6 +42,8 @@ const aiAnalysisSection = document.getElementById('ai-analysis-section');
 const settingsForm = document.getElementById('settings-form');
 const analyzeImageBtn = document.getElementById('analyze-image-btn');
 const imageAnalysisContainer = document.getElementById('image-analysis-container');
+const aiConfigPrompt = document.getElementById('ai-config-prompt');
+const aiConfigBtn = document.getElementById('ai-config-btn');
 
 
 // --- Global State ---
@@ -529,6 +531,7 @@ function clearInputs() {
     document.getElementById('product-description').value = '';
     document.getElementById('profit-margin').value = '50';
     document.getElementById('material-door').value = ''; // Reset door material
+    aiConfigPrompt.value = '';
     addedAccessories = [];
     renderAccessories();
     lastGeminiResult = null;
@@ -541,6 +544,10 @@ function clearInputs() {
     initialSummarySection.classList.add('hidden');
     aiAnalysisSection.classList.add('hidden');
     saveItemBtn.disabled = true;
+    
+    // Reset 3D viewer
+    const event = new Event('input');
+    document.getElementById('item-length').dispatchEvent(event);
 }
 
 // --- Calculation Logic ---
@@ -1015,6 +1022,10 @@ function loadItemIntoForm(item) {
 
     // Scroll to top for better UX
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Trigger 3D viewer update
+    const event = new Event('input');
+    document.getElementById('item-length').dispatchEvent(event);
 
     showToast('Đã tải dữ liệu dự án. Bạn có thể chỉnh sửa và phân tích lại.', 'info');
 }
@@ -1258,6 +1269,9 @@ async function handleImageAnalysis() {
 
         if (fieldsUpdated > 0) {
             showToast(`AI đã điền ${fieldsUpdated} thông số kích thước!`, 'success');
+             // Trigger 3D viewer update
+            const event = new Event('input');
+            document.getElementById('item-length').dispatchEvent(event);
         } else {
             showToast('Không tìm thấy kích thước nào trong ảnh. Vui lòng thử ảnh khác rõ ràng hơn.', 'info');
         }
@@ -1273,6 +1287,155 @@ async function handleImageAnalysis() {
 
 analyzeImageBtn.addEventListener('click', handleImageAnalysis);
 
+// --- New: AI Configuration from Text ---
+async function handleAIConfig() {
+    const text = aiConfigPrompt.value.trim();
+    if (!text) {
+        showToast('Vui lòng nhập mô tả sản phẩm.', 'error');
+        return;
+    }
+    
+    aiConfigBtn.disabled = true;
+    aiConfigBtn.innerHTML = `<span class="spinner-sm"></span> Đang phân tích...`;
+    
+    try {
+        const response = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ configureFromText: true, text: text })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Lỗi không xác định từ máy chủ');
+        }
+        
+        let updatedFields = 0;
+        
+        if(data.length) { document.getElementById('item-length').value = data.length; updatedFields++; }
+        if(data.width) { document.getElementById('item-width').value = data.width; updatedFields++; }
+        if(data.height) { document.getElementById('item-height').value = data.height; updatedFields++; }
+        if(data.itemName) { document.getElementById('item-name').value = data.itemName; updatedFields++; }
+        if(data.itemType) { document.getElementById('item-type').value = data.itemType; updatedFields++; }
+        
+        if(data.materialName) {
+            const materialSelect = document.getElementById('material-wood');
+            const allWood = localMaterials['Ván'];
+            let bestMatch = null;
+            let highestScore = 0;
+
+            // Simple fuzzy match
+            allWood.forEach(wood => {
+                const name = wood.name.toLowerCase();
+                const aiName = data.materialName.toLowerCase();
+                if (name.includes(aiName) || aiName.includes(name)) {
+                   const score = name.length > aiName.length ? aiName.length / name.length : name.length / aiName.length;
+                   if (score > highestScore) {
+                       highestScore = score;
+                       bestMatch = wood.id;
+                   }
+                }
+            });
+
+            if (bestMatch) {
+                materialSelect.value = bestMatch;
+                updatedFields++;
+            }
+        }
+        
+        if (updatedFields > 0) {
+            showToast(`AI đã điền ${updatedFields} thông tin sản phẩm!`, 'success');
+            // Trigger 3D viewer update
+            const event = new Event('input');
+            document.getElementById('item-length').dispatchEvent(event);
+        } else {
+            showToast('AI không thể trích xuất thông tin từ mô tả của bạn.', 'info');
+        }
+
+    } catch(error) {
+        console.error("AI Config Error:", error);
+        showToast(`Lỗi cấu hình AI: ${error.message}`, 'error');
+    } finally {
+        aiConfigBtn.disabled = false;
+        aiConfigBtn.innerHTML = `<i class="fas fa-cogs"></i> Tạo Sản phẩm từ Mô tả`;
+    }
+}
+aiConfigBtn.addEventListener('click', handleAIConfig);
+
+
+// --- New: 3D Viewer ---
+function initialize3DViewer() {
+    const container = document.getElementById('viewer-3d-container');
+    const scene = container.querySelector('.scene-3d');
+    const cube = container.querySelector('.cube-3d');
+    const lengthInput = document.getElementById('item-length');
+    const widthInput = document.getElementById('item-width');
+    const heightInput = document.getElementById('item-height');
+
+    let mouseX = 0, mouseY = 0;
+    let rotX = -20, rotY = -30;
+    let isDragging = false;
+
+    function updateCubeDimensions() {
+        const length = Number(lengthInput.value) || 0;
+        const width = Number(widthInput.value) || 0;
+        const height = Number(heightInput.value) || 0;
+        
+        const maxDim = Math.max(length, width, height, 200);
+        const scale = 180 / maxDim; // Container size is ~200px
+        
+        const scaledL = length * scale;
+        const scaledW = width * scale;
+        const scaledH = height * scale;
+
+        cube.style.setProperty('--w', `${scaledW}px`);
+        cube.style.setProperty('--h', `${scaledH}px`);
+        cube.style.setProperty('--d', `${scaledL}px`);
+        
+        // Update labels
+        cube.querySelector('.cube-face--front').setAttribute('data-label', `D: ${length || 0} mm`);
+        cube.querySelector('.cube-face--right').setAttribute('data-label', `R: ${width || 0} mm`);
+        cube.querySelector('.cube-face--top').setAttribute('data-label', `C: ${height || 0} mm`);
+    }
+
+    function onMouseMove(e) {
+        if (!isDragging) return;
+        const dx = e.clientX - mouseX;
+        const dy = e.clientY - mouseY;
+        rotY += dx * 0.5;
+        rotX -= dy * 0.5;
+        rotX = Math.max(-90, Math.min(90, rotX)); // Clamp vertical rotation
+        scene.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+    }
+
+    function onMouseDown(e) {
+        isDragging = true;
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+        container.style.cursor = 'grabbing';
+    }
+
+    function onMouseUp() {
+        isDragging = false;
+        container.style.cursor = 'grab';
+    }
+
+    container.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    container.addEventListener('mouseleave', onMouseUp);
+
+    lengthInput.addEventListener('input', updateCubeDimensions);
+    widthInput.addEventListener('input', updateCubeDimensions);
+    heightInput.addEventListener('input', updateCubeDimensions);
+    
+    // Initial setup
+    scene.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+    updateCubeDimensions();
+}
 
 // --- App Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -1288,4 +1451,5 @@ document.addEventListener('DOMContentLoaded', () => {
             imageAnalysisContainer.classList.add('hidden');
         }
     );
+    initialize3DViewer();
 });

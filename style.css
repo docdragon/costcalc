@@ -100,8 +100,27 @@ body {
 .button-group { display: flex; gap: 0.75rem; margin-top: 1.5rem; }
 .full-width { width: 100%; }
 .material-form { border-bottom: 1px solid var(--border-color); padding-bottom: 2rem; margin-bottom: 2rem; }
-.material-form > * + * { margin-top: 1rem; }
 .form-title { font-size: 1.25rem; font-weight: 600; text-align: center; margin-bottom: 1rem; }
+
+/* AI Config Section */
+.ai-config-section {
+    background-color: #eef2ff;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid #c7d2fe;
+}
+.ai-config-section .form-label {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+.ai-config-section .form-label i {
+    margin-right: 0.25rem;
+}
+.form-divider {
+    border: none;
+    border-top: 1px dashed var(--border-color);
+    margin: 1.5rem 0;
+}
 
 /* --- Accessory Adder --- */
 .accessory-adder { display: flex; align-items: center; gap: 0.5rem; }
@@ -370,7 +389,7 @@ td button { transition: color 0.2s; }
 }
 
 /* --- Structured Analysis & Modal Content Styling --- */
-.modal-body h4 {
+.modal-body h4, .guide-details h4, #viewer-3d-section h4 {
     font-size: 1rem;
     font-weight: 600;
     color: var(--primary-color);
@@ -380,10 +399,10 @@ td button { transition: color 0.2s; }
     align-items: center;
 }
 .modal-body h4:first-child { margin-top: 0; }
-.modal-body h4 i { margin-right: 0.5rem; color: var(--primary-hover); }
-.modal-body ul { list-style-type: none; padding-left: 1.5rem; margin: 0 0 1rem 0; }
-.modal-body li { position: relative; padding-bottom: 0.5rem; color: var(--text-dark); }
-.modal-body li::before {
+.modal-body h4 i, .guide-details h4 i, #viewer-3d-section h4 i { margin-right: 0.5rem; color: var(--primary-hover); }
+.modal-body ul, .guide-details ul { list-style-type: none; padding-left: 1.5rem; margin: 0 0 1rem 0; }
+.modal-body li, .guide-details li { position: relative; padding-bottom: 0.5rem; color: var(--text-dark); }
+.modal-body li::before, .guide-details li::before {
     content: '✓';
     position: absolute;
     left: -1.5rem;
@@ -727,7 +746,6 @@ td button { transition: color 0.2s; }
     gap: 1rem;
     margin-top: 1rem;
 }
-
 #cutting-layout-summary {
     font-size: 0.9rem;
     font-weight: 500;
@@ -744,17 +762,8 @@ td button { transition: color 0.2s; }
 #cutting-layout-summary p + p {
     margin-top: 0.25rem;
 }
-
-.cutting-sheet-wrapper {
-    margin-bottom: 1rem;
-}
-
-.cutting-sheet-title {
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    font-size: 0.875rem;
-}
-
+.cutting-sheet-wrapper { margin-bottom: 1rem; }
+.cutting-sheet-title { font-weight: 600; margin-bottom: 0.5rem; font-size: 0.875rem; }
 .cutting-sheet {
     position: relative;
     width: 100%;
@@ -766,7 +775,6 @@ td button { transition: color 0.2s; }
     border-radius: 4px;
     overflow: hidden;
 }
-
 .cutting-piece {
     position: absolute;
     box-sizing: border-box;
@@ -777,7 +785,6 @@ td button { transition: color 0.2s; }
     align-items: center;
     overflow: hidden;
 }
-
 .cutting-piece-label {
     font-size: 9px;
     color: var(--primary-color);
@@ -787,4 +794,110 @@ td button { transition: color 0.2s; }
     white-space: normal;
     word-break: break-word;
     line-height: 1.1;
+}
+
+/* --- Guide Section --- */
+.guide-details {
+    border-top: 1px solid var(--border-color);
+    margin-top: 1.5rem;
+    padding-top: 0.5rem;
+}
+.guide-details summary {
+    cursor: pointer;
+    list-style: none; /* Hide default marker */
+}
+.guide-details summary::-webkit-details-marker {
+    display: none; /* Hide default marker for Chrome/Safari */
+}
+.guide-details summary:focus { outline: none; }
+.guide-details summary h4 { margin: 0; }
+
+/* --- 3D Viewer --- */
+#viewer-3d-section {
+    margin-bottom: 1.5rem;
+}
+.viewer-3d-container {
+    width: 100%;
+    height: 220px;
+    perspective: 1000px;
+    background-color: var(--background-color);
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    position: relative;
+    user-select: none;
+    overflow: hidden;
+}
+.viewer-3d-instructions {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0,0,0,0.4);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    pointer-events: none;
+    opacity: 0.8;
+}
+.scene-3d {
+    transform-style: preserve-3d;
+    transition: transform 0.1s linear;
+}
+.cube-3d {
+    --w: 100px; /* width */
+    --h: 150px; /* height */
+    --d: 50px;  /* depth */
+    width: var(--w);
+    height: var(--h);
+    position: relative;
+    transform-style: preserve-3d;
+    transform: translateZ(calc(var(--d) / -2));
+}
+.cube-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: hsla(30, 35%, 85%, 0.8);
+    border: 1px solid hsla(30, 35%, 60%, 1);
+    color: var(--text-dark);
+    font-size: 12px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.cube-face::before {
+    content: attr(data-label);
+    padding: 2px 5px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 3px;
+}
+
+.cube-face--front {
+    width: var(--w); height: var(--h);
+    transform: translateZ(calc(var(--d) / 2));
+}
+.cube-face--back {
+    width: var(--w); height: var(--h);
+    transform: rotateY(180deg) translateZ(calc(var(--d) / 2));
+}
+.cube-face--right {
+    width: var(--d); height: var(--h);
+    transform: rotateY(90deg) translateZ(calc(var(--w) / 2));
+}
+.cube-face--left {
+    width: var(--d); height: var(--h);
+    transform: rotateY(-90deg) translateZ(calc(var(--w) / 2));
+}
+.cube-face--top {
+    width: var(--w); height: var(--d);
+    transform: rotateX(90deg) translateZ(calc(var(--h) / 2));
+}
+.cube-face--bottom {
+    width: var(--w); height: var(--d);
+    transform: rotateX(-90deg) translateZ(calc(var(--h) / 2));
 }

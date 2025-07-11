@@ -64,6 +64,16 @@
                     <div class="card main-card">
                         <h2 class="card-header">Thông tin Sản phẩm</h2>
                         <div class="content-wrapper calculator-form-content">
+                            <!-- AI Quick Config -->
+                            <div class="ai-config-section">
+                                <label for="ai-config-prompt" class="form-label"><i class="fas fa-wand-magic-sparkles"></i> Khởi tạo Nhanh với Trợ lý AI</label>
+                                <textarea id="ai-config-prompt" class="input-style" rows="2" placeholder="Vd: làm tủ bếp dưới dài 2 mét, rộng 60 phân, cao 85 phân, dùng ván MDF An Cường chống ẩm."></textarea>
+                                <button id="ai-config-btn" class="btn btn-secondary full-width" style="margin-top: 0.5rem;">
+                                    <i class="fas fa-cogs"></i> Tạo Sản phẩm từ Mô tả
+                                </button>
+                            </div>
+                            <hr class="form-divider">
+                            
                             <div class="grid-3-col">
                                 <div><label for="item-length" class="form-label">Dài (mm)</label><input type="number" id="item-length" class="input-style" placeholder="Vd: 1200"></div>
                                 <div><label for="item-width" class="form-label">Rộng (mm)</label><input type="number" id="item-width" class="input-style" placeholder="Vd: 600"></div>
@@ -198,15 +208,38 @@
                         </div>
                     </div>
                     <div class="sidebar-card card">
-                        <h2 class="card-header">Hướng Dẫn</h2>
+                        <h2 class="card-header">Công cụ</h2>
                         <div class="content-wrapper calculator-form-content">
-                             <h4><i class="fas fa-lightbulb"></i> Mẹo sử dụng</h4>
-                            <ul>
-                                <li><strong>Bước 1: Tính chi phí vật tư.</strong> Nhập đầy đủ thông tin sản phẩm và nhấn nút "Tính chi phí vật tư" để có ước tính ban đầu.</li>
-                                <li><strong>Bước 2: Nhờ AI phân tích.</strong> Sau khi có chi phí sơ bộ, nhấn nút "Nhờ AI Phân tích & Tối ưu" để AI tìm các chi phí ẩn, gợi ý tối ưu và tạo sơ đồ cắt ván chính xác.</li>
-                                <li><strong>Cấu hình Xưởng:</strong> Vào tab "Cấu hình Xưởng" để nhập các chi phí mặc định (nhân công, quản lý...). AI sẽ dựa vào đó để tính toán chính xác hơn.</li>
-                                <li><strong>Lưu & Tải lại:</strong> Lưu các dự án quan trọng để xem lại hoặc tải lại thông tin vào biểu mẫu để tính toán phiên bản mới.</li>
-                            </ul>
+                            <!-- 3D Viewer -->
+                            <div id="viewer-3d-section">
+                                <h4><i class="fas fa-cube"></i> Xem trước Sản phẩm 3D</h4>
+                                <div id="viewer-3d-container" class="viewer-3d-container">
+                                    <div class="scene-3d">
+                                        <div class="cube-3d">
+                                            <div class="cube-face cube-face--front"></div>
+                                            <div class="cube-face cube-face--back"></div>
+                                            <div class="cube-face cube-face--right"></div>
+                                            <div class="cube-face cube-face--left"></div>
+                                            <div class="cube-face cube-face--top"></div>
+                                            <div class="cube-face cube-face--bottom"></div>
+                                        </div>
+                                    </div>
+                                    <div class="viewer-3d-instructions">Nhấn và kéo để xoay</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Guide -->
+                            <details class="guide-details">
+                                <summary>
+                                    <h4><i class="fas fa-lightbulb"></i> Hướng dẫn & Mẹo sử dụng</h4>
+                                </summary>
+                                <ul>
+                                    <li><strong>Khởi tạo Nhanh:</strong> Nhập mô tả sản phẩm vào ô "Khởi tạo Nhanh với Trợ lý AI" và nhấn nút, AI sẽ điền các thông số giúp bạn.</li>
+                                    <li><strong>Tính chi phí:</strong> Nhập đầy đủ thông tin sản phẩm và nhấn nút "Tính chi phí vật tư" để có ước tính ban đầu.</li>
+                                    <li><strong>Phân tích AI:</strong> Sau khi có chi phí sơ bộ, nhấn "Nhờ AI Phân tích & Tối ưu" để tìm chi phí ẩn, gợi ý và tạo sơ đồ cắt.</li>
+                                    <li><strong>Lưu & Tải lại:</strong> Lưu các dự án quan trọng để xem lại hoặc tải lại thông tin vào biểu mẫu.</li>
+                                </ul>
+                           </details>
                         </div>
                          <div class="login-prompt-view">
                             <div class="icon-prompt"><i class="fas fa-info-circle"></i></div>
