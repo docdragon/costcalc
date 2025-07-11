@@ -40,6 +40,8 @@ const initialCostBreakdownContainer = document.getElementById('initial-cost-brea
 const initialTotalCostValue = document.getElementById('initial-total-cost-value');
 const aiAnalysisSection = document.getElementById('ai-analysis-section');
 const settingsForm = document.getElementById('settings-form');
+const analyzeImageBtn = document.getElementById('analyze-image-btn');
+const imageAnalysisContainer = document.getElementById('image-analysis-container');
 
 
 // --- Global State ---
@@ -1217,13 +1219,73 @@ chatForm.addEventListener('submit', async (e) => {
     chatInput.focus();
 });
 
+// --- New: Image Dimension Analysis ---
+async function handleImageAnalysis() {
+    if (!uploadedImage) {
+        showToast('Vui lòng tải lên một hình ảnh trước.', 'error');
+        return;
+    }
+
+    analyzeImageBtn.disabled = true;
+    analyzeImageBtn.innerHTML = `<span class="spinner-sm"></span> Đang phân tích ảnh...`;
+
+    try {
+        const response = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ analyzeDimensions: true, image: uploadedImage })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Lỗi không xác định từ máy chủ');
+        }
+
+        let fieldsUpdated = 0;
+        if (data.length) {
+            document.getElementById('item-length').value = data.length;
+            fieldsUpdated++;
+        }
+        if (data.width) {
+            document.getElementById('item-width').value = data.width;
+            fieldsUpdated++;
+        }
+        if (data.height) {
+            document.getElementById('item-height').value = data.height;
+            fieldsUpdated++;
+        }
+
+        if (fieldsUpdated > 0) {
+            showToast(`AI đã điền ${fieldsUpdated} thông số kích thước!`, 'success');
+        } else {
+            showToast('Không tìm thấy kích thước nào trong ảnh. Vui lòng thử ảnh khác rõ ràng hơn.', 'info');
+        }
+
+    } catch (error) {
+        console.error("Error analyzing image dimensions:", error);
+        showToast(`Lỗi phân tích ảnh: ${error.message}`, 'error');
+    } finally {
+        analyzeImageBtn.disabled = false;
+        analyzeImageBtn.innerHTML = `<i class="fas fa-search-plus"></i><span>Phân tích Kích thước từ Ảnh</span>`;
+    }
+}
+
+analyzeImageBtn.addEventListener('click', handleImageAnalysis);
+
 
 // --- App Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
     initializeTabs();
     initializeModals();
     initializeImageUploader(
-        (imageData) => { uploadedImage = imageData; },
-        () => { uploadedImage = null; }
+        (imageData) => { 
+            uploadedImage = imageData;
+            imageAnalysisContainer.classList.remove('hidden');
+        },
+        () => { 
+            uploadedImage = null; 
+            imageAnalysisContainer.classList.add('hidden');
+        }
     );
 });
