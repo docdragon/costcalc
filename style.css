@@ -917,3 +917,30 @@ td button { transition: color 0.2s; }
     top: calc((var(--h) - var(--d)) / 2);
     transform: rotateX(-90deg) translateZ(calc(var(--h) / 2));
 }
+
+/* --- Pagination Controls --- */
+.pagination-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+.pagination-controls #page-info {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-light);
+}
+.pagination-controls .btn {
+    padding: 0.5rem 1rem;
+}
+.pagination-controls .btn i {
+    margin: 0;
+}
+.pagination-controls .btn[data-direction="prev"] i {
+    margin-right: 0.4rem;
+}
+.pagination-controls .btn[data-direction="next"] i {
+    margin-left: 0.4rem;
+}

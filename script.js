@@ -42,6 +42,10 @@ const aiConfigPrompt = document.getElementById('ai-config-prompt');
 const aiConfigBtn = document.getElementById('ai-config-btn');
 const materialFilterInput = document.getElementById('material-filter-input');
 const materialSortSelect = document.getElementById('material-sort-select');
+const prevPageBtn = document.getElementById('prev-page-btn');
+const nextPageBtn = document.getElementById('next-page-btn');
+const pageInfo = document.getElementById('page-info');
+const paginationControls = document.getElementById('pagination-controls');
 
 
 // --- Global State ---
@@ -59,6 +63,9 @@ let uploadedImage = null;
 let chatHistory = [];
 let isAwaitingChatResponse = false;
 let calculationState = 'idle'; // idle, calculating, done
+let currentPage = 1;
+const itemsPerPage = 10;
+
 
 // --- Sample Data for New Users ---
 const sampleMaterials = [
@@ -295,16 +302,16 @@ function listenForMaterials() {
 
 
 /**
- * Applies current filter and sort options and then renders the material list.
+ * Applies current filter, sort, and pagination options and then renders the material list.
  */
 function displayMaterials() {
-    let materialsToRender = [...allLocalMaterials];
+    let materialsToProcess = [...allLocalMaterials];
     const filterText = materialFilterInput.value.toLowerCase().trim();
     const sortBy = materialSortSelect.value;
 
     // 1. Filter
     if (filterText) {
-        materialsToRender = materialsToRender.filter(m => 
+        materialsToProcess = materialsToProcess.filter(m => 
             m.name.toLowerCase().includes(filterText) || 
             (m.notes && m.notes.toLowerCase().includes(filterText))
         );
@@ -313,28 +320,69 @@ function displayMaterials() {
     // 2. Sort
     switch (sortBy) {
         case 'name-asc':
-            materialsToRender.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+            materialsToProcess.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
             break;
         case 'name-desc':
-            materialsToRender.sort((a, b) => b.name.localeCompare(a.name, 'vi'));
+            materialsToProcess.sort((a, b) => b.name.localeCompare(a.name, 'vi'));
             break;
         case 'price-asc':
-            materialsToRender.sort((a, b) => a.price - b.price);
+            materialsToProcess.sort((a, b) => a.price - b.price);
             break;
         case 'price-desc':
-            materialsToRender.sort((a, b) => b.price - a.price);
+            materialsToProcess.sort((a, b) => b.price - a.price);
             break;
         case 'type':
-            materialsToRender.sort((a, b) => a.type.localeCompare(b.type, 'vi') || a.name.localeCompare(b.name, 'vi'));
+            materialsToProcess.sort((a, b) => a.type.localeCompare(b.type, 'vi') || a.name.localeCompare(b.name, 'vi'));
             break;
     }
     
-    // 3. Render
-    renderMaterials(materialsToRender);
+    // 3. Paginate
+    const totalItems = materialsToProcess.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+
+    if (currentPage > totalPages) {
+        currentPage = totalPages;
+    }
+    
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedItems = materialsToProcess.slice(startIndex, endIndex);
+
+    // 4. Render
+    renderMaterials(paginatedItems);
+    updatePaginationControls(totalPages);
 }
 
-materialFilterInput.addEventListener('input', displayMaterials);
-materialSortSelect.addEventListener('change', displayMaterials);
+function updatePaginationControls(totalPages) {
+    if (totalPages <= 1) {
+        paginationControls.classList.add('hidden');
+        return;
+    }
+    paginationControls.classList.remove('hidden');
+
+    pageInfo.textContent = `Trang ${currentPage} / ${totalPages}`;
+    prevPageBtn.disabled = currentPage === 1;
+    nextPageBtn.disabled = currentPage === totalPages;
+}
+
+materialFilterInput.addEventListener('input', () => {
+    currentPage = 1;
+    displayMaterials();
+});
+materialSortSelect.addEventListener('change', () => {
+    currentPage = 1;
+    displayMaterials();
+});
+prevPageBtn.addEventListener('click', () => {
+    if (currentPage > 1) {
+        currentPage--;
+        displayMaterials();
+    }
+});
+nextPageBtn.addEventListener('click', () => {
+    currentPage++;
+    displayMaterials();
+});
 
 
 function renderMaterials(materials) {
