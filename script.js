@@ -476,6 +476,7 @@ function populateSelects() {
         { el: document.getElementById('material-accessories'), type: 'Phụ kiện' },
         // Quick Calc Selects
         { el: document.getElementById('qc-material-wood'), type: 'Ván' },
+        { el: document.getElementById('qc-material-wood-2'), type: 'Ván', optional: true, optionalText: '--- Không chọn ---' },
         { el: document.getElementById('qc-material-edge'), type: 'Cạnh' },
         { el: document.getElementById('qc-accessory-hinge'), type: 'Phụ kiện', optional: true, optionalText: '--- Không chọn ---' },
         { el: document.getElementById('qc-accessory-slide'), type: 'Phụ kiện', optional: true, optionalText: '--- Không chọn ---' },

@@ -31,6 +31,9 @@ export function initializeQuickCalc(localMaterials, showToast) {
     const qcAreaInput = document.getElementById('qc-area');
     const qcMaterialWoodSelect = document.getElementById('qc-material-wood');
     const qcSheetCountDisplay = document.getElementById('qc-sheet-count-display');
+    const qcArea2Input = document.getElementById('qc-area-2');
+    const qcMaterialWood2Select = document.getElementById('qc-material-wood-2');
+    const qcSheetCount2Display = document.getElementById('qc-sheet-count-display-2');
     const qcEdgeLengthInput = document.getElementById('qc-edge-length');
     const qcMaterialEdgeSelect = document.getElementById('qc-material-edge');
     const qcHingeSelect = document.getElementById('qc-accessory-hinge');
@@ -42,37 +45,45 @@ export function initializeQuickCalc(localMaterials, showToast) {
     const qcInstallCostInput = document.getElementById('qc-install-cost');
     const qcProfitMarginInput = document.getElementById('qc-profit-margin');
 
-    let currentNumSheets = 0;
-
     /**
-     * Updates the estimated sheet count display based on user input.
+     * Calculates the number of sheets and total cost for a given material input group.
+     * @param {HTMLInputElement} areaInput - The input element for area.
+     * @param {HTMLSelectElement} woodSelect - The select element for the material.
+     * @param {HTMLElement} displayEl - The element to show the estimated sheet count.
+     * @returns {{numSheets: number, cost: number}}
      */
-    function updateSheetCount() {
-        const area = parseFloat(qcAreaInput.value) || 0;
-        const woodId = qcMaterialWoodSelect.value;
-        
+    function calculateSheetData(areaInput, woodSelect, displayEl) {
+        const area = parseFloat(areaInput.value) || 0;
+        const woodId = woodSelect.value;
+        let numSheets = 0;
+        let cost = 0;
+
         if (area > 0 && woodId) {
             const woodMaterial = localMaterials['Ván'].find(m => m.id === woodId);
             if (woodMaterial) {
                 const sheetArea = parseSheetDimensions(woodMaterial);
-                currentNumSheets = Math.ceil(area / sheetArea);
-                qcSheetCountDisplay.textContent = `(Ước tính: ${currentNumSheets} tấm)`;
+                numSheets = Math.ceil(area / sheetArea);
+                cost = numSheets * (woodMaterial.price || 0);
+                displayEl.textContent = `(Ước tính: ${numSheets} tấm)`;
+            } else {
+                 displayEl.textContent = '';
             }
         } else {
-            qcSheetCountDisplay.textContent = '';
-            currentNumSheets = 0;
+            displayEl.textContent = '';
         }
+        return { numSheets, cost };
     }
+
 
     /**
      * Performs the main calculation for the Quick Calc tab.
      */
     function handleQuickCalculation() {
-        // Update the sheet count display first
-        updateSheetCount();
-        
+        // Calculate wood costs for both material types
+        const woodData1 = calculateSheetData(qcAreaInput, qcMaterialWoodSelect, qcSheetCountDisplay);
+        const woodData2 = calculateSheetData(qcArea2Input, qcMaterialWood2Select, qcSheetCount2Display);
+
         // Get all raw values
-        const woodId = qcMaterialWoodSelect.value;
         const edgeLength = parseFloat(qcEdgeLengthInput.value) || 0;
         const edgeId = qcMaterialEdgeSelect.value;
         const hingeId = qcHingeSelect.value;
@@ -85,14 +96,13 @@ export function initializeQuickCalc(localMaterials, showToast) {
         const profitMargin = parseFloat(qcProfitMarginInput.value) || 0;
 
         // Find materials from local store
-        const woodMaterial = localMaterials['Ván'].find(m => m.id === woodId);
         const edgeMaterial = localMaterials['Cạnh'].find(m => m.id === edgeId);
         const hingeMaterial = localMaterials['Phụ kiện'].find(m => m.id === hingeId);
         const slideMaterial = localMaterials['Phụ kiện'].find(m => m.id === slideId);
         const camMaterial = localMaterials['Phụ kiện'].find(m => m.id === camId);
         
         // Calculate individual costs, ensuring they are numbers
-        const woodCost = (currentNumSheets * (woodMaterial?.price || 0)) || 0;
+        const woodCost = woodData1.cost + woodData2.cost;
         const edgeCost = (edgeLength * (edgeMaterial?.price || 0)) || 0;
         const hingeCost = (hingeQty * (hingeMaterial?.price || 0)) || 0;
         const slideCost = (slideQty * (slideMaterial?.price || 0)) || 0;
@@ -115,7 +125,8 @@ export function initializeQuickCalc(localMaterials, showToast) {
 
     // --- Event Listeners for Auto-Calculation ---
     const inputsToTrack = [
-        qcAreaInput, qcMaterialWoodSelect, qcEdgeLengthInput, qcMaterialEdgeSelect,
+        qcAreaInput, qcMaterialWoodSelect, qcArea2Input, qcMaterialWood2Select,
+        qcEdgeLengthInput, qcMaterialEdgeSelect,
         qcHingeSelect, qcHingeQtyInput, qcSlideSelect, qcSlideQtyInput,
         qcCamSelect, qcCamQtyInput, qcInstallCostInput, qcProfitMarginInput
     ];
