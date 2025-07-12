@@ -156,11 +156,20 @@ export function initializeTabs() {
  * @param {object} config Configuration options.
  */
 export function initializeCombobox(container, optionsData, onSelect, config = {}) {
+    // Prevent re-initializing listeners if called again on the same element
+    if (container.dataset.comboboxInitialized) {
+        if (container.updateComboboxData) {
+            container.updateComboboxData(optionsData);
+        }
+        return;
+    }
+
     const input = container.querySelector('.combobox-input');
     const valueInput = container.querySelector('.combobox-value');
     const optionsWrapper = container.querySelector('.combobox-options-wrapper');
     const optionsList = container.querySelector('.combobox-options');
 
+    let currentOptionsData = optionsData || []; // Store data locally
     const { placeholder = "Chọn...", allowEmpty = false, emptyOptionText = "--- Không chọn ---" } = config;
     if (placeholder) {
         input.placeholder = placeholder;
@@ -168,7 +177,8 @@ export function initializeCombobox(container, optionsData, onSelect, config = {}
 
     const renderOptions = (filterText = '') => {
         optionsList.innerHTML = '';
-        let filteredOptions = optionsData.filter(o => o.name.toLowerCase().includes(filterText.toLowerCase()));
+        // Use the local, updatable data source
+        let filteredOptions = currentOptionsData.filter(o => o.name.toLowerCase().includes(filterText.toLowerCase()));
 
         if (allowEmpty) {
             const emptyOption = document.createElement('li');
@@ -203,11 +213,19 @@ export function initializeCombobox(container, optionsData, onSelect, config = {}
             closeDropdown();
         }
     };
+
+    // Attach an update function to the container element itself
+    container.updateComboboxData = (newOptions) => {
+        currentOptionsData = newOptions || [];
+        // If the user is currently filtering, update the list in place
+        if (optionsWrapper.classList.contains('show') || input.value) {
+            renderOptions(input.value);
+        }
+    };
     
     input.addEventListener('focus', () => {
         renderOptions(input.value);
         optionsWrapper.classList.add('show');
-        // Use capture phase to handle clicks on other elements before they can prevent this
         document.addEventListener('click', handleClickOutside, true);
     });
 
@@ -234,7 +252,8 @@ export function initializeCombobox(container, optionsData, onSelect, config = {}
         }
     });
 
-    // Set initial state
+    // Mark as initialized to prevent re-adding listeners
+    container.dataset.comboboxInitialized = 'true';
     renderOptions();
 }
 

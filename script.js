@@ -10,7 +10,7 @@ import {
     initializeImageUploader, initializeTabs, initializeModals, initializeMathInput,
     initializeCombobox
 } from './ui.js';
-import { initializeQuickCalc } from './quick-calc.js';
+import { initializeQuickCalc, updateQuickCalcMaterials } from './quick-calc.js';
 
 // --- DOM Elements ---
 const logoutBtn = document.getElementById('logout-btn');
@@ -138,6 +138,7 @@ function clearLocalData() {
     renderMaterials([]);
     renderSavedItems([]);
     populateSelects();
+    updateQuickCalcMaterials(localMaterials); // Clear quick calc comboboxes too
 }
 
 logoutBtn.addEventListener('click', () => signOut(auth));
@@ -298,6 +299,7 @@ function listenForMaterials() {
 
         displayMaterials(); // Render with current filters/sort
         populateSelects();  // Update all dropdowns in the app
+        updateQuickCalcMaterials(localMaterials); // Update Quick Calc comboboxes
     }, console.error);
 }
 
