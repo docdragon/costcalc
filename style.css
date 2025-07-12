@@ -850,17 +850,21 @@ td button { transition: color 0.2s; }
 }
 .cube-face--right {
     width: var(--d); height: var(--h);
+    left: calc((var(--w) - var(--d)) / 2);
     transform: rotateY(90deg) translateZ(calc(var(--w) / 2));
 }
 .cube-face--left {
     width: var(--d); height: var(--h);
+    left: calc((var(--w) - var(--d)) / 2);
     transform: rotateY(-90deg) translateZ(calc(var(--w) / 2));
 }
 .cube-face--top {
     width: var(--w); height: var(--d);
+    top: calc((var(--h) - var(--d)) / 2);
     transform: rotateX(90deg) translateZ(calc(var(--h) / 2));
 }
 .cube-face--bottom {
     width: var(--w); height: var(--d);
+    top: calc((var(--h) - var(--d)) / 2);
     transform: rotateX(-90deg) translateZ(calc(var(--h) / 2));
 }

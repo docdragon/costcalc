@@ -1265,20 +1265,22 @@ function initialize3DViewer() {
     let isDragging = false;
 
     function updateCubeDimensions() {
-        const length = Number(lengthInput.value) || 0;
-        const width = Number(widthInput.value) || 0;
-        const height = Number(heightInput.value) || 0;
+        const length = Number(lengthInput.value) || 0; // Dài
+        const width = Number(widthInput.value) || 0;  // Rộng
+        const height = Number(heightInput.value) || 0; // Cao
         
         const maxDim = Math.max(length, width, height, 200);
         const scale = 180 / maxDim; // Container size is ~200px
         
-        const scaledL = length * scale;
-        const scaledW = width * scale;
+        // Dài (length) is mapped to width (--w)
+        // Rộng (width) is mapped to depth (--d)
+        const scaledW = length * scale;
+        const scaledD = width * scale;
         const scaledH = height * scale;
 
         cube.style.setProperty('--w', `${scaledW}px`);
         cube.style.setProperty('--h', `${scaledH}px`);
-        cube.style.setProperty('--d', `${scaledL}px`);
+        cube.style.setProperty('--d', `${scaledD}px`);
         
         // Update labels
         cube.querySelector('.cube-face--front').setAttribute('data-label', `D: ${length || 0} mm`);
