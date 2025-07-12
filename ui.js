@@ -81,7 +81,7 @@ export function updateUIVisibility(isLoggedIn, user) {
     document.getElementById('logged-out-view').classList.toggle('hidden', isLoggedIn);
     userEmailDisplay.textContent = isLoggedIn ? (user.displayName || user.email) : '';
     
-    document.querySelectorAll('.calculator-form-content, .materials-form-content, .saved-items-content, .assistant-content, .settings-form-content').forEach(el => {
+    document.querySelectorAll('.calculator-form-content, .materials-form-content, .saved-items-content, .assistant-content, .settings-form-content, .quick-calc-form-content').forEach(el => {
         el.style.display = isLoggedIn ? 'block' : 'none';
     });
     document.querySelectorAll('.login-prompt-view').forEach(el => {

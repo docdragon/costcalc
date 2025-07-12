@@ -41,6 +41,7 @@ const analyzeImageBtn = document.getElementById('analyze-image-btn');
 const imageAnalysisContainer = document.getElementById('image-analysis-container');
 const aiConfigPrompt = document.getElementById('ai-config-prompt');
 const aiConfigBtn = document.getElementById('ai-config-btn');
+const qcCalculateBtn = document.getElementById('qc-calculate-btn');
 
 
 // --- Global State ---
@@ -460,19 +461,37 @@ function resetMaterialForm() {
 }
 
 function populateSelects() {
-    const selects = [
+    const allSelects = [
+        // Main calculator selects
         { el: document.getElementById('material-wood'), type: 'Ván' },
-        { el: document.getElementById('material-door'), type: 'Ván', optional: true },
-        { el: document.getElementById('material-back-panel'), type: 'Ván', optional: true },
+        { el: document.getElementById('material-door'), type: 'Ván', optional: true, optionalText: 'Dùng chung ván chính' },
+        { el: document.getElementById('material-back-panel'), type: 'Ván', optional: true, optionalText: 'Dùng chung ván chính' },
         { el: document.getElementById('material-edge'), type: 'Cạnh' },
-        { el: document.getElementById('material-accessories'), type: 'Phụ kiện' }
+        { el: document.getElementById('material-accessories'), type: 'Phụ kiện' },
+        // Quick Calc Selects
+        { el: document.getElementById('qc-material-wood'), type: 'Ván' },
+        { el: document.getElementById('qc-material-edge'), type: 'Cạnh' },
+        { el: document.getElementById('qc-accessory-hinge'), type: 'Phụ kiện', optional: true, optionalText: '--- Không chọn ---' },
+        { el: document.getElementById('qc-accessory-slide'), type: 'Phụ kiện', optional: true, optionalText: '--- Không chọn ---' },
     ];
-    selects.forEach(s => {
+
+    allSelects.forEach(s => {
+        if (!s.el) return; // Guard if element doesn't exist
         const currentVal = s.el.value;
         s.el.innerHTML = '';
-        if (s.optional) s.el.add(new Option('Dùng chung ván chính', ''));
+
+        if (s.optional) {
+            s.el.add(new Option(s.optionalText, ''));
+        }
+
         localMaterials[s.type].forEach(m => s.el.add(new Option(`${m.name} (${Number(m.price).toLocaleString('vi-VN')}đ)`, m.id)));
-        if (currentVal) s.el.value = currentVal;
+        
+        if (currentVal) {
+            const optionExists = Array.from(s.el.options).some(opt => opt.value === currentVal);
+            if (optionExists) {
+                s.el.value = currentVal;
+            }
+        }
     });
 }
 
@@ -1349,6 +1368,68 @@ function initialize3DViewer() {
     updateCubeDimensions();
 }
 
+// --- New: Quick Calculator Logic ---
+function handleQuickCalculation() {
+    // Get all values
+    const area = parseFloat(document.getElementById('qc-area').value) || 0;
+    const woodId = document.getElementById('qc-material-wood').value;
+    const edgeLength = parseFloat(document.getElementById('qc-edge-length').value) || 0;
+    const edgeId = document.getElementById('qc-material-edge').value;
+    const hingeId = document.getElementById('qc-accessory-hinge').value;
+    const hingeQty = parseInt(document.getElementById('qc-hinge-qty').value) || 0;
+    const slideId = document.getElementById('qc-accessory-slide').value;
+    const slideQty = parseInt(document.getElementById('qc-slide-qty').value) || 0;
+    const installCost = parseFloat(document.getElementById('qc-install-cost').value) || 0;
+    const profitMargin = parseFloat(document.getElementById('qc-profit-margin').value) || 0;
+
+    // Validation
+    if (area > 0 && !woodId) {
+        showToast('Vui lòng chọn loại ván.', 'error');
+        return;
+    }
+    if (edgeLength > 0 && !edgeId) {
+        showToast('Vui lòng chọn loại nẹp.', 'error');
+        return;
+    }
+    if (hingeQty > 0 && !hingeId) {
+        showToast('Vui lòng chọn loại bản lề.', 'error');
+        return;
+    }
+    if (slideQty > 0 && !slideId) {
+        showToast('Vui lòng chọn loại ray trượt.', 'error');
+        return;
+    }
+
+    // Find materials
+    const woodMaterial = localMaterials['Ván'].find(m => m.id === woodId);
+    const edgeMaterial = localMaterials['Cạnh'].find(m => m.id === edgeId);
+    const hingeMaterial = localMaterials['Phụ kiện'].find(m => m.id === hingeId);
+    const slideMaterial = localMaterials['Phụ kiện'].find(m => m.id === slideId);
+
+    // Calculate costs
+    const STANDARD_SHEET_AREA = 1.22 * 2.44; // approx 2.9768 m²
+    const numSheets = woodMaterial ? Math.ceil(area / STANDARD_SHEET_AREA) : 0;
+    const woodCost = numSheets * (woodMaterial?.price || 0);
+
+    const edgeCost = edgeLength * (edgeMaterial?.price || 0);
+    
+    const hingeCost = hingeQty * (hingeMaterial?.price || 0);
+    const slideCost = slideQty * (slideMaterial?.price || 0);
+    const accessoriesCost = hingeCost + slideCost;
+
+    const totalCost = woodCost + edgeCost + accessoriesCost + installCost;
+    const suggestedPrice = totalCost * (1 + profitMargin / 100);
+    const estimatedProfit = suggestedPrice - totalCost;
+
+    // Display results
+    document.getElementById('qc-total-cost-value').textContent = totalCost.toLocaleString('vi-VN') + 'đ';
+    document.getElementById('qc-suggested-price-value').textContent = suggestedPrice.toLocaleString('vi-VN') + 'đ';
+    document.getElementById('qc-estimated-profit-value').textContent = estimatedProfit.toLocaleString('vi-VN') + 'đ';
+    
+    document.getElementById('qc-results-container').classList.remove('hidden');
+}
+
+
 // --- App Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
     initializeTabs();
@@ -1364,4 +1445,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     );
     initialize3DViewer();
+    if(qcCalculateBtn) {
+        qcCalculateBtn.addEventListener('click', handleQuickCalculation);
+    }
 });

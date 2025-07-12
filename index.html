@@ -54,6 +54,7 @@
         <div class="tabs-container">
             <nav id="tabs" class="tabs-nav">
                 <button data-tab="calculator" class="tab-btn active"><i class="fas fa-magic"></i>Trình Báo Giá</button>
+                <button data-tab="quick-calc" class="tab-btn"><i class="fas fa-calculator"></i>Tính Nhanh</button>
                 <button data-tab="materials" class="tab-btn"><i class="fas fa-boxes"></i>Kho Vật Tư</button>
                 <button data-tab="assistant" class="tab-btn"><i class="fas fa-robot"></i>Hỏi Đáp AI</button>
                 <button data-tab="saved" class="tab-btn"><i class="fas fa-folder-open"></i>Dự Án</button>
@@ -255,6 +256,110 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Tab: Quick Calculator -->
+            <div id="quick-calc-tab" class="tab-pane hidden">
+                <div class="card">
+                    <h2 class="card-header"><i class="fas fa-calculator" style="margin-right: 0.75rem;"></i>Tính Giá Nhanh</h2>
+                    <div class="content-wrapper quick-calc-form-content">
+                        <p class="settings-intro">Công cụ này giúp bạn ước tính nhanh chi phí dựa trên tổng số vật tư, không cần bóc tách chi tiết sản phẩm. Nhập các thông số và nhấn "Tính toán".</p>
+                        <div class="grid-2-col">
+                            <!-- Left Column: Materials -->
+                            <div class="form-group" style="margin-top: 0;">
+                                <h3 class="result-box-header" style="margin-bottom: 1rem; font-size: 1.1rem;"><i class="fas fa-layer-group"></i>Vật liệu ván & cạnh</h3>
+                                <div class="grid-2-col" style="gap: 0.5rem 1.25rem;">
+                                    <div>
+                                        <label for="qc-area" class="form-label">Tổng diện tích ván (m²)</label>
+                                        <input type="number" id="qc-area" class="input-style" placeholder="Vd: 4.5">
+                                    </div>
+                                    <div>
+                                        <label for="qc-material-wood" class="form-label">Loại ván sử dụng</label>
+                                        <select id="qc-material-wood" class="input-style"></select>
+                                    </div>
+                                </div>
+                                <div class="grid-2-col" style="gap: 0.5rem 1.25rem; margin-top: 1.25rem;">
+                                    <div>
+                                        <label for="qc-edge-length" class="form-label">Tổng chiều dài nẹp (m)</label>
+                                        <input type="number" id="qc-edge-length" class="input-style" placeholder="Vd: 25">
+                                    </div>
+                                    <div>
+                                        <label for="qc-material-edge" class="form-label">Loại nẹp sử dụng</label>
+                                        <select id="qc-material-edge" class="input-style"></select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right Column: Accessories and Costs -->
+                             <div class="form-group" style="margin-top: 0;">
+                                <h3 class="result-box-header" style="margin-bottom: 1rem; font-size: 1.1rem;"><i class="fas fa-cogs"></i>Phụ kiện & Chi phí khác</h3>
+                                <div class="grid-2-col" style="gap: 0.5rem 1.25rem;">
+                                    <div>
+                                        <label for="qc-accessory-hinge" class="form-label">Bản lề</label>
+                                        <select id="qc-accessory-hinge" class="input-style"></select>
+                                    </div>
+                                    <div>
+                                         <label for="qc-hinge-qty" class="form-label">Số lượng</label>
+                                        <input type="number" id="qc-hinge-qty" class="input-style" placeholder="Vd: 8" value="0" min="0">
+                                    </div>
+                                </div>
+                                 <div class="grid-2-col" style="gap: 0.5rem 1.25rem; margin-top: 1.25rem;">
+                                    <div>
+                                        <label for="qc-accessory-slide" class="form-label">Ray trượt</label>
+                                        <select id="qc-accessory-slide" class="input-style"></select>
+                                    </div>
+                                    <div>
+                                        <label for="qc-slide-qty" class="form-label">Số lượng</label>
+                                        <input type="number" id="qc-slide-qty" class="input-style" placeholder="Vd: 2" value="0" min="0">
+                                    </div>
+                                </div>
+                                 <div class="grid-2-col" style="gap: 0.5rem 1.25rem; margin-top: 1.25rem;">
+                                     <div>
+                                        <label for="qc-install-cost" class="form-label">Chi phí lắp đặt (VND)</label>
+                                        <input type="number" id="qc-install-cost" class="input-style" placeholder="Vd: 500000" value="0" min="0">
+                                    </div>
+                                    <div>
+                                        <label for="qc-profit-margin" class="form-label">Lợi nhuận mong muốn (%)</label>
+                                        <input type="number" id="qc-profit-margin" class="input-style" value="50" min="0">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="main-actions-group" style="justify-content: center;">
+                             <button id="qc-calculate-btn" class="btn btn-primary">
+                                <i class="fas fa-check-circle"></i> Tính toán
+                            </button>
+                        </div>
+
+                        <div id="qc-results-container" class="hidden" style="margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 2rem;">
+                             <div class="grid-3-col">
+                                <div class="price-card bg-indigo">
+                                    <div class="price-label">Tổng Chi Phí</div>
+                                    <div id="qc-total-cost-value" class="price-value">0đ</div>
+                                    <div class="price-sublabel">Gồm tất cả vật tư và chi phí</div>
+                                </div>
+                                <div class="price-card bg-yellow">
+                                    <div class="price-label">Giá Bán Đề Xuất</div>
+                                    <div id="qc-suggested-price-value" class="price-value">0đ</div>
+                                    <div class="price-sublabel">Đã gồm lợi nhuận mong muốn</div>
+                                </div>
+                                <div class="price-card bg-green">
+                                    <div class="price-label">Lợi Nhuận Ước Tính</div>
+                                    <div id="qc-estimated-profit-value" class="price-value">0đ</div>
+                                    <div class="price-sublabel">Sau khi trừ mọi chi phí</div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="login-prompt-view">
+                        <div class="icon-prompt"><i class="fas fa-calculator"></i></div>
+                        <h3>Tính toán nhanh chóng</h3>
+                        <p>Vui lòng đăng nhập để sử dụng công cụ tính giá nhanh dựa trên kho vật tư của bạn.</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Tab 2: Quản lý Vật tư -->
             <div id="materials-tab" class="tab-pane hidden">
                 <div class="card">

@@ -695,7 +695,7 @@ td button { transition: color 0.2s; }
 .toast--info .toast-icon { color: #17a2b8; }
 
 /* --- Login/Disabled Placeholders --- */
-.login-prompt-view, .calculator-form-content, .materials-form-content, .saved-items-content, .assistant-content, .settings-form-content {
+.login-prompt-view, .calculator-form-content, .materials-form-content, .saved-items-content, .assistant-content, .settings-form-content, .quick-calc-form-content {
     display: none;
 }
 .login-prompt-view { text-align: center; padding: 2.5rem 0; }
