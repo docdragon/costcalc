@@ -159,6 +159,15 @@ Ví dụ phản hồi: {\"length\": 1200, \"height\": 750}`;
             }
             promptParts.push({ text: prompt });
             
+            const costItemSchema = {
+                type: Type.OBJECT,
+                properties: { 
+                    name: { type: Type.STRING, description: "Tên chi phí, ví dụ: 'Ván MDF An Cường (2 tấm)'" }, 
+                    cost: { type: Type.NUMBER, description: "Tổng chi phí cho mục này" }, 
+                    reason: { type: Type.STRING, description: "Giải thích ngắn gọn cách tính, ví dụ: '2 tấm x 550,000đ'" }
+                }
+            };
+            
             // Define the strict schema for the JSON response
             const responseSchema = {
                 type: Type.OBJECT,
@@ -166,42 +175,27 @@ Ví dụ phản hồi: {\"length\": 1200, \"height\": 750}`;
                     costBreakdown: {
                         type: Type.OBJECT,
                         properties: {
-                            materialCosts: {
+                            woodCosts: {
                                 type: Type.ARRAY,
-                                items: {
-                                    type: Type.OBJECT,
-                                    properties: { name: { type: Type.STRING }, cost: { type: Type.NUMBER }, reason: { type: Type.STRING } }
-                                }
+                                items: costItemSchema,
+                                description: "Danh sách chi phí cho tất cả các loại ván (ván chính, cánh, hậu)."
                             },
-                            hiddenCosts: {
+                            edgeCosts: {
                                 type: Type.ARRAY,
-                                items: {
-                                    type: Type.OBJECT,
-                                    properties: { name: { type: Type.STRING }, cost: { type: Type.NUMBER }, reason: { type: Type.STRING } }
-                                }
+                                items: costItemSchema,
+                                description: "Chi phí cho nẹp cạnh."
                             },
-                            totalCost: { type: Type.NUMBER },
-                            suggestedPrice: { type: Type.NUMBER },
-                            estimatedProfit: { type: Type.NUMBER }
-                        }
-                    },
-                    aiSuggestions: {
-                        type: Type.OBJECT,
-                        properties: {
-                            summary: { type: Type.STRING },
-                            keyPoints: {
+                             accessoryCosts: {
                                 type: Type.ARRAY,
-                                items: {
-                                    type: Type.OBJECT,
-                                    properties: { type: { type: Type.STRING }, text: { type: Type.STRING } }
-                                }
+                                items: costItemSchema,
+                                description: "Danh sách chi phí cho từng loại phụ kiện được cung cấp."
                             }
                         }
                     },
                     cuttingLayout: {
                         type: Type.OBJECT,
                         properties: {
-                            totalSheetsUsed: { type: Type.INTEGER },
+                            totalSheetsUsed: { type: Type.INTEGER, description: "Tổng số tấm ván CHÍNH được sử dụng, dựa trên sơ đồ cắt tối ưu." },
                             sheets: {
                                 type: Type.ARRAY,
                                 items: {

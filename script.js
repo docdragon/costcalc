@@ -18,7 +18,6 @@ const materialsTableBody = document.getElementById('materials-table-body');
 const savedItemsTableBody = document.getElementById('saved-items-table-body');
 const analyzeBtn = document.getElementById('analyze-btn');
 const saveItemBtn = document.getElementById('save-item-btn');
-const resultContainer = document.getElementById('result-content');
 const addAccessoryBtn = document.getElementById('add-accessory-btn');
 const accessoriesList = document.getElementById('accessories-list');
 const priceSummaryContainer = document.getElementById('price-summary-container');
@@ -37,7 +36,6 @@ const cuttingLayoutSection = document.getElementById('cutting-layout-section');
 let cuttingLayoutContainer = document.getElementById('cutting-layout-container');
 let cuttingLayoutSummary = document.getElementById('cutting-layout-summary');
 const aiAnalysisSection = document.getElementById('ai-analysis-section');
-const settingsForm = document.getElementById('settings-form');
 const analyzeImageBtn = document.getElementById('analyze-image-btn');
 const imageAnalysisContainer = document.getElementById('image-analysis-container');
 const aiConfigPrompt = document.getElementById('ai-config-prompt');
@@ -52,7 +50,6 @@ let unsubscribeMaterials = null;
 let unsubscribeSavedItems = null;
 let localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [] };
 let localSavedItems = [];
-let workshopSettings = {};
 let lastGeminiResult = null;
 let addedAccessories = [];
 let uploadedImage = null;
@@ -69,6 +66,7 @@ const sampleMaterials = [
     { name: 'Bản lề hơi Ivan giảm chấn', type: 'Phụ kiện', price: 15000, unit: 'cái', notes: 'Loại thẳng' },
     { name: 'Ray bi 3 tầng', type: 'Phụ kiện', price: 45000, unit: 'cặp', notes: 'Dài 45cm' },
     { name: 'Cam chốt liên kết', type: 'Phụ kiện', price: 500, unit: 'bộ', notes: 'Chất lượng tốt' },
+    { name: 'Tay nắm âm', type: 'Phụ kiện', price: 25000, unit: 'cái', notes: 'Màu đen' },
 ];
 
 async function addSampleData(userId) {
@@ -104,7 +102,6 @@ onAuthStateChanged(auth, async (user) => {
         await checkAndAddSampleData(currentUserId);
         initializeChat();
         listenForData();
-        listenForWorkshopSettings();
     } else {
         currentUserId = null;
         if (unsubscribeMaterials) unsubscribeMaterials();
@@ -124,13 +121,11 @@ function listenForData() {
 function clearLocalData() {
     localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [] };
     localSavedItems = [];
-    workshopSettings = {};
     chatHistory = [];
     if (chatMessagesContainer) chatMessagesContainer.innerHTML = '';
     renderMaterials([]);
     renderSavedItems([]);
     populateSelects();
-    populateSettingsForm();
 }
 
 logoutBtn.addEventListener('click', () => signOut(auth));
@@ -237,7 +232,7 @@ function renderCostBreakdown(breakdown, container) {
         container.innerHTML = '';
         return;
     }
-    let breakdownHtml = '<h3 class="result-box-header"><i class="fas fa-file-invoice-dollar"></i> Phân tích Chi phí Chi tiết</h3><ul class="cost-list">';
+    let breakdownHtml = '<h3 class="result-box-header"><i class="fas fa-file-invoice-dollar"></i> Phân tích Chi phí Vật tư</h3><ul class="cost-list">';
     breakdown.forEach(item => {
         breakdownHtml += `
             <li>
@@ -251,43 +246,6 @@ function renderCostBreakdown(breakdown, container) {
     container.innerHTML = breakdownHtml;
     container.classList.remove('hidden');
 }
-
-// REFACTORED: Returns an HTML string instead of directly manipulating the DOM.
-function renderAiSuggestions(suggestions) {
-    if (!suggestions) {
-        return '<div class="ai-suggestions-container"><p>Không có gợi ý nào từ AI.</p></div>';
-    }
-
-    const icons = {
-        cost_saving: { class: 'icon-cost-saving', i: 'fa-coins' },
-        structural: { class: 'icon-structural', i: 'fa-tools' },
-        warning: { class: 'icon-warning', i: 'fa-exclamation-triangle' },
-        upsell: { class: 'icon-upsell', i: 'fa-arrow-trend-up' },
-    };
-
-    let keyPointsHtml = '';
-    if (suggestions.keyPoints && suggestions.keyPoints.length > 0) {
-        keyPointsHtml = suggestions.keyPoints.map(point => {
-            const iconInfo = icons[point.type] || { class: 'icon-generic', i: 'fa-lightbulb' };
-            return `
-                <div class="suggestion-point">
-                    <div class="suggestion-icon ${iconInfo.class}"><i class="fas ${iconInfo.i}"></i></div>
-                    <div class="suggestion-text">${point.text}</div>
-                </div>
-            `;
-        }).join('');
-    }
-
-    const html = `
-        <div class="ai-suggestions-container">
-            ${suggestions.summary ? `<p class="suggestion-summary">${suggestions.summary}</p>` : ''}
-            ${keyPointsHtml ? `<div class="suggestion-points-list">${keyPointsHtml}</div>` : '<p>Không có điểm nhấn cụ thể nào từ AI.</p>'}
-        </div>
-    `;
-
-    return html;
-}
-
 
 function renderFormattedText(text) {
     // This is a simplified version. For full markdown, a library would be better.
@@ -306,56 +264,6 @@ function renderFormattedText(text) {
     }).join('');
 }
 
-// --- Settings Management ---
-function listenForWorkshopSettings() {
-    if (!currentUserId) return;
-    const settingsDocRef = doc(db, `users/${currentUserId}/config`, 'workshop');
-    onSnapshot(settingsDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-            workshopSettings = docSnap.data();
-            populateSettingsForm();
-        } else {
-            console.log("No workshop settings found for user.");
-            workshopSettings = {}; 
-            populateSettingsForm();
-        }
-    }, (error) => {
-        console.error("Error listening to workshop settings:", error);
-    });
-}
-
-function populateSettingsForm() {
-    if (!settingsForm) return;
-    settingsForm['workshop-labor-cost'].value = workshopSettings.laborCost || '';
-    settingsForm['workshop-management-cost'].value = workshopSettings.managementCost || '';
-    settingsForm['workshop-shipping-cost'].value = workshopSettings.shippingCost || '';
-    settingsForm['workshop-waste-margin'].value = workshopSettings.wasteMargin || '';
-}
-
-if (settingsForm) {
-    settingsForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (!currentUserId) {
-            showToast('Vui lòng đăng nhập để lưu cấu hình.', 'error');
-            return;
-        }
-        const settingsData = {
-            laborCost: Number(settingsForm['workshop-labor-cost'].value) || 0,
-            managementCost: Number(settingsForm['workshop-management-cost'].value) || 0,
-            shippingCost: Number(settingsForm['workshop-shipping-cost'].value) || 0,
-            wasteMargin: Number(settingsForm['workshop-waste-margin'].value) || 0,
-        };
-        
-        const settingsDocRef = doc(db, `users/${currentUserId}/config`, 'workshop');
-        try {
-            await setDoc(settingsDocRef, settingsData, { merge: true });
-            showToast('Cấu hình đã được lưu thành công!', 'success');
-        } catch (error) {
-            console.error("Error saving settings:", error);
-            showToast(`Lỗi khi lưu cấu hình: ${error.message}`, 'error');
-        }
-    });
-}
 
 // --- Materials Management ---
 function listenForMaterials() {
@@ -481,6 +389,7 @@ function populateSelects() {
         { el: document.getElementById('qc-accessory-hinge'), type: 'Phụ kiện', optional: true, optionalText: '--- Không chọn ---' },
         { el: document.getElementById('qc-accessory-slide'), type: 'Phụ kiện', optional: true, optionalText: '--- Không chọn ---' },
         { el: document.getElementById('qc-accessory-cam'), type: 'Phụ kiện', optional: true, optionalText: '--- Không chọn ---' },
+        { el: document.getElementById('qc-accessory-handle'), type: 'Phụ kiện', optional: true, optionalText: '--- Không chọn ---' },
     ];
 
     allSelects.forEach(s => {
@@ -524,6 +433,11 @@ addAccessoryBtn.addEventListener('click', () => {
     }
     renderAccessories();
     quantityInput.value = '1';
+
+    // Recalculate price if analysis is already done
+    if (calculationState === 'done') {
+        recalculateFinalPrice();
+    }
 });
 
 function renderAccessories() {
@@ -546,6 +460,9 @@ accessoriesList.addEventListener('click', e => {
         const id = e.target.dataset.id;
         addedAccessories = addedAccessories.filter(a => a.id !== id);
         renderAccessories();
+        if (calculationState === 'done') {
+            recalculateFinalPrice();
+        }
     }
 });
 
@@ -559,6 +476,9 @@ accessoriesList.addEventListener('change', e => {
         } else if (accessory) {
             e.target.value = accessory.quantity; // revert if invalid
         }
+        if (calculationState === 'done') {
+            recalculateFinalPrice();
+        }
     }
 });
 
@@ -569,6 +489,7 @@ function clearInputs() {
     document.getElementById('item-name').value = '';
     document.getElementById('product-description').value = '';
     document.getElementById('profit-margin').value = '50';
+    document.getElementById('labor-cost').value = '0';
     document.getElementById('item-compartments').value = '1';
     document.getElementById('material-door').value = ''; // Reset door material
     aiConfigPrompt.value = '';
@@ -611,7 +532,6 @@ async function runAICalculation() {
     updateAnalyzeButton();
     aiAnalysisSection.classList.remove('hidden');
     
-    // Show loader, hide results
     const loadingPlaceholder = document.getElementById('ai-loading-placeholder');
     const resultsContent = document.getElementById('ai-results-content');
     loadingPlaceholder.classList.remove('hidden');
@@ -625,7 +545,6 @@ async function runAICalculation() {
         type: document.getElementById('item-type').value,
         compartments: document.getElementById('item-compartments').value,
         description: document.getElementById('product-description').value,
-        profitMargin: document.getElementById('profit-margin').value,
     };
 
     const mainWoodId = document.getElementById('material-wood').value;
@@ -634,7 +553,7 @@ async function runAICalculation() {
     const edgeId = document.getElementById('material-edge').value;
 
     const mainWood = localMaterials['Ván'].find(m => m.id === mainWoodId);
-    const doorWood = localMaterials['Ván'].find(m => m.id === doorWoodId); // Find door wood specifically
+    const doorWood = localMaterials['Ván'].find(m => m.id === doorWoodId); 
     const backPanel = localMaterials['Ván'].find(m => m.id === backPanelId);
     const edge = localMaterials['Cạnh'].find(m => m.id === edgeId);
 
@@ -650,18 +569,8 @@ async function runAICalculation() {
         mainWoodPieces.push(...allPieces.filter(p => p.type === 'door'));
     }
 
-    const workshopSettingsPrompt = `
-    THÔNG SỐ MẶC ĐỊNH CỦA XƯỞNG (sử dụng các giá trị này để tính chi phí ẩn):
-    - Chi phí nhân công: ${workshopSettings.laborCost || 350000} VND/m² (tính trên tổng diện tích bề mặt sản phẩm, bao gồm cả cắt, dán cạnh, lắp ráp)
-    - Chi phí quản lý: ${workshopSettings.managementCost || 10}% (tính trên tổng chi phí vật tư)
-    - Chi phí vận chuyển & lắp đặt: ${workshopSettings.shippingCost || 5}% (tính trên tổng chi phí vật tư)
-    - Hao hụt vật tư chung: ${workshopSettings.wasteMargin || 15}% (sử dụng khi ước tính sơ bộ nếu cần)
-    `;
-
     const prompt = `
-    NHIỆM VỤ: Bạn là một trợ lý AI chuyên gia cho một xưởng gỗ ở Việt Nam. Mục tiêu của bạn là cung cấp một phân tích chi phí chi tiết, các đề xuất tối ưu hóa, và một sơ đồ cắt ván chính xác (2D bin packing) cho một sản phẩm nhất định. TOÀN BỘ PHẢN HỒI PHẢI BẰNG TIẾNG VIỆT.
-
-    ${workshopSettingsPrompt}
+    NHIỆM VỤ: Bạn là một trợ lý AI chuyên gia cho một xưởng gỗ ở Việt Nam. Mục tiêu của bạn là cung cấp một phân tích chi phí vật liệu chi tiết và một sơ đồ cắt ván chính xác (2D bin packing). TOÀN BỘ PHẢN HỒI PHẢI BẰNG TIẾNG VIỆT.
 
     DỮ LIỆU ĐẦU VÀO:
     - Tên sản phẩm: ${inputs.name}
@@ -669,15 +578,13 @@ async function runAICalculation() {
     - Loại sản phẩm: ${inputs.type}
     - Số khoang / số cánh: ${inputs.compartments}
     - Ghi chú của người dùng: ${inputs.description}
-    - Tỷ suất lợi nhuận mong muốn: ${inputs.profitMargin}%
-    - Vật liệu VÁN CHÍNH (dùng cho Thùng và các chi tiết được liệt kê bên dưới): ${mainWood.name} (${mainWood.price} VND/${mainWood.unit})
+    - Vật liệu VÁN CHÍNH (dùng cho Thùng): ${mainWood.name} (${mainWood.price} VND/${mainWood.unit})
     - Vật liệu VÁN CÁNH: ${useSeparateDoorWood ? `${doorWood.name} (${doorWood.price} VND/${doorWood.unit})` : 'Sử dụng chung vật liệu Ván Chính.'}
     - Vật liệu VÁN HẬU: ${backPanel ? `${backPanel.name} (${backPanel.price} VND/${backPanel.unit})` : 'Không có hoặc đã được gộp vào Ván Chính.'}
     - Nẹp cạnh: ${edge.name} (${edge.price} VND/mét)
     - Phụ kiện: ${addedAccessories.map(a => `${a.name} (SL: ${a.quantity}, Đơn giá: ${a.price})`).join(', ')}
-    - Có hình ảnh: ${uploadedImage ? 'Có' : 'Không'}
 
-    DANH SÁCH CHI TIẾT VÀ VẬT LIỆU TƯƠNG ỨNG (Đây là bản bóc tách chi tiết đã được xử lý. Các chi tiết 'Vách Ngăn' đã được thêm nếu cần):
+    DANH SÁCH CHI TIẾT VÀ VẬT LIỆU TƯƠNG ỨNG (Đây là bản bóc tách chi tiết đã được xử lý):
     - Chi tiết cắt từ VÁN CHÍNH: ${JSON.stringify(mainWoodPieces.map(({type, ...rest}) => rest))}
     - Chi tiết cắt từ VÁN CÁNH (chỉ áp dụng nếu có vật liệu riêng): ${JSON.stringify(doorPiecesForPrompt.map(({type, ...rest}) => rest))}
 
@@ -686,21 +593,17 @@ async function runAICalculation() {
         - Chỉ tạo sơ đồ cắt cho các chi tiết trong danh sách "Chi tiết cắt từ VÁN CHÍNH".
         - Kích thước tấm ván tiêu chuẩn là 1220mm x 2440mm.
         - Thực hiện thuật toán sắp xếp 2D để xếp các miếng này vào số lượng tấm ván tiêu chuẩn ít nhất có thể.
-        - Tọa độ (x, y) là góc trên cùng bên trái của mỗi miếng.
         - Điền kết quả vào đối tượng "cuttingLayout". "totalSheetsUsed" phải là số tấm VÁN CHÍNH cần dùng.
 
-    2.  **Tính toán chi phí:**
-        - Tạo một danh sách chi phí trong "materialCosts".
-        - **Chi phí Ván chính:** Phải dựa trên "totalSheetsUsed" đã được tối ưu từ sơ đồ cắt ở trên, nhân với giá VÁN CHÍNH.
-        - **Chi phí Ván cánh:** Nếu danh sách "Chi tiết cắt từ VÁN CÁNH" không rỗng, hãy ước tính số tấm ván cánh cần dùng và tính chi phí. Cách ước tính: tính tổng diện tích các miếng, chia cho diện tích tấm ván chuẩn (1220x2440), làm tròn lên, rồi nhân với giá VÁN CÁNH.
-        - **Chi phí Ván hậu:** Nếu có ván hậu riêng (${backPanel ? 'có' : 'không'}), tính chi phí cho 1 tấm.
-        - **Chi phí Nẹp cạnh:** Tính toán dựa trên chu vi của tất cả các miếng (cả ván chính và ván cánh).
-        - **Chi phí Phụ kiện:** Tính toán dựa trên dữ liệu đầu vào.
-        - Tính các "hiddenCosts" dựa trên **THÔNG SỐ MẶC ĐỊNH CỦA XƯỞNG** đã cung cấp.
-        - Tính "totalCost", "suggestedPrice", "estimatedProfit".
-    
-    3.  **Gợi ý từ AI:**
-        - Dựa trên TOÀN BỘ các chi tiết của sản phẩm, phân tích và đưa ra các gợi ý có giá trị trong "aiSuggestions".
+    2.  **Tính toán chi phí vật liệu:**
+        - Tạo danh sách chi phí và phân loại chúng vào: "woodCosts", "edgeCosts", "accessoryCosts".
+        - **woodCosts**:
+            - Tính chi phí Ván chính dựa trên "totalSheetsUsed" đã được tối ưu, nhân với giá VÁN CHÍNH.
+            - Nếu có "VÁN CÁNH" riêng, ước tính số tấm cần dùng (tổng diện tích các miếng cánh / diện tích tấm chuẩn, làm tròn lên) và tính chi phí.
+            - Nếu có "VÁN HẬU" riêng, tính chi phí cho 1 tấm (giả định cần 1 tấm).
+            - Thêm từng mục vào mảng "woodCosts".
+        - **edgeCosts**: Tính tổng chi phí nẹp cạnh dựa trên chu vi của TẤT CẢ các miếng (cả ván chính và ván cánh).
+        - **accessoryCosts**: Tính chi phí cho từng phụ kiện trong danh sách được cung cấp.
     `;
     
     try {
@@ -723,24 +626,19 @@ async function runAICalculation() {
 
         lastGeminiResult = data;
         calculationState = 'done';
-        const { costBreakdown, aiSuggestions, cuttingLayout } = data;
-
-        if (costBreakdown) {
-            const allCosts = [...(costBreakdown.materialCosts || []), ...(costBreakdown.hiddenCosts || [])];
-            renderCostBreakdown(allCosts, costBreakdownContainer);
-            totalCostValue.textContent = (costBreakdown.totalCost || 0).toLocaleString('vi-VN') + 'đ';
-            suggestedPriceValue.textContent = (costBreakdown.suggestedPrice || 0).toLocaleString('vi-VN') + 'đ';
-            estimatedProfitValue.textContent = (costBreakdown.estimatedProfit || 0).toLocaleString('vi-VN') + 'đ';
-            priceSummaryContainer.classList.remove('hidden');
-        }
-
-        resultContainer.innerHTML = renderAiSuggestions(aiSuggestions);
+        
+        const { cuttingLayout } = data;
+        
         if (cuttingLayout) {
             renderCuttingLayout(cuttingLayout, cuttingLayoutContainer, cuttingLayoutSummary);
             cuttingLayoutSection.classList.remove('hidden');
         } else {
             cuttingLayoutSection.classList.add('hidden');
         }
+        
+        recalculateFinalPrice(); // Perform initial client-side price calculation
+        addDynamicPricingListeners(); // Add listeners for dynamic updates
+        
         saveItemBtn.disabled = false;
 
     } catch (error) {
@@ -750,7 +648,6 @@ async function runAICalculation() {
         } else {
              showToast(`Lỗi khi phân tích: ${error.message}`, 'error');
         }
-        resultContainer.innerHTML = `<p style="color: var(--danger-color);">Đã xảy ra lỗi khi giao tiếp với AI. Vui lòng thử lại.</p>`;
         calculationState = 'idle'; // Revert state
     } finally {
         loadingPlaceholder.classList.add('hidden');
@@ -758,6 +655,69 @@ async function runAICalculation() {
         updateAnalyzeButton();
     }
 }
+
+/**
+ * Recalculates the final price based on the last AI analysis and current form inputs.
+ * This function makes the pricing dynamic without needing another AI call.
+ */
+function recalculateFinalPrice() {
+    if (calculationState !== 'done' || !lastGeminiResult || !lastGeminiResult.costBreakdown) return;
+
+    const { woodCosts, edgeCosts } = lastGeminiResult.costBreakdown;
+
+    // Calculate base cost of wood and edge from the AI's result
+    const woodAndEdgeBaseCost = [...(woodCosts || []), ...(edgeCosts || [])].reduce((sum, item) => sum + (item.cost || 0), 0);
+    
+    // Recalculate accessory costs based on the current client-side list
+    const currentAccessoryCostItems = addedAccessories.map(acc => {
+        const material = localMaterials['Phụ kiện'].find(m => m.id === acc.id);
+        const cost = material ? material.price * acc.quantity : 0;
+        return {
+            name: `${acc.name} (SL: ${acc.quantity})`,
+            cost: cost,
+            reason: `Đơn giá: ${material ? material.price.toLocaleString('vi-VN') : 0}đ`
+        };
+    });
+    const currentAccessoryTotalCost = currentAccessoryCostItems.reduce((sum, item) => sum + item.cost, 0);
+
+    const baseMaterialCost = woodAndEdgeBaseCost + currentAccessoryTotalCost;
+    
+    const laborCost = parseFloat(document.getElementById('labor-cost').value) || 0;
+    const profitMargin = parseFloat(document.getElementById('profit-margin').value) || 0;
+    
+    const totalCost = baseMaterialCost + laborCost;
+    const suggestedPrice = totalCost * (1 + profitMargin / 100);
+    const estimatedProfit = suggestedPrice - totalCost;
+    
+    // Update the summary cards
+    totalCostValue.textContent = totalCost.toLocaleString('vi-VN') + 'đ';
+    suggestedPriceValue.textContent = suggestedPrice.toLocaleString('vi-VN') + 'đ';
+    estimatedProfitValue.textContent = estimatedProfit.toLocaleString('vi-VN') + 'đ';
+    priceSummaryContainer.classList.remove('hidden');
+
+    // Update the detailed cost breakdown view
+    const allCostsForDisplay = [...(woodCosts || []), ...(edgeCosts || []), ...currentAccessoryCostItems];
+    renderCostBreakdown(allCostsForDisplay, costBreakdownContainer);
+
+    // Update the lastGeminiResult object to reflect the current state for saving
+    lastGeminiResult.costBreakdown.accessoryCosts = currentAccessoryCostItems; // Update with latest
+    lastGeminiResult.finalPrices = { totalCost, suggestedPrice, estimatedProfit };
+}
+
+let dynamicListenersAdded = false;
+function addDynamicPricingListeners() {
+    if (dynamicListenersAdded) return;
+
+    const laborCostInput = document.getElementById('labor-cost');
+    const profitMarginInput = document.getElementById('profit-margin');
+    
+    laborCostInput.addEventListener('input', recalculateFinalPrice);
+    profitMarginInput.addEventListener('input', recalculateFinalPrice);
+    // Accessory changes are handled by their own listeners which now also call recalculateFinalPrice
+
+    dynamicListenersAdded = true;
+}
+
 
 analyzeBtn.addEventListener('click', async () => {
     if (!currentUserId) {
@@ -832,6 +792,7 @@ saveItemBtn.addEventListener('click', async () => {
             compartments: document.getElementById('item-compartments').value,
             description: document.getElementById('product-description').value,
             profitMargin: document.getElementById('profit-margin').value,
+            laborCost: document.getElementById('labor-cost').value,
             mainWoodId: document.getElementById('material-wood').value,
             doorWoodId: document.getElementById('material-door').value,
             backPanelId: document.getElementById('material-back-panel').value,
@@ -888,11 +849,10 @@ savedItemsTableBody.addEventListener('click', async e => {
  * @param {object} item The saved item object from Firestore.
  */
 function loadItemIntoForm(item) {
-    clearInputs(); // Start with a clean slate
+    clearInputs();
 
     const inputs = item.inputs || {};
 
-    // Populate text/number inputs
     document.getElementById('item-length').value = inputs.length || '';
     document.getElementById('item-width').value = inputs.width || '';
     document.getElementById('item-height').value = inputs.height || '';
@@ -901,65 +861,50 @@ function loadItemIntoForm(item) {
     document.getElementById('item-compartments').value = inputs.compartments || '1';
     document.getElementById('product-description').value = inputs.description || '';
     document.getElementById('profit-margin').value = inputs.profitMargin || '50';
+    document.getElementById('labor-cost').value = inputs.laborCost || '0';
 
-    // Populate selects. This assumes `populateSelects` has already run.
     document.getElementById('material-wood').value = inputs.mainWoodId || '';
     document.getElementById('material-door').value = inputs.doorWoodId || '';
     document.getElementById('material-back-panel').value = inputs.backPanelId || '';
     document.getElementById('material-edge').value = inputs.edgeId || '';
     
-    // Populate accessories
     if (inputs.accessories && Array.isArray(inputs.accessories)) {
-        // Create a deep copy to avoid modifying the original saved item object
         addedAccessories = JSON.parse(JSON.stringify(inputs.accessories));
         renderAccessories();
     }
 
-    // Restore AI result to allow re-saving if needed without re-calculating
     lastGeminiResult = {
         costBreakdown: item.costBreakdown,
-        aiSuggestions: item.aiSuggestions,
         cuttingLayout: item.cuttingLayout,
+        finalPrices: item.finalPrices, 
     };
+
     if(lastGeminiResult) {
+        calculationState = 'done';
         saveItemBtn.disabled = false;
-        calculationState = 'done'; // Set state to reflect that AI analysis is loaded
         updateAnalyzeButton();
         
-        // Render the loaded AI results
         aiAnalysisSection.classList.remove('hidden');
         document.getElementById('ai-results-content').classList.remove('hidden');
 
-
-        const { costBreakdown, aiSuggestions, cuttingLayout } = lastGeminiResult;
-        if (costBreakdown) {
-            const allCosts = [...(costBreakdown.materialCosts || []), ...(costBreakdown.hiddenCosts || [])];
-            renderCostBreakdown(allCosts, costBreakdownContainer);
-            totalCostValue.textContent = (costBreakdown.totalCost || 0).toLocaleString('vi-VN') + 'đ';
-            suggestedPriceValue.textContent = (costBreakdown.suggestedPrice || 0).toLocaleString('vi-VN') + 'đ';
-            estimatedProfitValue.textContent = (costBreakdown.estimatedProfit || 0).toLocaleString('vi-VN') + 'đ';
-            priceSummaryContainer.classList.remove('hidden');
-        }
-        resultContainer.innerHTML = renderAiSuggestions(aiSuggestions);
+        const { cuttingLayout } = lastGeminiResult;
+        
+        recalculateFinalPrice(); // Recalculate and render prices and breakdown
+        
         if (cuttingLayout) {
             renderCuttingLayout(cuttingLayout, cuttingLayoutContainer, cuttingLayoutSummary);
             cuttingLayoutSection.classList.remove('hidden');
         } else {
             cuttingLayoutSection.classList.add('hidden');
         }
+
+        addDynamicPricingListeners();
     }
 
-
-    // Switch to the calculator tab
     const calculatorTabBtn = document.querySelector('button[data-tab="calculator"]');
-    if (calculatorTabBtn) {
-        calculatorTabBtn.click();
-    }
-
-    // Scroll to top for better UX
+    if (calculatorTabBtn) calculatorTabBtn.click();
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
-    // Trigger 3D viewer update
     const event = new Event('input');
     document.getElementById('item-length').dispatchEvent(event);
 
@@ -969,8 +914,6 @@ function loadItemIntoForm(item) {
 
 /**
  * Renders the details of a saved item to a modal.
- * REFACTORED: This function is now more robust and no longer mutates global state,
- * preventing "assignment to constant variable" errors.
  * @param {string} itemId The ID of the item to render.
  */
 function renderItemDetailsToModal(itemId) {
@@ -980,36 +923,31 @@ function renderItemDetailsToModal(itemId) {
         return;
     }
 
-    // Safely access properties using optional chaining and default values
     const inputs = item.inputs || {};
     const costBreakdown = item.costBreakdown || {};
     const cuttingLayout = item.cuttingLayout || {};
+    const finalPrices = item.finalPrices || {};
     
     viewItemTitle.textContent = `Chi tiết dự án: ${inputs.name || 'Không tên'}`;
     
-    const mainWoodFound = localMaterials['Ván'].find(m => m.id === inputs.mainWoodId);
-    const mainWood = mainWoodFound ? mainWoodFound.name : 'Không rõ';
-
-    const doorWoodFound = localMaterials['Ván'].find(m => m.id === inputs.doorWoodId);
-    const doorWood = doorWoodFound ? doorWoodFound.name : 'Dùng ván chính';
-
-    const backPanelFound = localMaterials['Ván'].find(m => m.id === inputs.backPanelId);
-    const backPanel = backPanelFound ? backPanelFound.name : 'Dùng ván chính';
-    
-    const edgeFound = localMaterials['Cạnh'].find(m => m.id === inputs.edgeId);
-    const edge = edgeFound ? edgeFound.name : 'Không rõ';
+    const mainWood = localMaterials['Ván'].find(m => m.id === inputs.mainWoodId)?.name || 'Không rõ';
+    const doorWood = localMaterials['Ván'].find(m => m.id === inputs.doorWoodId)?.name || 'Dùng ván chính';
+    const backPanel = localMaterials['Ván'].find(m => m.id === inputs.backPanelId)?.name || 'Dùng ván chính';
+    const edge = localMaterials['Cạnh'].find(m => m.id === inputs.edgeId)?.name || 'Không rõ';
 
     let accessoriesHtml = 'Không có';
     if (inputs.accessories && inputs.accessories.length > 0) {
         accessoriesHtml = '<ul>' + inputs.accessories.map(a => `<li>${a.name} (SL: ${a.quantity})</li>`).join('') + '</ul>';
     }
 
+    const allCosts = [
+        ...(costBreakdown.woodCosts || []),
+        ...(costBreakdown.edgeCosts || []),
+        ...(costBreakdown.accessoryCosts || [])
+    ];
+
     let breakdownHtml = '<p>Không có phân tích chi phí.</p>';
-    if (costBreakdown.materialCosts || costBreakdown.hiddenCosts) {
-        const allCosts = [
-            ...(costBreakdown.materialCosts || []),
-            ...(costBreakdown.hiddenCosts || [])
-        ];
+    if (allCosts.length > 0) {
         const tempContainer = document.createElement('div');
         renderCostBreakdown(allCosts, tempContainer);
         breakdownHtml = tempContainer.innerHTML;
@@ -1024,24 +962,20 @@ function renderItemDetailsToModal(itemId) {
         layoutHtml = tempSummary.innerHTML + tempContainer.innerHTML;
     }
 
-    const suggestionsHtml = renderAiSuggestions(item.aiSuggestions);
-
     viewItemContent.innerHTML = `
         <div class="final-price-recommendation">
             <div class="final-price-label">Giá Bán Đề Xuất</div>
-            <div class="final-price-value">${(costBreakdown.suggestedPrice || 0).toLocaleString('vi-VN')}đ</div>
+            <div class="final-price-value">${(finalPrices.suggestedPrice || 0).toLocaleString('vi-VN')}đ</div>
             <p class="final-price-summary">
-                Tổng chi phí: <strong>${(costBreakdown.totalCost || 0).toLocaleString('vi-VN')}đ</strong> | 
-                Lợi nhuận ước tính: <strong>${(costBreakdown.estimatedProfit || 0).toLocaleString('vi-VN')}đ</strong>
+                Tổng chi phí: <strong>${(finalPrices.totalCost || 0).toLocaleString('vi-VN')}đ</strong> | 
+                Lợi nhuận ước tính: <strong>${(finalPrices.estimatedProfit || 0).toLocaleString('vi-VN')}đ</strong>
             </p>
         </div>
 
         <h4><i class="fas fa-ruler-combined"></i>Thông số Đầu vào</h4>
         <ul>
             <li><strong>Kích thước (D x R x C):</strong> ${inputs.length || 'N/A'} x ${inputs.width || 'N/A'} x ${inputs.height || 'N/A'} mm</li>
-            <li><strong>Số khoang/cánh:</strong> ${inputs.compartments || '1'}</li>
-            <li><strong>Loại sản phẩm:</strong> ${inputs.type || 'N/A'}</li>
-            <li><strong>Mô tả:</strong> ${inputs.description || 'Không có'}</li>
+            <li><strong>Chi phí nhân công:</strong> ${(Number(inputs.laborCost) || 0).toLocaleString('vi-VN')}đ</li>
             <li><strong>Lợi nhuận mong muốn:</strong> ${inputs.profitMargin || 'N/A'}%</li>
         </ul>
 
@@ -1055,9 +989,6 @@ function renderItemDetailsToModal(itemId) {
         </ul>
         
         ${breakdownHtml}
-
-        <h4><i class="fas fa-lightbulb"></i>Gợi ý từ AI</h4>
-        ${suggestionsHtml}
         
         <div class="result-box" style="margin-top: 1.5rem;">
              <h3 class="result-box-header"><i class="fas fa-th-large"></i> Sơ đồ Cắt ván Gợi ý</h3>

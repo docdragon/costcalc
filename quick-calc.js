@@ -42,6 +42,8 @@ export function initializeQuickCalc(localMaterials, showToast) {
     const qcSlideQtyInput = document.getElementById('qc-slide-qty');
     const qcCamSelect = document.getElementById('qc-accessory-cam');
     const qcCamQtyInput = document.getElementById('qc-cam-qty');
+    const qcHandleSelect = document.getElementById('qc-accessory-handle');
+    const qcHandleQtyInput = document.getElementById('qc-handle-qty');
     const qcInstallCostInput = document.getElementById('qc-install-cost');
     const qcProfitMarginInput = document.getElementById('qc-profit-margin');
 
@@ -92,6 +94,8 @@ export function initializeQuickCalc(localMaterials, showToast) {
         const slideQty = parseInt(qcSlideQtyInput.value) || 0;
         const camId = qcCamSelect.value;
         const camQty = parseInt(qcCamQtyInput.value) || 0;
+        const handleId = qcHandleSelect.value;
+        const handleQty = parseInt(qcHandleQtyInput.value) || 0;
         const installCost = parseFloat(qcInstallCostInput.value) || 0;
         const profitMargin = parseFloat(qcProfitMarginInput.value) || 0;
 
@@ -100,6 +104,7 @@ export function initializeQuickCalc(localMaterials, showToast) {
         const hingeMaterial = localMaterials['Phụ kiện'].find(m => m.id === hingeId);
         const slideMaterial = localMaterials['Phụ kiện'].find(m => m.id === slideId);
         const camMaterial = localMaterials['Phụ kiện'].find(m => m.id === camId);
+        const handleMaterial = localMaterials['Phụ kiện'].find(m => m.id === handleId);
         
         // Calculate individual costs, ensuring they are numbers
         const woodCost = woodData1.cost + woodData2.cost;
@@ -107,10 +112,12 @@ export function initializeQuickCalc(localMaterials, showToast) {
         const hingeCost = (hingeQty * (hingeMaterial?.price || 0)) || 0;
         const slideCost = (slideQty * (slideMaterial?.price || 0)) || 0;
         const camCost = (camQty * (camMaterial?.price || 0)) || 0;
+        const handleCost = (handleQty * (handleMaterial?.price || 0)) || 0;
+
 
         // Sum up costs clearly
         const totalMaterialCost = woodCost + edgeCost;
-        const totalAccessoryCost = hingeCost + slideCost + camCost;
+        const totalAccessoryCost = hingeCost + slideCost + camCost + handleCost;
         const totalCost = totalMaterialCost + totalAccessoryCost + installCost;
 
         // Calculate final pricing
@@ -128,7 +135,8 @@ export function initializeQuickCalc(localMaterials, showToast) {
         qcAreaInput, qcMaterialWoodSelect, qcArea2Input, qcMaterialWood2Select,
         qcEdgeLengthInput, qcMaterialEdgeSelect,
         qcHingeSelect, qcHingeQtyInput, qcSlideSelect, qcSlideQtyInput,
-        qcCamSelect, qcCamQtyInput, qcInstallCostInput, qcProfitMarginInput
+        qcCamSelect, qcCamQtyInput, qcHandleSelect, qcHandleQtyInput, 
+        qcInstallCostInput, qcProfitMarginInput
     ];
 
     inputsToTrack.forEach(input => {

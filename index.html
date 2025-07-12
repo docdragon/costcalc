@@ -58,7 +58,6 @@
                 <button data-tab="materials" class="tab-btn"><i class="fas fa-boxes"></i>Kho Vật Tư</button>
                 <button data-tab="assistant" class="tab-btn"><i class="fas fa-robot"></i>Hỏi Đáp AI</button>
                 <button data-tab="saved" class="tab-btn"><i class="fas fa-folder-open"></i>Dự Án</button>
-                <button data-tab="settings" class="tab-btn"><i class="fas fa-cog"></i>Cấu Hình</button>
             </nav>
         </div>
 
@@ -90,7 +89,7 @@
                                 <div><label for="item-height" class="form-label">Cao (mm)</label><input type="text" inputmode="decimal" id="item-height" class="input-style" placeholder="Vd: 850"></div>
                                 <div><label for="item-compartments" class="form-label">Số khoang/cánh</label><input type="text" inputmode="decimal" id="item-compartments" class="input-style" value="1" min="1" placeholder="Vd: 2"></div>
                             </div>
-                            <div class="grid-2-col" style="margin-top: 1.25rem;">
+                            <div class="grid-3-col" style="margin-top: 1.25rem;">
                                  <div class="form-group" style="margin-top: 0;">
                                     <label for="item-type" class="form-label">Loại sản phẩm</label>
                                     <select id="item-type" class="input-style">
@@ -99,6 +98,10 @@
                                         <option value="tu-ao">Tủ áo (Thùng, cánh, không hậu)</option>
                                         <option value="khac">Khác (Hộp 4 mặt, hở trước & sau)</option>
                                     </select>
+                                </div>
+                                <div class="form-group" style="margin-top: 0;">
+                                    <label for="labor-cost" class="form-label">Chi phí nhân công (VND)</label>
+                                    <input type="text" inputmode="decimal" id="labor-cost" class="input-style" value="0" placeholder="Vd: 500000">
                                 </div>
                                 <div class="form-group" style="margin-top: 0;">
                                     <label for="profit-margin" class="form-label">Lợi nhuận mong muốn (%)</label>
@@ -175,7 +178,7 @@
                                             <div class="price-card bg-indigo">
                                                 <div class="price-label">Tổng Chi Phí</div>
                                                 <div id="total-cost-value" class="price-value">0đ</div>
-                                                <div class="price-sublabel">Đã gồm chi phí ẩn & quản lý</div>
+                                                <div class="price-sublabel">Gồm vật tư và nhân công</div>
                                             </div>
                                             <div class="price-card bg-yellow">
                                                 <div class="price-label">Giá Bán Đề Xuất</div>
@@ -190,13 +193,6 @@
                                         </div>
                                     </div>
                                     <div id="cost-breakdown-container" class="result-box"></div>
-                                    
-                                    <div class="result-box">
-                                        <h3 class="result-box-header"><i class="fas fa-lightbulb"></i> Phân Tích & Gợi Ý từ AI</h3>
-                                        <div id="result-content">
-                                            <!-- AI suggestions will go here -->
-                                        </div>
-                                    </div>
                                     
                                     <div id="cutting-layout-section" class="result-box">
                                         <h3 class="result-box-header"><i class="fas fa-th-large"></i> Sơ đồ Cắt ván Gợi ý từ AI</h3>
@@ -332,6 +328,16 @@
                                     <div>
                                         <label for="qc-cam-qty" class="form-label">Số lượng</label>
                                         <input type="text" inputmode="decimal" id="qc-cam-qty" class="input-style" placeholder="Vd: 50" value="0" min="0">
+                                    </div>
+                                </div>
+                                <div class="grid-2-col" style="gap: 0.5rem 1.25rem; margin-top: 1.25rem;">
+                                    <div>
+                                        <label for="qc-accessory-handle" class="form-label">Tay nắm</label>
+                                        <select id="qc-accessory-handle" class="input-style"></select>
+                                    </div>
+                                    <div>
+                                         <label for="qc-handle-qty" class="form-label">Số lượng</label>
+                                        <input type="text" inputmode="decimal" id="qc-handle-qty" class="input-style" placeholder="Vd: 4" value="0" min="0">
                                     </div>
                                 </div>
                                  <div class="grid-2-col" style="gap: 0.5rem 1.25rem; margin-top: 1.25rem;">
@@ -498,50 +504,6 @@
                         <div class="icon-prompt"><i class="fas fa-folder-open"></i></div>
                         <h3>Lưu trữ các dự án của bạn</h3>
                         <p>Vui lòng đăng nhập để xem lại các dự án đã tính toán.</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Tab 5: Cấu hình Xưởng -->
-            <div id="settings-tab" class="tab-pane hidden">
-                <div class="card">
-                    <h2 class="card-header">Cấu hình Chi phí Xưởng</h2>
-                    <div class="content-wrapper settings-form-content">
-                        <p class="settings-intro">Các thông số này sẽ được AI sử dụng để đưa ra tính toán chi phí ẩn chính xác hơn, phù hợp với xưởng của bạn. Hãy điền các giá trị mặc định mà bạn thường sử dụng.</p>
-                        <form id="settings-form">
-                            <div class="grid-2-col">
-                                <div class="form-group">
-                                    <label for="workshop-labor-cost" class="form-label">Chi phí nhân công (VND/m²)</label>
-                                    <input type="text" inputmode="decimal" id="workshop-labor-cost" class="input-style" placeholder="Vd: 300000">
-                                     <small class="form-text">Chi phí nhân công tính trên mỗi mét vuông sản phẩm hoàn thiện.</small>
-                                </div>
-                                <div class="form-group">
-                                    <label for="workshop-management-cost" class="form-label">Chi phí quản lý (%)</label>
-                                    <input type="text" inputmode="decimal" id="workshop-management-cost" class="input-style" placeholder="Vd: 10">
-                                     <small class="form-text">Phần trăm chi phí quản lý, mặt bằng, điện nước...</small>
-                                </div>
-                                <div class="form-group">
-                                    <label for="workshop-shipping-cost" class="form-label">Chi phí vận chuyển (%)</label>
-                                    <input type="text" inputmode="decimal" id="workshop-shipping-cost" class="input-style" placeholder="Vd: 5">
-                                    <small class="form-text">Phần trăm chi phí vận chuyển và lắp đặt.</small>
-                                </div>
-                                <div class="form-group">
-                                    <label for="workshop-waste-margin" class="form-label">Tỷ lệ hao hụt ván mặc định (%)</label>
-                                    <input type="text" inputmode="decimal" id="workshop-waste-margin" class="input-style" placeholder="Vd: 15">
-                                     <small class="form-text">AI sẽ dùng con số này để ước tính hao hụt khi tính sơ bộ.</small>
-                                </div>
-                            </div>
-                            <div class="button-group" style="justify-content: flex-end; margin-top: 2rem;">
-                                <button type="submit" id="save-settings-btn" class="btn btn-primary">
-                                    <i class="fas fa-save"></i> Lưu Cấu hình
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                    <div class="login-prompt-view">
-                        <div class="icon-prompt"><i class="fas fa-cog"></i></div>
-                        <h3>Cấu hình cho xưởng của bạn</h3>
-                        <p>Vui lòng đăng nhập để lưu lại các thông số mặc định.</p>
                     </div>
                 </div>
             </div>
