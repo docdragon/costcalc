@@ -15,7 +15,7 @@ const logoutBtn = document.getElementById('logout-btn');
 const materialForm = document.getElementById('material-form');
 const materialsTableBody = document.getElementById('materials-table-body');
 const savedItemsTableBody = document.getElementById('saved-items-table-body');
-const calculateBtn = document.getElementById('calculate-btn');
+const analyzeBtn = document.getElementById('analyze-btn');
 const saveItemBtn = document.getElementById('save-item-btn');
 const resultContainer = document.getElementById('result-content');
 const addAccessoryBtn = document.getElementById('add-accessory-btn');
@@ -35,9 +35,6 @@ const viewItemContent = document.getElementById('view-item-content');
 const cuttingLayoutSection = document.getElementById('cutting-layout-section');
 let cuttingLayoutContainer = document.getElementById('cutting-layout-container');
 let cuttingLayoutSummary = document.getElementById('cutting-layout-summary');
-const initialSummarySection = document.getElementById('initial-summary-section');
-const initialCostBreakdownContainer = document.getElementById('initial-cost-breakdown-container');
-const initialTotalCostValue = document.getElementById('initial-total-cost-value');
 const aiAnalysisSection = document.getElementById('ai-analysis-section');
 const settingsForm = document.getElementById('settings-form');
 const analyzeImageBtn = document.getElementById('analyze-image-btn');
@@ -60,8 +57,7 @@ let addedAccessories = [];
 let uploadedImage = null;
 let chatHistory = [];
 let isAwaitingChatResponse = false;
-let calculationState = 'idle'; // idle, calculating_initial, initial_done, calculating_ai, ai_done
-let initialCostDetails = null;
+let calculationState = 'idle'; // idle, calculating, done
 
 // --- Sample Data for New Users ---
 const sampleMaterials = [
@@ -223,7 +219,7 @@ function renderCostBreakdown(breakdown, container) {
         container.innerHTML = '';
         return;
     }
-    let breakdownHtml = '<ul class="cost-list">';
+    let breakdownHtml = '<h3 class="result-box-header"><i class="fas fa-file-invoice-dollar"></i> Phân tích Chi phí Chi tiết</h3><ul class="cost-list">';
     breakdown.forEach(item => {
         breakdownHtml += `
             <li>
@@ -369,7 +365,7 @@ function renderMaterials(materials) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td data-label="Tên">${m.name}</td>
-            <td data-label="Loại"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">${m.type}</span></td>
+            <td data-label="Loại"><span class="tag-type">${m.type}</span></td>
             <td data-label="Đơn giá">${Number(m.price).toLocaleString('vi-VN')}đ / ${m.unit}</td>
             <td data-label="Ghi chú">${m.notes || ''}</td>
             <td data-label="Thao tác" class="text-center">
@@ -535,13 +531,11 @@ function clearInputs() {
     addedAccessories = [];
     renderAccessories();
     lastGeminiResult = null;
-    initialCostDetails = null;
     calculationState = 'idle';
     document.querySelector('#remove-image-btn').click();
 
     // Reset UI
-    updateCalculateButton();
-    initialSummarySection.classList.add('hidden');
+    updateAnalyzeButton();
     aiAnalysisSection.classList.add('hidden');
     saveItemBtn.disabled = true;
     
@@ -551,130 +545,33 @@ function clearInputs() {
 }
 
 // --- Calculation Logic ---
-function updateCalculateButton() {
+function updateAnalyzeButton() {
     switch(calculationState) {
         case 'idle':
-            calculateBtn.disabled = false;
-            calculateBtn.innerHTML = '<i class="fas fa-calculator"></i> Tính chi phí vật tư';
+            analyzeBtn.disabled = false;
+            analyzeBtn.innerHTML = '<i class="fas fa-microchip"></i> Phân tích & Báo giá với AI';
             break;
-        case 'calculating_initial':
-            calculateBtn.disabled = true;
-            calculateBtn.innerHTML = `<span class="spinner-sm"></span> Đang tính toán...`;
+        case 'calculating':
+            analyzeBtn.disabled = true;
+            analyzeBtn.innerHTML = `<span class="spinner-sm"></span> Đang phân tích...`;
             break;
-        case 'initial_done':
-            calculateBtn.disabled = false;
-            calculateBtn.innerHTML = '<i class="fas fa-magic"></i> Nhờ AI Phân tích & Tối ưu';
-            break;
-        case 'calculating_ai':
-            calculateBtn.disabled = true;
-            calculateBtn.innerHTML = `<span class="spinner-sm"></span> Đang phân tích...`;
-            break;
-        case 'ai_done':
-            calculateBtn.disabled = false;
-            calculateBtn.innerHTML = '<i class="fas fa-redo"></i> Phân tích lại với AI';
+        case 'done':
+            analyzeBtn.disabled = false;
+            analyzeBtn.innerHTML = '<i class="fas fa-redo"></i> Phân tích lại';
             break;
     }
 }
-
-function calculateInitialCosts() {
-    const mainWoodId = document.getElementById('material-wood').value;
-    const doorWoodId = document.getElementById('material-door').value;
-    const edgeId = document.getElementById('material-edge').value;
-    const backPanelId = document.getElementById('material-back-panel').value;
-
-    const mainWood = localMaterials['Ván'].find(m => m.id === mainWoodId);
-    const doorWood = localMaterials['Ván'].find(m => m.id === doorWoodId);
-    const edge = localMaterials['Cạnh'].find(m => m.id === edgeId);
-    const backPanel = localMaterials['Ván'].find(m => m.id === backPanelId);
-
-    if (!mainWood || !edge) {
-        showToast('Vui lòng chọn vật liệu Ván chính và Nẹp cạnh.', 'error');
-        return null;
-    }
-
-    const allPieces = getPanelPieces();
-    if (allPieces.length === 0) {
-        showToast('Vui lòng nhập kích thước sản phẩm.', 'error');
-        return null;
-    }
-
-    const useSeparateDoorWood = !!doorWoodId && doorWood && doorWood.id !== mainWood.id;
-
-    const bodyPieces = allPieces.filter(p => p.type === 'body');
-    const doorPieces = allPieces.filter(p => p.type === 'door');
-    
-    const standardPanelArea = 1220 * 2440;
-    const breakdown = [];
-    let totalCost = 0;
-
-    // --- Wood Panels Cost ---
-    const piecesForMainWood = useSeparateDoorWood ? bodyPieces : allPieces;
-    const mainWoodArea = piecesForMainWood.reduce((sum, p) => sum + p.width * p.height, 0);
-    const estimatedMainSheets = mainWoodArea > 0 ? Math.ceil((mainWoodArea / standardPanelArea) * 1.15) : 0;
-    
-    if (estimatedMainSheets > 0) {
-        const mainWoodCost = estimatedMainSheets * mainWood.price;
-        breakdown.push({
-            name: `Ván chính (${mainWood.name})`,
-            cost: mainWoodCost,
-            reason: `Ước tính ${estimatedMainSheets} tấm cho thùng ${useSeparateDoorWood ? '' : 'và cánh'}`
-        });
-        totalCost += mainWoodCost;
-    }
-
-    if (useSeparateDoorWood && doorPieces.length > 0) {
-        const doorPieceArea = doorPieces.reduce((sum, p) => sum + p.width * p.height, 0);
-        const estimatedDoorSheets = doorPieceArea > 0 ? Math.ceil((doorPieceArea / standardPanelArea) * 1.15) : 0;
-        if (estimatedDoorSheets > 0) {
-            const doorWoodCost = estimatedDoorSheets * doorWood.price;
-            breakdown.push({
-                name: `Ván cánh (${doorWood.name})`,
-                cost: doorWoodCost,
-                reason: `Ước tính ${estimatedDoorSheets} tấm`
-            });
-            totalCost += doorWoodCost;
-        }
-    }
-
-    // --- Back Panel Cost ---
-    if (backPanel) {
-        const backPanelCost = backPanel.price;
-        breakdown.push({
-            name: `Ván hậu (${backPanel.name})`,
-            cost: backPanelCost,
-            reason: 'Ước tính 1 tấm'
-        });
-        totalCost += backPanelCost;
-    }
-
-    // --- Edge Banding Cost ---
-    const totalPerimeter = allPieces.reduce((sum, p) => sum + 2 * (p.width + p.height), 0);
-    const estimatedEdgeMeters = Math.ceil(totalPerimeter / 1000);
-    const edgeCost = estimatedEdgeMeters * edge.price;
-    if(edgeCost > 0){
-         breakdown.push({ name: `Nẹp cạnh (${edge.name})`, cost: edgeCost, reason: `Ước tính ${estimatedEdgeMeters} mét` });
-         totalCost += edgeCost;
-    }
-
-    // --- Accessories Cost ---
-    const accessoriesCost = addedAccessories.reduce((sum, acc) => sum + acc.quantity * acc.price, 0);
-    if (accessoriesCost > 0) {
-         breakdown.push({ name: 'Tổng phụ kiện', cost: accessoriesCost, reason: `${addedAccessories.length} loại` });
-         totalCost += accessoriesCost;
-    }
-    
-    return { breakdown, totalCost };
-}
-
 
 async function runAICalculation() {
-    calculationState = 'calculating_ai';
-    updateCalculateButton();
+    calculationState = 'calculating';
+    updateAnalyzeButton();
     aiAnalysisSection.classList.remove('hidden');
-    resultContainer.innerHTML = '<div class="flex justify-center items-center h-full"><div class="spinner"></div></div>';
-    priceSummaryContainer.classList.add('hidden');
-    costBreakdownContainer.classList.add('hidden');
-    cuttingLayoutSection.classList.add('hidden');
+    
+    // Show loader, hide results
+    const loadingPlaceholder = document.getElementById('ai-loading-placeholder');
+    const resultsContent = document.getElementById('ai-results-content');
+    loadingPlaceholder.classList.remove('hidden');
+    resultsContent.classList.add('hidden');
     
     const inputs = {
         name: document.getElementById('item-name').value,
@@ -751,7 +648,8 @@ async function runAICalculation() {
         - **Chi phí Ván chính:** Phải dựa trên "totalSheetsUsed" đã được tối ưu từ sơ đồ cắt ở trên, nhân với giá VÁN CHÍNH.
         - **Chi phí Ván cánh:** Nếu danh sách "Chi tiết cắt từ VÁN CÁNH" không rỗng, hãy ước tính số tấm ván cánh cần dùng và tính chi phí. Cách ước tính: tính tổng diện tích các miếng, chia cho diện tích tấm ván chuẩn (1220x2440), làm tròn lên, rồi nhân với giá VÁN CÁNH.
         - **Chi phí Ván hậu:** Nếu có ván hậu riêng (${backPanel ? 'có' : 'không'}), tính chi phí cho 1 tấm.
-        - **Chi phí Nẹp cạnh và Phụ kiện:** Tính toán dựa trên dữ liệu đầu vào.
+        - **Chi phí Nẹp cạnh:** Tính toán dựa trên chu vi của tất cả các miếng (cả ván chính và ván cánh).
+        - **Chi phí Phụ kiện:** Tính toán dựa trên dữ liệu đầu vào.
         - Tính các "hiddenCosts" dựa trên **THÔNG SỐ MẶC ĐỊNH CỦA XƯỞNG** đã cung cấp.
         - Tính "totalCost", "suggestedPrice", "estimatedProfit".
     
@@ -778,7 +676,7 @@ async function runAICalculation() {
         }
 
         lastGeminiResult = data;
-        calculationState = 'ai_done';
+        calculationState = 'done';
         const { costBreakdown, aiSuggestions, cuttingLayout } = data;
 
         if (costBreakdown) {
@@ -794,6 +692,8 @@ async function runAICalculation() {
         if (cuttingLayout) {
             renderCuttingLayout(cuttingLayout, cuttingLayoutContainer, cuttingLayoutSummary);
             cuttingLayoutSection.classList.remove('hidden');
+        } else {
+            cuttingLayoutSection.classList.add('hidden');
         }
         saveItemBtn.disabled = false;
 
@@ -805,13 +705,15 @@ async function runAICalculation() {
              showToast(`Lỗi khi phân tích: ${error.message}`, 'error');
         }
         resultContainer.innerHTML = `<p style="color: var(--danger-color);">Đã xảy ra lỗi khi giao tiếp với AI. Vui lòng thử lại.</p>`;
-        calculationState = 'initial_done'; // Revert state
+        calculationState = 'idle'; // Revert state
     } finally {
-        updateCalculateButton();
+        loadingPlaceholder.classList.add('hidden');
+        resultsContent.classList.remove('hidden');
+        updateAnalyzeButton();
     }
 }
 
-calculateBtn.addEventListener('click', async () => {
+analyzeBtn.addEventListener('click', async () => {
     if (!currentUserId) {
         showToast('Vui lòng đăng nhập để sử dụng tính năng này.', 'error');
         return;
@@ -821,31 +723,14 @@ calculateBtn.addEventListener('click', async () => {
         showToast('Vui lòng nhập Tên sản phẩm / dự án.', 'error');
         return;
     }
-
-    if (calculationState === 'idle' || calculationState === 'ai_done') {
-        // Start fresh: Clear previous results and do initial calculation
-        aiAnalysisSection.classList.add('hidden');
-        calculationState = 'calculating_initial';
-        updateCalculateButton();
-        
-        // Use a timeout to allow UI to update before blocking with calculations
-        setTimeout(() => {
-            initialCostDetails = calculateInitialCosts();
-            if (initialCostDetails) {
-                renderCostBreakdown(initialCostDetails.breakdown, initialCostBreakdownContainer);
-                initialTotalCostValue.textContent = initialCostDetails.totalCost.toLocaleString('vi-VN') + 'đ';
-                initialSummarySection.classList.remove('hidden');
-                calculationState = 'initial_done';
-            } else {
-                calculationState = 'idle'; // Calculation failed, revert
-            }
-            updateCalculateButton();
-        }, 10);
-
-    } else if (calculationState === 'initial_done') {
-        // Proceed to AI analysis
-        await runAICalculation();
+     const mainWoodId = document.getElementById('material-wood').value;
+    const edgeId = document.getElementById('material-edge').value;
+     if (!mainWoodId || !edgeId) {
+        showToast('Vui lòng chọn vật liệu Ván chính và Nẹp cạnh.', 'error');
+        return;
     }
+
+    await runAICalculation();
 });
 
 
@@ -990,12 +875,13 @@ function loadItemIntoForm(item) {
     };
     if(lastGeminiResult) {
         saveItemBtn.disabled = false;
-        calculationState = 'ai_done'; // Set state to reflect that AI analysis is loaded
-        updateCalculateButton();
+        calculationState = 'done'; // Set state to reflect that AI analysis is loaded
+        updateAnalyzeButton();
         
         // Render the loaded AI results
         aiAnalysisSection.classList.remove('hidden');
-        initialSummarySection.classList.add('hidden'); // Hide initial summary as we have full data
+        document.getElementById('ai-results-content').classList.remove('hidden');
+
 
         const { costBreakdown, aiSuggestions, cuttingLayout } = lastGeminiResult;
         if (costBreakdown) {
@@ -1010,6 +896,8 @@ function loadItemIntoForm(item) {
         if (cuttingLayout) {
             renderCuttingLayout(cuttingLayout, cuttingLayoutContainer, cuttingLayoutSummary);
             cuttingLayoutSection.classList.remove('hidden');
+        } else {
+            cuttingLayoutSection.classList.add('hidden');
         }
     }
 
@@ -1117,7 +1005,6 @@ function renderItemDetailsToModal(itemId) {
             <li><strong>Phụ kiện:</strong> ${accessoriesHtml}</li>
         </ul>
         
-        <h4><i class="fas fa-file-invoice-dollar"></i>Phân tích Chi phí Chi tiết</h4>
         ${breakdownHtml}
 
         <h4><i class="fas fa-lightbulb"></i>Gợi ý từ AI</h4>
