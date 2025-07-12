@@ -300,47 +300,15 @@
                             <!-- Right Column: Accessories and Costs -->
                              <div class="form-group" style="margin-top: 0;">
                                 <h3 class="result-box-header" style="margin-bottom: 1rem; font-size: 1.1rem;"><i class="fas fa-cogs"></i>Phụ kiện & Chi phí khác</h3>
-                                <div class="grid-2-col" style="gap: 0.5rem 1.25rem;">
-                                    <div>
-                                        <label for="qc-accessory-hinge" class="form-label">Bản lề</label>
-                                        <select id="qc-accessory-hinge" class="input-style"></select>
-                                    </div>
-                                    <div>
-                                         <label for="qc-hinge-qty" class="form-label">Số lượng</label>
-                                        <input type="text" inputmode="decimal" id="qc-hinge-qty" class="input-style" placeholder="Vd: 8" value="0" min="0">
-                                    </div>
+                                
+                                <div class="accessory-adder">
+                                    <select id="qc-material-accessories" class="input-style"></select>
+                                    <input type="text" inputmode="decimal" id="qc-accessory-quantity" class="input-style accessory-qty" placeholder="SL" value="1" min="1">
+                                    <button id="qc-add-accessory-btn" class="btn btn-secondary accessory-add-btn"><i class="fas fa-plus"></i> Thêm</button>
                                 </div>
-                                 <div class="grid-2-col" style="gap: 0.5rem 1.25rem; margin-top: 1.25rem;">
-                                    <div>
-                                        <label for="qc-accessory-slide" class="form-label">Ray trượt</label>
-                                        <select id="qc-accessory-slide" class="input-style"></select>
-                                    </div>
-                                    <div>
-                                        <label for="qc-slide-qty" class="form-label">Số lượng</label>
-                                        <input type="text" inputmode="decimal" id="qc-slide-qty" class="input-style" placeholder="Vd: 2" value="0" min="0">
-                                    </div>
-                                </div>
-                                <div class="grid-2-col" style="gap: 0.5rem 1.25rem; margin-top: 1.25rem;">
-                                    <div>
-                                        <label for="qc-accessory-cam" class="form-label">Cam chốt</label>
-                                        <select id="qc-accessory-cam" class="input-style"></select>
-                                    </div>
-                                    <div>
-                                        <label for="qc-cam-qty" class="form-label">Số lượng</label>
-                                        <input type="text" inputmode="decimal" id="qc-cam-qty" class="input-style" placeholder="Vd: 50" value="0" min="0">
-                                    </div>
-                                </div>
-                                <div class="grid-2-col" style="gap: 0.5rem 1.25rem; margin-top: 1.25rem;">
-                                    <div>
-                                        <label for="qc-accessory-handle" class="form-label">Tay nắm</label>
-                                        <select id="qc-accessory-handle" class="input-style"></select>
-                                    </div>
-                                    <div>
-                                         <label for="qc-handle-qty" class="form-label">Số lượng</label>
-                                        <input type="text" inputmode="decimal" id="qc-handle-qty" class="input-style" placeholder="Vd: 4" value="0" min="0">
-                                    </div>
-                                </div>
-                                 <div class="grid-2-col" style="gap: 0.5rem 1.25rem; margin-top: 1.25rem;">
+                                <ul id="qc-accessories-list" class="accessory-list" style="margin-top: 1rem; margin-bottom: 1.25rem;"></ul>
+
+                                 <div class="grid-2-col" style="gap: 0.5rem 1.25rem;">
                                      <div>
                                         <label for="qc-install-cost" class="form-label">Chi phí lắp đặt (VND)</label>
                                         <input type="text" inputmode="decimal" id="qc-install-cost" class="input-style" placeholder="Vd: 500000" value="0" min="0">

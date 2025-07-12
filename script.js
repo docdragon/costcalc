@@ -438,10 +438,7 @@ function populateSelects() {
         { el: document.getElementById('qc-material-wood'), type: 'Ván' },
         { el: document.getElementById('qc-material-wood-2'), type: 'Ván', optional: true, optionalText: '--- Không chọn ---' },
         { el: document.getElementById('qc-material-edge'), type: 'Cạnh' },
-        { el: document.getElementById('qc-accessory-hinge'), type: 'Phụ kiện', optional: true, optionalText: '--- Không chọn ---' },
-        { el: document.getElementById('qc-accessory-slide'), type: 'Phụ kiện', optional: true, optionalText: '--- Không chọn ---' },
-        { el: document.getElementById('qc-accessory-cam'), type: 'Phụ kiện', optional: true, optionalText: '--- Không chọn ---' },
-        { el: document.getElementById('qc-accessory-handle'), type: 'Phụ kiện', optional: true, optionalText: '--- Không chọn ---' },
+        { el: document.getElementById('qc-material-accessories'), type: 'Phụ kiện' },
     ];
 
     allSelects.forEach(s => {

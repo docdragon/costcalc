@@ -27,6 +27,9 @@ function parseSheetDimensions(material) {
  * @param {function} showToast - A function to display toast notifications.
  */
 export function initializeQuickCalc(localMaterials, showToast) {
+    // --- State ---
+    let qcAddedAccessories = [];
+
     // --- DOM Elements ---
     const qcAreaInput = document.getElementById('qc-area');
     const qcMaterialWoodSelect = document.getElementById('qc-material-wood');
@@ -36,35 +39,50 @@ export function initializeQuickCalc(localMaterials, showToast) {
     const qcSheetCount2Display = document.getElementById('qc-sheet-count-display-2');
     const qcEdgeLengthInput = document.getElementById('qc-edge-length');
     const qcMaterialEdgeSelect = document.getElementById('qc-material-edge');
-    const qcHingeSelect = document.getElementById('qc-accessory-hinge');
-    const qcHingeQtyInput = document.getElementById('qc-hinge-qty');
-    const qcSlideSelect = document.getElementById('qc-accessory-slide');
-    const qcSlideQtyInput = document.getElementById('qc-slide-qty');
-    const qcCamSelect = document.getElementById('qc-accessory-cam');
-    const qcCamQtyInput = document.getElementById('qc-cam-qty');
-    const qcHandleSelect = document.getElementById('qc-accessory-handle');
-    const qcHandleQtyInput = document.getElementById('qc-handle-qty');
     const qcInstallCostInput = document.getElementById('qc-install-cost');
     const qcProfitMarginInput = document.getElementById('qc-profit-margin');
+
+    // New dynamic accessory elements
+    const qcAccessorySelect = document.getElementById('qc-material-accessories');
+    const qcAccessoryQtyInput = document.getElementById('qc-accessory-quantity');
+    const qcAddAccessoryBtn = document.getElementById('qc-add-accessory-btn');
+    const qcAccessoriesList = document.getElementById('qc-accessories-list');
+
+    /**
+     * Renders the list of added accessories into the DOM.
+     */
+    function renderQCAccessories() {
+        qcAccessoriesList.innerHTML = '';
+        qcAddedAccessories.forEach(acc => {
+            const li = document.createElement('li');
+            li.dataset.id = acc.id;
+            li.innerHTML = `
+                <span class="flex-grow">${acc.name}</span>
+                <input type="text" inputmode="decimal" value="${acc.quantity}" min="1" class="input-style accessory-list-qty" data-id="${acc.id}">
+                <span class="accessory-unit">${acc.unit}</span>
+                <button class="remove-acc-btn" data-id="${acc.id}">&times;</button>
+            `;
+            qcAccessoriesList.appendChild(li);
+        });
+    }
 
     /**
      * Calculates the number of sheets and total cost for a given material input group.
      * @param {HTMLInputElement} areaInput - The input element for area.
      * @param {HTMLSelectElement} woodSelect - The select element for the material.
      * @param {HTMLElement} displayEl - The element to show the estimated sheet count.
-     * @returns {{numSheets: number, cost: number}}
+     * @returns {number} The calculated cost for this wood type.
      */
-    function calculateSheetData(areaInput, woodSelect, displayEl) {
+    function calculateSheetCost(areaInput, woodSelect, displayEl) {
         const area = parseFloat(areaInput.value) || 0;
         const woodId = woodSelect.value;
-        let numSheets = 0;
         let cost = 0;
 
         if (area > 0 && woodId) {
             const woodMaterial = localMaterials['Ván'].find(m => m.id === woodId);
             if (woodMaterial) {
                 const sheetArea = parseSheetDimensions(woodMaterial);
-                numSheets = Math.ceil(area / sheetArea);
+                const numSheets = Math.ceil(area / sheetArea);
                 cost = numSheets * (woodMaterial.price || 0);
                 displayEl.textContent = `(Ước tính: ${numSheets} tấm)`;
             } else {
@@ -73,78 +91,111 @@ export function initializeQuickCalc(localMaterials, showToast) {
         } else {
             displayEl.textContent = '';
         }
-        return { numSheets, cost };
+        return cost;
     }
 
-
     /**
-     * Performs the main calculation for the Quick Calc tab.
+     * Performs the main calculation for the Quick Calc tab and updates the UI.
      */
     function handleQuickCalculation() {
-        // Calculate wood costs for both material types
-        const woodData1 = calculateSheetData(qcAreaInput, qcMaterialWoodSelect, qcSheetCountDisplay);
-        const woodData2 = calculateSheetData(qcArea2Input, qcMaterialWood2Select, qcSheetCount2Display);
-
-        // Get all raw values
+        // 1. Calculate Wood & Edge costs
+        const woodCost1 = calculateSheetCost(qcAreaInput, qcMaterialWoodSelect, qcSheetCountDisplay);
+        const woodCost2 = calculateSheetCost(qcArea2Input, qcMaterialWood2Select, qcSheetCount2Display);
+        const totalWoodCost = woodCost1 + woodCost2;
+        
         const edgeLength = parseFloat(qcEdgeLengthInput.value) || 0;
         const edgeId = qcMaterialEdgeSelect.value;
-        const hingeId = qcHingeSelect.value;
-        const hingeQty = parseInt(qcHingeQtyInput.value) || 0;
-        const slideId = qcSlideSelect.value;
-        const slideQty = parseInt(qcSlideQtyInput.value) || 0;
-        const camId = qcCamSelect.value;
-        const camQty = parseInt(qcCamQtyInput.value) || 0;
-        const handleId = qcHandleSelect.value;
-        const handleQty = parseInt(qcHandleQtyInput.value) || 0;
+        const edgeMaterial = localMaterials['Cạnh'].find(m => m.id === edgeId);
+        const edgeCost = (edgeLength * (edgeMaterial?.price || 0)) || 0;
+
+        // 2. Calculate dynamic accessory costs
+        const totalAccessoryCost = qcAddedAccessories.reduce((sum, acc) => {
+            return sum + (acc.price * acc.quantity);
+        }, 0);
+
+        // 3. Get other costs
         const installCost = parseFloat(qcInstallCostInput.value) || 0;
         const profitMargin = parseFloat(qcProfitMarginInput.value) || 0;
 
-        // Find materials from local store
-        const edgeMaterial = localMaterials['Cạnh'].find(m => m.id === edgeId);
-        const hingeMaterial = localMaterials['Phụ kiện'].find(m => m.id === hingeId);
-        const slideMaterial = localMaterials['Phụ kiện'].find(m => m.id === slideId);
-        const camMaterial = localMaterials['Phụ kiện'].find(m => m.id === camId);
-        const handleMaterial = localMaterials['Phụ kiện'].find(m => m.id === handleId);
-        
-        // Calculate individual costs, ensuring they are numbers
-        const woodCost = woodData1.cost + woodData2.cost;
-        const edgeCost = (edgeLength * (edgeMaterial?.price || 0)) || 0;
-        const hingeCost = (hingeQty * (hingeMaterial?.price || 0)) || 0;
-        const slideCost = (slideQty * (slideMaterial?.price || 0)) || 0;
-        const camCost = (camQty * (camMaterial?.price || 0)) || 0;
-        const handleCost = (handleQty * (handleMaterial?.price || 0)) || 0;
+        // 4. Sum up total cost
+        const totalCost = totalWoodCost + edgeCost + totalAccessoryCost + installCost;
 
-
-        // Sum up costs clearly
-        const totalMaterialCost = woodCost + edgeCost;
-        const totalAccessoryCost = hingeCost + slideCost + camCost + handleCost;
-        const totalCost = totalMaterialCost + totalAccessoryCost + installCost;
-
-        // Calculate final pricing
+        // 5. Calculate final pricing
         const suggestedPrice = totalCost * (1 + profitMargin / 100);
         const estimatedProfit = suggestedPrice - totalCost;
 
-        // Display results
+        // 6. Display results
         document.getElementById('qc-total-cost-value').textContent = totalCost.toLocaleString('vi-VN') + 'đ';
         document.getElementById('qc-suggested-price-value').textContent = suggestedPrice.toLocaleString('vi-VN') + 'đ';
         document.getElementById('qc-estimated-profit-value').textContent = estimatedProfit.toLocaleString('vi-VN') + 'đ';
     }
 
-    // --- Event Listeners for Auto-Calculation ---
+    // --- Event Listeners ---
+
+    // Listeners for standard inputs
     const inputsToTrack = [
         qcAreaInput, qcMaterialWoodSelect, qcArea2Input, qcMaterialWood2Select,
-        qcEdgeLengthInput, qcMaterialEdgeSelect,
-        qcHingeSelect, qcHingeQtyInput, qcSlideSelect, qcSlideQtyInput,
-        qcCamSelect, qcCamQtyInput, qcHandleSelect, qcHandleQtyInput, 
-        qcInstallCostInput, qcProfitMarginInput
+        qcEdgeLengthInput, qcMaterialEdgeSelect, qcInstallCostInput, qcProfitMarginInput
     ];
-
     inputsToTrack.forEach(input => {
         if (input) {
-            // 'input' event works for text fields and 'change' for selects. 'input' also covers changes for selects.
             input.addEventListener('input', handleQuickCalculation);
         }
     });
+
+    // Listeners for dynamic accessories
+    if (qcAddAccessoryBtn) {
+        qcAddAccessoryBtn.addEventListener('click', () => {
+            const selectedId = qcAccessorySelect.value;
+            const quantity = parseInt(qcAccessoryQtyInput.value, 10);
+    
+            if (!selectedId || !quantity || quantity <= 0) {
+                showToast('Vui lòng chọn phụ kiện và nhập số lượng.', 'error');
+                return;
+            }
+            const accessory = localMaterials['Phụ kiện'].find(a => a.id === selectedId);
+            if (!accessory) return;
+    
+            const existing = qcAddedAccessories.find(a => a.id === selectedId);
+    
+            if (existing) {
+                existing.quantity += quantity;
+            } else {
+                qcAddedAccessories.push({ ...accessory, quantity });
+            }
+            
+            renderQCAccessories();
+            handleQuickCalculation(); // Recalculate
+            qcAccessoryQtyInput.value = '1';
+        });
+    }
+
+    if (qcAccessoriesList) {
+        qcAccessoriesList.addEventListener('click', e => {
+            if (e.target.classList.contains('remove-acc-btn')) {
+                const id = e.target.dataset.id;
+                qcAddedAccessories = qcAddedAccessories.filter(a => a.id !== id);
+                renderQCAccessories();
+                handleQuickCalculation();
+            }
+        });
+    
+        qcAccessoriesList.addEventListener('change', e => {
+            if (e.target.classList.contains('accessory-list-qty')) {
+                const id = e.target.dataset.id;
+                const newQuantity = parseInt(e.target.value, 10);
+                const accessory = qcAddedAccessories.find(a => a.id === id);
+                
+                if (accessory && newQuantity > 0) {
+                    accessory.quantity = newQuantity;
+                    handleQuickCalculation();
+                } else if (accessory) {
+                    // Revert to old value if input is invalid (e.g., 0 or non-number)
+                    e.target.value = accessory.quantity; 
+                }
+            }
+        });
+    }
 
     // Run initial calculation to show 0s
     handleQuickCalculation();
