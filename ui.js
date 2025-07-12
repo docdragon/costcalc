@@ -148,6 +148,54 @@ export function initializeTabs() {
     });
 }
 
+/**
+ * Safely evaluates a mathematical expression string.
+ * @param {string} expr The expression to evaluate.
+ * @returns {number|null} The result of the calculation or null if invalid.
+ */
+function evaluateMathExpression(expr) {
+    // Allow numbers, whitespace, parentheses, and basic operators.
+    // This regex ensures no letters or other symbols can be injected.
+    if (/[^0-9\s.()+\-*/]/.test(expr)) {
+        return null; // Invalid characters found
+    }
+    try {
+        // Use the Function constructor which is safer than eval.
+        // It executes in the global scope, not the local one.
+        const result = new Function(`return ${expr}`)();
+        if (typeof result === 'number' && isFinite(result)) {
+            return result;
+        }
+        return null; // Result is not a finite number (e.g., from '1/0')
+    } catch (e) {
+        return null; // Syntax error in expression
+    }
+}
+
+/**
+ * Initializes number inputs to evaluate math expressions on Enter.
+ * @param {string} selector CSS selector for the input elements.
+ */
+export function initializeMathInput(selector) {
+    document.querySelectorAll(selector).forEach(input => {
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // Prevent form submission
+                const expression = input.value;
+                const result = evaluateMathExpression(expression);
+
+                if (result !== null) {
+                    input.value = result;
+                    // Dispatch an 'input' event to trigger any listeners
+                    // that depend on this input's value changing.
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            }
+        });
+    });
+}
+
+
 // --- Modal & Auth Button Listeners ---
 async function handleGoogleLogin() {
     await signInWithPopup(auth, new GoogleAuthProvider());

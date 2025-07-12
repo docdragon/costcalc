@@ -7,7 +7,7 @@ import {
 
 import { 
     openModal, closeModal, showConfirm, showToast, updateUIVisibility, 
-    initializeImageUploader, initializeTabs, initializeModals 
+    initializeImageUploader, initializeTabs, initializeModals, initializeMathInput
 } from './ui.js';
 import { initializeQuickCalc } from './quick-calc.js';
 
@@ -1386,5 +1386,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     );
     initialize3DViewer();
+    initializeMathInput('input[type="number"].input-style');
     initializeQuickCalc(localMaterials, showToast);
 });

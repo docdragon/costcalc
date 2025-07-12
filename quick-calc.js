@@ -31,7 +31,6 @@ export function initializeQuickCalc(localMaterials, showToast) {
     const qcAreaInput = document.getElementById('qc-area');
     const qcMaterialWoodSelect = document.getElementById('qc-material-wood');
     const qcSheetCountDisplay = document.getElementById('qc-sheet-count-display');
-    const qcCalculateBtn = document.getElementById('qc-calculate-btn');
     const qcEdgeLengthInput = document.getElementById('qc-edge-length');
     const qcMaterialEdgeSelect = document.getElementById('qc-material-edge');
     const qcHingeSelect = document.getElementById('qc-accessory-hinge');
@@ -42,7 +41,6 @@ export function initializeQuickCalc(localMaterials, showToast) {
     const qcCamQtyInput = document.getElementById('qc-cam-qty');
     const qcInstallCostInput = document.getElementById('qc-install-cost');
     const qcProfitMarginInput = document.getElementById('qc-profit-margin');
-    const qcResultsContainer = document.getElementById('qc-results-container');
 
     let currentNumSheets = 0;
 
@@ -70,6 +68,9 @@ export function initializeQuickCalc(localMaterials, showToast) {
      * Performs the main calculation for the Quick Calc tab.
      */
     function handleQuickCalculation() {
+        // Update the sheet count display first
+        updateSheetCount();
+        
         // Get all values
         const edgeLength = parseFloat(qcEdgeLengthInput.value) || 0;
         const edgeId = qcMaterialEdgeSelect.value;
@@ -82,31 +83,6 @@ export function initializeQuickCalc(localMaterials, showToast) {
         const installCost = parseFloat(qcInstallCostInput.value) || 0;
         const profitMargin = parseFloat(qcProfitMarginInput.value) || 0;
         const woodId = qcMaterialWoodSelect.value;
-        const area = parseFloat(qcAreaInput.value) || 0;
-
-
-        // Validation
-        if (area > 0 && !woodId) {
-            showToast('Vui lòng chọn loại ván.', 'error');
-            return;
-        }
-        if (edgeLength > 0 && !edgeId) {
-            showToast('Vui lòng chọn loại nẹp.', 'error');
-            return;
-        }
-        if (hingeQty > 0 && !hingeId) {
-            showToast('Vui lòng chọn loại bản lề.', 'error');
-            return;
-        }
-        if (slideQty > 0 && !slideId) {
-            showToast('Vui lòng chọn loại ray trượt.', 'error');
-            return;
-        }
-        if (camQty > 0 && !camId) {
-            showToast('Vui lòng chọn loại cam chốt.', 'error');
-            return;
-        }
-
 
         // Find materials
         const woodMaterial = localMaterials['Ván'].find(m => m.id === woodId);
@@ -114,9 +90,6 @@ export function initializeQuickCalc(localMaterials, showToast) {
         const hingeMaterial = localMaterials['Phụ kiện'].find(m => m.id === hingeId);
         const slideMaterial = localMaterials['Phụ kiện'].find(m => m.id === slideId);
         const camMaterial = localMaterials['Phụ kiện'].find(m => m.id === camId);
-
-        // Re-run sheet count calculation to ensure it's up-to-date
-        updateSheetCount(); 
         
         // Calculate costs
         const woodCost = currentNumSheets * (woodMaterial?.price || 0);
@@ -134,18 +107,22 @@ export function initializeQuickCalc(localMaterials, showToast) {
         document.getElementById('qc-total-cost-value').textContent = totalCost.toLocaleString('vi-VN') + 'đ';
         document.getElementById('qc-suggested-price-value').textContent = suggestedPrice.toLocaleString('vi-VN') + 'đ';
         document.getElementById('qc-estimated-profit-value').textContent = estimatedProfit.toLocaleString('vi-VN') + 'đ';
-        
-        qcResultsContainer.classList.remove('hidden');
     }
 
-    // --- Event Listeners ---
-    if (qcCalculateBtn) {
-        qcCalculateBtn.addEventListener('click', handleQuickCalculation);
-    }
-    if (qcAreaInput) {
-        qcAreaInput.addEventListener('input', updateSheetCount);
-    }
-    if (qcMaterialWoodSelect) {
-        qcMaterialWoodSelect.addEventListener('change', updateSheetCount);
-    }
+    // --- Event Listeners for Auto-Calculation ---
+    const inputsToTrack = [
+        qcAreaInput, qcMaterialWoodSelect, qcEdgeLengthInput, qcMaterialEdgeSelect,
+        qcHingeSelect, qcHingeQtyInput, qcSlideSelect, qcSlideQtyInput,
+        qcCamSelect, qcCamQtyInput, qcInstallCostInput, qcProfitMarginInput
+    ];
+
+    inputsToTrack.forEach(input => {
+        if (input) {
+            // 'input' event works for text fields and 'change' for selects. 'input' also covers changes for selects.
+            input.addEventListener('input', handleQuickCalculation);
+        }
+    });
+
+    // Run initial calculation to show 0s
+    handleQuickCalculation();
 }
