@@ -424,6 +424,19 @@
                         </form>
                         <div class="table-container">
                              <h3 class="table-header">Danh sách Vật tư</h3>
+                             <div class="material-controls">
+                                <div class="filter-wrapper">
+                                    <i class="fas fa-search"></i>
+                                    <input type="text" id="material-filter-input" class="input-style" placeholder="Lọc theo tên hoặc ghi chú...">
+                                </div>
+                                <select id="material-sort-select" class="input-style">
+                                    <option value="name-asc">Sắp xếp: Tên A-Z</option>
+                                    <option value="name-desc">Sắp xếp: Tên Z-A</option>
+                                    <option value="price-asc">Sắp xếp: Giá thấp nhất</option>
+                                    <option value="price-desc">Sắp xếp: Giá cao nhất</option>
+                                    <option value="type">Sắp xếp: Loại vật tư</option>
+                                </select>
+                             </div>
                             <div class="table-wrapper">
                                 <table class="data-table">
                                     <thead>

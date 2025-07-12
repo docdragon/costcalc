@@ -40,6 +40,8 @@ const analyzeImageBtn = document.getElementById('analyze-image-btn');
 const imageAnalysisContainer = document.getElementById('image-analysis-container');
 const aiConfigPrompt = document.getElementById('ai-config-prompt');
 const aiConfigBtn = document.getElementById('ai-config-btn');
+const materialFilterInput = document.getElementById('material-filter-input');
+const materialSortSelect = document.getElementById('material-sort-select');
 
 
 // --- Global State ---
@@ -49,6 +51,7 @@ let savedItemsCollectionRef = null;
 let unsubscribeMaterials = null; 
 let unsubscribeSavedItems = null;
 let localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [] };
+let allLocalMaterials = []; // Flat array for filtering and sorting
 let localSavedItems = [];
 let lastGeminiResult = null;
 let addedAccessories = [];
@@ -120,6 +123,7 @@ function listenForData() {
 
 function clearLocalData() {
     localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [] };
+    allLocalMaterials = [];
     localSavedItems = [];
     chatHistory = [];
     if (chatMessagesContainer) chatMessagesContainer.innerHTML = '';
@@ -269,8 +273,7 @@ function renderFormattedText(text) {
 function listenForMaterials() {
     if (unsubscribeMaterials) unsubscribeMaterials(); 
     unsubscribeMaterials = onSnapshot(materialsCollectionRef, snapshot => {
-        // FIX: Clear the arrays within the existing object to preserve the reference 
-        // for other modules like quick-calc.js, instead of reassigning the whole object.
+        // Clear categorized object for dropdowns
         localMaterials['Ván'] = [];
         localMaterials['Cạnh'] = [];
         localMaterials['Phụ kiện'] = [];
@@ -281,15 +284,63 @@ function listenForMaterials() {
                 localMaterials[material.type].push(material);
             }
         });
-        renderMaterials(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        populateSelects();
+
+        // Update the flat array used for the main list view
+        allLocalMaterials = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        displayMaterials(); // Render with current filters/sort
+        populateSelects();  // Update all dropdowns in the app
     }, console.error);
 }
+
+
+/**
+ * Applies current filter and sort options and then renders the material list.
+ */
+function displayMaterials() {
+    let materialsToRender = [...allLocalMaterials];
+    const filterText = materialFilterInput.value.toLowerCase().trim();
+    const sortBy = materialSortSelect.value;
+
+    // 1. Filter
+    if (filterText) {
+        materialsToRender = materialsToRender.filter(m => 
+            m.name.toLowerCase().includes(filterText) || 
+            (m.notes && m.notes.toLowerCase().includes(filterText))
+        );
+    }
+
+    // 2. Sort
+    switch (sortBy) {
+        case 'name-asc':
+            materialsToRender.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+            break;
+        case 'name-desc':
+            materialsToRender.sort((a, b) => b.name.localeCompare(a.name, 'vi'));
+            break;
+        case 'price-asc':
+            materialsToRender.sort((a, b) => a.price - b.price);
+            break;
+        case 'price-desc':
+            materialsToRender.sort((a, b) => b.price - a.price);
+            break;
+        case 'type':
+            materialsToRender.sort((a, b) => a.type.localeCompare(b.type, 'vi') || a.name.localeCompare(b.name, 'vi'));
+            break;
+    }
+    
+    // 3. Render
+    renderMaterials(materialsToRender);
+}
+
+materialFilterInput.addEventListener('input', displayMaterials);
+materialSortSelect.addEventListener('change', displayMaterials);
+
 
 function renderMaterials(materials) {
     materialsTableBody.innerHTML = '';
     if (materials.length === 0) {
-        materialsTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 1rem; color: var(--text-light);">Chưa có vật tư nào.</td></tr>`;
+        materialsTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 1rem; color: var(--text-light);">Không tìm thấy vật tư nào.</td></tr>`;
         return;
     }
     materials.forEach(m => {
@@ -339,7 +390,8 @@ materialsTableBody.addEventListener('click', async e => {
     const deleteBtn = e.target.closest('.delete-btn');
     if (editBtn) {
         const id = editBtn.dataset.id;
-        const material = localMaterials['Ván'].concat(localMaterials['Cạnh'], localMaterials['Phụ kiện']).find(m => m.id === id);
+        // Use the flat array to find the material
+        const material = allLocalMaterials.find(m => m.id === id);
         if (material) {
             materialForm['material-id'].value = id;
             materialForm['material-name'].value = material.name;
