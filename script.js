@@ -361,7 +361,12 @@ if (settingsForm) {
 function listenForMaterials() {
     if (unsubscribeMaterials) unsubscribeMaterials(); 
     unsubscribeMaterials = onSnapshot(materialsCollectionRef, snapshot => {
-        localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [] };
+        // FIX: Clear the arrays within the existing object to preserve the reference 
+        // for other modules like quick-calc.js, instead of reassigning the whole object.
+        localMaterials['Ván'] = [];
+        localMaterials['Cạnh'] = [];
+        localMaterials['Phụ kiện'] = [];
+        
         snapshot.docs.forEach(doc => {
             const material = { id: doc.id, ...doc.data() };
             if (localMaterials[material.type]) {
