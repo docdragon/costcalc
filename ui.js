@@ -177,21 +177,22 @@ function evaluateMathExpression(expr) {
  * @param {string} selector CSS selector for the input elements.
  */
 export function initializeMathInput(selector) {
-    document.querySelectorAll(selector).forEach(input => {
-        input.addEventListener('keydown', e => {
-            if (e.key === 'Enter') {
-                e.preventDefault(); // Prevent form submission
-                const expression = input.value;
-                const result = evaluateMathExpression(expression);
+    document.body.addEventListener('keydown', e => {
+        // Use event delegation on the body for dynamically added inputs
+        if (e.key === 'Enter' && e.target.matches(selector)) {
+            const input = e.target;
+            e.preventDefault(); // Prevent form submission
+            const expression = input.value;
+            const result = evaluateMathExpression(expression);
 
-                if (result !== null) {
-                    input.value = result;
-                    // Dispatch an 'input' event to trigger any listeners
-                    // that depend on this input's value changing.
-                    input.dispatchEvent(new Event('input', { bubbles: true }));
-                }
+            if (result !== null) {
+                // Format result to avoid excessive decimals from floating point math
+                input.value = Number(result.toFixed(4)); 
+                // Dispatch an 'input' event to trigger any listeners
+                // that depend on this input's value changing.
+                input.dispatchEvent(new Event('input', { bubbles: true }));
             }
-        });
+        }
     });
 }
 

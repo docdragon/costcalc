@@ -85,10 +85,10 @@
                                 <input type="text" id="item-name" class="input-style" placeholder="Vd: Tủ bếp dưới chân sắt">
                             </div>
                             <div class="grid-4-col">
-                                <div><label for="item-length" class="form-label">Dài (mm)</label><input type="number" id="item-length" class="input-style" placeholder="Vd: 2000"></div>
-                                <div><label for="item-width" class="form-label">Rộng (mm)</label><input type="number" id="item-width" class="input-style" placeholder="Vd: 600"></div>
-                                <div><label for="item-height" class="form-label">Cao (mm)</label><input type="number" id="item-height" class="input-style" placeholder="Vd: 850"></div>
-                                <div><label for="item-compartments" class="form-label">Số khoang/cánh</label><input type="number" id="item-compartments" class="input-style" value="1" min="1" placeholder="Vd: 2"></div>
+                                <div><label for="item-length" class="form-label">Dài (mm)</label><input type="text" inputmode="decimal" id="item-length" class="input-style" placeholder="Vd: 2000"></div>
+                                <div><label for="item-width" class="form-label">Rộng (mm)</label><input type="text" inputmode="decimal" id="item-width" class="input-style" placeholder="Vd: 600"></div>
+                                <div><label for="item-height" class="form-label">Cao (mm)</label><input type="text" inputmode="decimal" id="item-height" class="input-style" placeholder="Vd: 850"></div>
+                                <div><label for="item-compartments" class="form-label">Số khoang/cánh</label><input type="text" inputmode="decimal" id="item-compartments" class="input-style" value="1" min="1" placeholder="Vd: 2"></div>
                             </div>
                             <div class="grid-2-col" style="margin-top: 1.25rem;">
                                  <div class="form-group" style="margin-top: 0;">
@@ -102,7 +102,7 @@
                                 </div>
                                 <div class="form-group" style="margin-top: 0;">
                                     <label for="profit-margin" class="form-label">Lợi nhuận mong muốn (%)</label>
-                                    <input type="number" id="profit-margin" class="input-style" value="50">
+                                    <input type="text" inputmode="decimal" id="profit-margin" class="input-style" value="50">
                                 </div>
                             </div>
                            
@@ -124,7 +124,7 @@
                                 <label for="material-accessories" class="form-label">Phụ kiện & Vật tư khác</label>
                                 <div class="accessory-adder">
                                     <select id="material-accessories" class="input-style"></select>
-                                    <input type="number" id="accessory-quantity" class="input-style accessory-qty" placeholder="SL" value="1" min="1">
+                                    <input type="text" inputmode="decimal" id="accessory-quantity" class="input-style accessory-qty" placeholder="SL" value="1" min="1">
                                     <button id="add-accessory-btn" class="btn btn-secondary accessory-add-btn"><i class="fas fa-plus"></i> Thêm</button>
                                 </div>
                                 <ul id="accessories-list" class="accessory-list"></ul>
@@ -270,7 +270,7 @@
                                 <div class="grid-2-col" style="gap: 0.5rem 1.25rem;">
                                     <div>
                                         <label for="qc-area" class="form-label">Tổng diện tích ván (m²)</label>
-                                        <input type="number" id="qc-area" class="input-style" placeholder="Vd: 4.5">
+                                        <input type="text" inputmode="decimal" id="qc-area" class="input-style" placeholder="Vd: 4.5">
                                     </div>
                                     <div>
                                         <label for="qc-material-wood" class="form-label">Loại ván sử dụng</label>
@@ -281,7 +281,7 @@
                                 <div class="grid-2-col" style="gap: 0.5rem 1.25rem; margin-top: 1.25rem;">
                                     <div>
                                         <label for="qc-edge-length" class="form-label">Tổng chiều dài nẹp (m)</label>
-                                        <input type="number" id="qc-edge-length" class="input-style" placeholder="Vd: 25">
+                                        <input type="text" inputmode="decimal" id="qc-edge-length" class="input-style" placeholder="Vd: 25">
                                     </div>
                                     <div>
                                         <label for="qc-material-edge" class="form-label">Loại nẹp sử dụng</label>
@@ -300,7 +300,7 @@
                                     </div>
                                     <div>
                                          <label for="qc-hinge-qty" class="form-label">Số lượng</label>
-                                        <input type="number" id="qc-hinge-qty" class="input-style" placeholder="Vd: 8" value="0" min="0">
+                                        <input type="text" inputmode="decimal" id="qc-hinge-qty" class="input-style" placeholder="Vd: 8" value="0" min="0">
                                     </div>
                                 </div>
                                  <div class="grid-2-col" style="gap: 0.5rem 1.25rem; margin-top: 1.25rem;">
@@ -310,7 +310,7 @@
                                     </div>
                                     <div>
                                         <label for="qc-slide-qty" class="form-label">Số lượng</label>
-                                        <input type="number" id="qc-slide-qty" class="input-style" placeholder="Vd: 2" value="0" min="0">
+                                        <input type="text" inputmode="decimal" id="qc-slide-qty" class="input-style" placeholder="Vd: 2" value="0" min="0">
                                     </div>
                                 </div>
                                 <div class="grid-2-col" style="gap: 0.5rem 1.25rem; margin-top: 1.25rem;">
@@ -320,17 +320,17 @@
                                     </div>
                                     <div>
                                         <label for="qc-cam-qty" class="form-label">Số lượng</label>
-                                        <input type="number" id="qc-cam-qty" class="input-style" placeholder="Vd: 50" value="0" min="0">
+                                        <input type="text" inputmode="decimal" id="qc-cam-qty" class="input-style" placeholder="Vd: 50" value="0" min="0">
                                     </div>
                                 </div>
                                  <div class="grid-2-col" style="gap: 0.5rem 1.25rem; margin-top: 1.25rem;">
                                      <div>
                                         <label for="qc-install-cost" class="form-label">Chi phí lắp đặt (VND)</label>
-                                        <input type="number" id="qc-install-cost" class="input-style" placeholder="Vd: 500000" value="0" min="0">
+                                        <input type="text" inputmode="decimal" id="qc-install-cost" class="input-style" placeholder="Vd: 500000" value="0" min="0">
                                     </div>
                                     <div>
                                         <label for="qc-profit-margin" class="form-label">Lợi nhuận mong muốn (%)</label>
-                                        <input type="number" id="qc-profit-margin" class="input-style" value="50" min="0">
+                                        <input type="text" inputmode="decimal" id="qc-profit-margin" class="input-style" value="50" min="0">
                                     </div>
                                 </div>
                             </div>
@@ -389,7 +389,7 @@
                             <div class="grid-2-col">
                                 <div>
                                     <label for="material-price" class="form-label">Đơn giá</label>
-                                    <input type="number" id="material-price" class="input-style" placeholder="Vd: 550000" required>
+                                    <input type="text" inputmode="decimal" id="material-price" class="input-style" placeholder="Vd: 550000" required>
                                 </div>
                                 <div>
                                     <label for="material-unit" class="form-label">Đơn vị tính</label>
@@ -501,22 +501,22 @@
                             <div class="grid-2-col">
                                 <div class="form-group">
                                     <label for="workshop-labor-cost" class="form-label">Chi phí nhân công (VND/m²)</label>
-                                    <input type="number" id="workshop-labor-cost" class="input-style" placeholder="Vd: 300000">
+                                    <input type="text" inputmode="decimal" id="workshop-labor-cost" class="input-style" placeholder="Vd: 300000">
                                      <small class="form-text">Chi phí nhân công tính trên mỗi mét vuông sản phẩm hoàn thiện.</small>
                                 </div>
                                 <div class="form-group">
                                     <label for="workshop-management-cost" class="form-label">Chi phí quản lý (%)</label>
-                                    <input type="number" id="workshop-management-cost" class="input-style" placeholder="Vd: 10">
+                                    <input type="text" inputmode="decimal" id="workshop-management-cost" class="input-style" placeholder="Vd: 10">
                                      <small class="form-text">Phần trăm chi phí quản lý, mặt bằng, điện nước...</small>
                                 </div>
                                 <div class="form-group">
                                     <label for="workshop-shipping-cost" class="form-label">Chi phí vận chuyển (%)</label>
-                                    <input type="number" id="workshop-shipping-cost" class="input-style" placeholder="Vd: 5">
+                                    <input type="text" inputmode="decimal" id="workshop-shipping-cost" class="input-style" placeholder="Vd: 5">
                                     <small class="form-text">Phần trăm chi phí vận chuyển và lắp đặt.</small>
                                 </div>
                                 <div class="form-group">
                                     <label for="workshop-waste-margin" class="form-label">Tỷ lệ hao hụt ván mặc định (%)</label>
-                                    <input type="number" id="workshop-waste-margin" class="input-style" placeholder="Vd: 15">
+                                    <input type="text" inputmode="decimal" id="workshop-waste-margin" class="input-style" placeholder="Vd: 15">
                                      <small class="form-text">AI sẽ dùng con số này để ước tính hao hụt khi tính sơ bộ.</small>
                                 </div>
                             </div>

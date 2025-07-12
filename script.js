@@ -527,7 +527,7 @@ function renderAccessories() {
         li.dataset.id = acc.id;
         li.innerHTML = `
             <span class="flex-grow">${acc.name}</span>
-            <input type="number" value="${acc.quantity}" min="1" class="input-style accessory-list-qty" data-id="${acc.id}">
+            <input type="text" inputmode="decimal" value="${acc.quantity}" min="1" class="input-style accessory-list-qty" data-id="${acc.id}">
             <span class="accessory-unit">${acc.unit}</span>
             <button class="remove-acc-btn" data-id="${acc.id}">&times;</button>
         `;
@@ -1386,6 +1386,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     );
     initialize3DViewer();
-    initializeMathInput('input[type="number"].input-style');
+    initializeMathInput('.input-style[type="text"][inputmode="decimal"]');
     initializeQuickCalc(localMaterials, showToast);
 });
