@@ -23,10 +23,11 @@ export default async function handler(request, response) {
                 return response.status(400).json({ error: 'Yêu cầu cấu hình từ văn bản thiếu nội dung.' });
             }
             const configPrompt = `Bạn là một trợ lý AI chuyên nghiệp cho một xưởng mộc ở Việt Nam. Nhiệm vụ của bạn là đọc một mô tả sản phẩm bằng tiếng Việt và trích xuất các thông tin chi tiết vào một cấu trúc JSON.
-- Phân tích văn bản để tìm 'length' (dài), 'width' (rộng), 'height' (cao), 'itemName' (tên sản phẩm), 'itemType' (loại sản phẩm), và 'materialName' (tên vật liệu).
+- Phân tích văn bản để tìm 'length' (dài), 'width' (rộng), 'height' (cao), 'itemName' (tên sản phẩm), 'itemType' (loại sản phẩm), 'materialName' (tên vật liệu), và 'compartments' (số khoang/cánh).
 - **Chuyển đổi đơn vị**: Chuyển đổi tất cả các đơn vị sang milimét (mm). Ví dụ: "2 mét", "2m", "2m2" -> 2000; "60 phân", "60cm" -> 600.
 - **Loại sản phẩm (itemType)**: Phải là một trong các giá trị sau: 'tu-bep-duoi', 'tu-bep-tren', 'tu-ao', 'khac'.
 - **Tên vật liệu (materialName)**: Trích xuất tên vật liệu chính được yêu cầu, ví dụ: "MDF An Cường", "HDF chống ẩm".
+- **Số khoang (compartments)**: Trích xuất số lượng khoang hoặc cánh. Ví dụ: "3 cánh", "2 khoang" -> 3. Nếu không đề cập, mặc định là 1.
 - Nếu không tìm thấy thông tin nào, hãy bỏ qua khóa đó. Chỉ trả về JSON.`;
             
             const responseSchema = {
@@ -38,6 +39,7 @@ export default async function handler(request, response) {
                     itemName: { type: Type.STRING, description: "Tên sản phẩm được trích xuất" },
                     itemType: { type: Type.STRING, description: "Loại sản phẩm: 'tu-bep-duoi', 'tu-bep-tren', 'tu-ao', or 'khac'" },
                     materialName: { type: Type.STRING, description: "Tên của vật liệu ván chính" },
+                    compartments: { type: Type.INTEGER, description: "Số lượng khoang hoặc cánh" }
                 }
             };
             

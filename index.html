@@ -72,7 +72,7 @@
                             <!-- AI Quick Config -->
                             <div class="ai-config-section">
                                 <label for="ai-config-prompt" class="form-label"><i class="fas fa-wand-magic-sparkles"></i> Khởi tạo Nhanh với AI</label>
-                                <textarea id="ai-config-prompt" class="input-style" rows="2" placeholder="Vd: làm tủ bếp dưới dài 2 mét, rộng 60 phân, cao 85 phân, dùng ván MDF An Cường chống ẩm."></textarea>
+                                <textarea id="ai-config-prompt" class="input-style" rows="2" placeholder="Vd: làm tủ bếp dưới dài 2 mét, rộng 60 phân, cao 85 phân, có 3 khoang, dùng ván MDF An Cường chống ẩm."></textarea>
                                 <button id="ai-config-btn" class="btn btn-secondary full-width" style="margin-top: 0.5rem;">
                                     <i class="fas fa-cogs"></i> Tạo Sản phẩm từ Mô tả
                                 </button>
@@ -83,19 +83,20 @@
                                 <label for="item-name" class="form-label">Tên sản phẩm / dự án</label>
                                 <input type="text" id="item-name" class="input-style" placeholder="Vd: Tủ bếp dưới chân sắt">
                             </div>
-                            <div class="grid-3-col">
+                            <div class="grid-4-col">
                                 <div><label for="item-length" class="form-label">Dài (mm)</label><input type="number" id="item-length" class="input-style" placeholder="Vd: 2000"></div>
                                 <div><label for="item-width" class="form-label">Rộng (mm)</label><input type="number" id="item-width" class="input-style" placeholder="Vd: 600"></div>
                                 <div><label for="item-height" class="form-label">Cao (mm)</label><input type="number" id="item-height" class="input-style" placeholder="Vd: 850"></div>
+                                <div><label for="item-compartments" class="form-label">Số khoang/cánh</label><input type="number" id="item-compartments" class="input-style" value="1" min="1" placeholder="Vd: 2"></div>
                             </div>
                             <div class="grid-2-col" style="margin-top: 1.25rem;">
                                  <div class="form-group" style="margin-top: 0;">
                                     <label for="item-type" class="form-label">Loại sản phẩm</label>
                                     <select id="item-type" class="input-style">
-                                        <option value="khac">Khác (Hộp 4 mặt, hở trước & sau)</option>
                                         <option value="tu-bep-duoi">Tủ bếp dưới</option>
                                         <option value="tu-bep-tren">Tủ bếp trên</option>
                                         <option value="tu-ao">Tủ áo (Thùng, cánh, không hậu)</option>
+                                        <option value="khac">Khác (Hộp 4 mặt, hở trước & sau)</option>
                                     </select>
                                 </div>
                                 <div class="form-group" style="margin-top: 0;">
@@ -239,7 +240,7 @@
                                     <h4><i class="fas fa-question-circle"></i> Hướng dẫn sử dụng</h4>
                                 </summary>
                                 <ul>
-                                    <li><strong>Khởi tạo Nhanh:</strong> Nhập mô tả sản phẩm (vd: "tủ áo 2m x 1m8") vào ô "Khởi tạo Nhanh" và nhấn nút, AI sẽ tự động điền các thông số cơ bản.</li>
+                                    <li><strong>Khởi tạo Nhanh:</strong> Nhập mô tả sản phẩm (vd: "tủ áo 2m x 1m8, 4 cánh") và nhấn nút, AI sẽ tự động điền các thông số.</li>
                                     <li><strong>Điền thông tin:</strong> Hoàn thiện các thông tin chi tiết về kích thước, vật liệu, và phụ kiện cho sản phẩm của bạn.</li>
                                     <li><strong>Phân tích AI:</strong> Nhấn nút "Phân tích & Báo giá với AI" để nhận báo giá chi tiết, phân tích chi phí ẩn, gợi ý tối ưu và sơ đồ cắt ván.</li>
                                     <li><strong>Lưu & Tải lại:</strong> Đăng nhập và lưu các dự án quan trọng để xem lại hoặc chỉnh sửa sau này.</li>

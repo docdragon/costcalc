@@ -139,6 +139,7 @@ function getPanelPieces() {
     const length = parseFloat(document.getElementById('item-length').value) || 0;
     const width = parseFloat(document.getElementById('item-width').value) || 0;
     const height = parseFloat(document.getElementById('item-height').value) || 0;
+    const compartments = parseInt(document.getElementById('item-compartments').value, 10) || 1;
     const type = document.getElementById('item-type').value;
     const backPanelSelect = document.getElementById('material-back-panel');
     const usesMainWoodForBack = !backPanelSelect.value || backPanelSelect.value === '';
@@ -146,6 +147,7 @@ function getPanelPieces() {
     const pieces = [];
     if (!length || !width || !height) return [];
 
+    // Main box structure
     pieces.push({ name: 'Hông Trái', width: width, height: height, type: 'body' });
     pieces.push({ name: 'Hông Phải', width: width, height: height, type: 'body' });
     pieces.push({ name: 'Đáy', width: length, height: width, type: 'body' });
@@ -153,12 +155,26 @@ function getPanelPieces() {
     if (type !== 'tu-bep-duoi') {
         pieces.push({ name: 'Nóc', width: length, height: width, type: 'body' });
     }
-    if (type.includes('tu-')) {
-         pieces.push({ name: 'Cánh Trái', width: Math.round(length / 2), height: height, type: 'door' });
-         pieces.push({ name: 'Cánh Phải', width: Math.round(length / 2), height: height, type: 'door' });
+
+    // Dividers and Doors based on compartments
+    if (type.includes('tu-') && compartments > 0) {
+        // Add internal dividers if more than one compartment
+        if (compartments > 1) {
+            const numDividers = compartments - 1;
+            for (let i = 0; i < numDividers; i++) {
+                pieces.push({ name: `Vách Ngăn ${i + 1}`, width: width, height: height, type: 'body' });
+            }
+        }
+        // Add doors, one for each compartment
+        const doorWidth = Math.round(length / compartments);
+        for (let i = 0; i < compartments; i++) {
+             pieces.push({ name: `Cánh ${i + 1}`, width: doorWidth, height: height, type: 'door' });
+        }
     }
+    
+    // Back panel
     if (usesMainWoodForBack && type !== 'tu-ao' && type !== 'khac') {
-        pieces.push({ name: 'Hậu', width: length, height: height, type: 'body' }); // Add to body pieces if using main wood
+        pieces.push({ name: 'Hậu', width: length, height: height, type: 'body' });
     }
 
     return pieces.filter(p => p.width > 0 && p.height > 0).map(p => ({...p, width: Math.round(p.width), height: Math.round(p.height)}));
@@ -526,6 +542,7 @@ function clearInputs() {
     document.getElementById('item-name').value = '';
     document.getElementById('product-description').value = '';
     document.getElementById('profit-margin').value = '50';
+    document.getElementById('item-compartments').value = '1';
     document.getElementById('material-door').value = ''; // Reset door material
     aiConfigPrompt.value = '';
     addedAccessories = [];
@@ -579,6 +596,7 @@ async function runAICalculation() {
         width: document.getElementById('item-width').value,
         height: document.getElementById('item-height').value,
         type: document.getElementById('item-type').value,
+        compartments: document.getElementById('item-compartments').value,
         description: document.getElementById('product-description').value,
         profitMargin: document.getElementById('profit-margin').value,
     };
@@ -622,6 +640,7 @@ async function runAICalculation() {
     - Tên sản phẩm: ${inputs.name}
     - Kích thước (DxRxC): ${inputs.length} x ${inputs.width} x ${inputs.height} mm
     - Loại sản phẩm: ${inputs.type}
+    - Số khoang / số cánh: ${inputs.compartments}
     - Ghi chú của người dùng: ${inputs.description}
     - Tỷ suất lợi nhuận mong muốn: ${inputs.profitMargin}%
     - Vật liệu VÁN CHÍNH (dùng cho Thùng và các chi tiết được liệt kê bên dưới): ${mainWood.name} (${mainWood.price} VND/${mainWood.unit})
@@ -631,7 +650,7 @@ async function runAICalculation() {
     - Phụ kiện: ${addedAccessories.map(a => `${a.name} (SL: ${a.quantity}, Đơn giá: ${a.price})`).join(', ')}
     - Có hình ảnh: ${uploadedImage ? 'Có' : 'Không'}
 
-    DANH SÁCH CHI TIẾT VÀ VẬT LIỆU TƯƠNG ỨNG:
+    DANH SÁCH CHI TIẾT VÀ VẬT LIỆU TƯƠNG ỨNG (Đây là bản bóc tách chi tiết đã được xử lý. Các chi tiết 'Vách Ngăn' đã được thêm nếu cần):
     - Chi tiết cắt từ VÁN CHÍNH: ${JSON.stringify(mainWoodPieces.map(({type, ...rest}) => rest))}
     - Chi tiết cắt từ VÁN CÁNH (chỉ áp dụng nếu có vật liệu riêng): ${JSON.stringify(doorPiecesForPrompt.map(({type, ...rest}) => rest))}
 
@@ -783,6 +802,7 @@ saveItemBtn.addEventListener('click', async () => {
             width: document.getElementById('item-width').value,
             height: document.getElementById('item-height').value,
             type: document.getElementById('item-type').value,
+            compartments: document.getElementById('item-compartments').value,
             description: document.getElementById('product-description').value,
             profitMargin: document.getElementById('profit-margin').value,
             mainWoodId: document.getElementById('material-wood').value,
@@ -851,6 +871,7 @@ function loadItemIntoForm(item) {
     document.getElementById('item-height').value = inputs.height || '';
     document.getElementById('item-name').value = inputs.name || '';
     document.getElementById('item-type').value = inputs.type || 'khac';
+    document.getElementById('item-compartments').value = inputs.compartments || '1';
     document.getElementById('product-description').value = inputs.description || '';
     document.getElementById('profit-margin').value = inputs.profitMargin || '50';
 
@@ -991,6 +1012,7 @@ function renderItemDetailsToModal(itemId) {
         <h4><i class="fas fa-ruler-combined"></i>Thông số Đầu vào</h4>
         <ul>
             <li><strong>Kích thước (D x R x C):</strong> ${inputs.length || 'N/A'} x ${inputs.width || 'N/A'} x ${inputs.height || 'N/A'} mm</li>
+            <li><strong>Số khoang/cánh:</strong> ${inputs.compartments || '1'}</li>
             <li><strong>Loại sản phẩm:</strong> ${inputs.type || 'N/A'}</li>
             <li><strong>Mô tả:</strong> ${inputs.description || 'Không có'}</li>
             <li><strong>Lợi nhuận mong muốn:</strong> ${inputs.profitMargin || 'N/A'}%</li>
@@ -1205,6 +1227,7 @@ async function handleAIConfig() {
         if(data.height) { document.getElementById('item-height').value = data.height; updatedFields++; }
         if(data.itemName) { document.getElementById('item-name').value = data.itemName; updatedFields++; }
         if(data.itemType) { document.getElementById('item-type').value = data.itemType; updatedFields++; }
+        if(data.compartments) { document.getElementById('item-compartments').value = data.compartments; updatedFields++; }
         
         if(data.materialName) {
             const materialSelect = document.getElementById('material-wood');
