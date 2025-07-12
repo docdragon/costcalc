@@ -475,22 +475,19 @@ function resetMaterialForm() {
 }
 
 function populateSelects() {
-    const allSelects = [
-        // Main calculator selects
+    // Define standard selects that are populated with a single material type
+    const standardSelects = [
         { el: document.getElementById('material-wood'), type: 'Ván' },
         { el: document.getElementById('material-door'), type: 'Ván', optional: true, optionalText: 'Dùng chung ván chính' },
         { el: document.getElementById('material-back-panel'), type: 'Ván', optional: true, optionalText: 'Dùng chung ván chính' },
         { el: document.getElementById('material-edge'), type: 'Cạnh' },
         { el: document.getElementById('material-accessories'), type: 'Phụ kiện' },
-        // Quick Calc Selects
         { el: document.getElementById('qc-material-wood'), type: 'Ván' },
         { el: document.getElementById('qc-material-wood-2'), type: 'Ván', optional: true, optionalText: '--- Không chọn ---' },
-        { el: document.getElementById('qc-material-edge'), type: 'Cạnh' },
-        { el: document.getElementById('qc-material-accessories'), type: 'Phụ kiện' },
     ];
 
-    allSelects.forEach(s => {
-        if (!s.el) return; // Guard if element doesn't exist
+    standardSelects.forEach(s => {
+        if (!s.el) return;
         const currentVal = s.el.value;
         s.el.innerHTML = '';
 
@@ -507,6 +504,32 @@ function populateSelects() {
             }
         }
     });
+    
+    // Special handling for Quick Calc accessories dropdown to include edge banding
+    const qcAccessorySelect = document.getElementById('qc-material-accessories');
+    if (qcAccessorySelect) {
+        const currentVal = qcAccessorySelect.value;
+        qcAccessorySelect.innerHTML = ''; // Clear it
+
+        // Helper to create optgroup
+        const createOptgroup = (type, label) => {
+            const group = document.createElement('optgroup');
+            group.label = label;
+            localMaterials[type].forEach(m => group.appendChild(new Option(`${m.name} (${Number(m.price).toLocaleString('vi-VN')}đ)`, m.id)));
+            return group;
+        };
+
+        qcAccessorySelect.appendChild(createOptgroup('Phụ kiện', 'Phụ kiện'));
+        qcAccessorySelect.appendChild(createOptgroup('Cạnh', 'Nẹp Cạnh'));
+        
+        if (currentVal) {
+            // Try to set back the value
+            const optionExists = Array.from(qcAccessorySelect.options).some(opt => opt.value === currentVal);
+            if (optionExists) {
+                qcAccessorySelect.value = currentVal;
+            }
+        }
+    }
 }
 
 // --- Accessory Management ---
@@ -1320,7 +1343,7 @@ async function handleAIConfig() {
 
     } catch(error) {
         console.error("AI Config Error:", error);
-        showToast(`Lỗi cấu hình AI: ${error.message}`, 'error');
+        showToast(`Lỗi cấu hình AI: ${error.message}`);
     } finally {
         aiConfigBtn.disabled = false;
         aiConfigBtn.innerHTML = `<i class="fas fa-cogs"></i> Tạo Sản phẩm từ Mô tả`;

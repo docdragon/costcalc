@@ -37,19 +37,17 @@ export function initializeQuickCalc(localMaterials, showToast) {
     const qcArea2Input = document.getElementById('qc-area-2');
     const qcMaterialWood2Select = document.getElementById('qc-material-wood-2');
     const qcSheetCount2Display = document.getElementById('qc-sheet-count-display-2');
-    const qcEdgeLengthInput = document.getElementById('qc-edge-length');
-    const qcMaterialEdgeSelect = document.getElementById('qc-material-edge');
     const qcInstallCostInput = document.getElementById('qc-install-cost');
     const qcProfitMarginInput = document.getElementById('qc-profit-margin');
 
-    // New dynamic accessory elements
+    // Dynamic accessory/edge elements
     const qcAccessorySelect = document.getElementById('qc-material-accessories');
     const qcAccessoryQtyInput = document.getElementById('qc-accessory-quantity');
     const qcAddAccessoryBtn = document.getElementById('qc-add-accessory-btn');
     const qcAccessoriesList = document.getElementById('qc-accessories-list');
 
     /**
-     * Renders the list of added accessories into the DOM.
+     * Renders the list of added accessories/edges into the DOM.
      */
     function renderQCAccessories() {
         qcAccessoriesList.innerHTML = '';
@@ -98,17 +96,12 @@ export function initializeQuickCalc(localMaterials, showToast) {
      * Performs the main calculation for the Quick Calc tab and updates the UI.
      */
     function handleQuickCalculation() {
-        // 1. Calculate Wood & Edge costs
+        // 1. Calculate Wood costs
         const woodCost1 = calculateSheetCost(qcAreaInput, qcMaterialWoodSelect, qcSheetCountDisplay);
         const woodCost2 = calculateSheetCost(qcArea2Input, qcMaterialWood2Select, qcSheetCount2Display);
         const totalWoodCost = woodCost1 + woodCost2;
         
-        const edgeLength = parseFloat(qcEdgeLengthInput.value) || 0;
-        const edgeId = qcMaterialEdgeSelect.value;
-        const edgeMaterial = localMaterials['Cạnh'].find(m => m.id === edgeId);
-        const edgeCost = (edgeLength * (edgeMaterial?.price || 0)) || 0;
-
-        // 2. Calculate dynamic accessory costs
+        // 2. Calculate dynamic accessory and edge costs
         const totalAccessoryCost = qcAddedAccessories.reduce((sum, acc) => {
             return sum + (acc.price * acc.quantity);
         }, 0);
@@ -118,7 +111,7 @@ export function initializeQuickCalc(localMaterials, showToast) {
         const profitMargin = parseFloat(qcProfitMarginInput.value) || 0;
 
         // 4. Sum up total cost
-        const totalCost = totalWoodCost + edgeCost + totalAccessoryCost + installCost;
+        const totalCost = totalWoodCost + totalAccessoryCost + installCost;
 
         // 5. Calculate final pricing
         const suggestedPrice = totalCost * (1 + profitMargin / 100);
@@ -135,7 +128,7 @@ export function initializeQuickCalc(localMaterials, showToast) {
     // Listeners for standard inputs
     const inputsToTrack = [
         qcAreaInput, qcMaterialWoodSelect, qcArea2Input, qcMaterialWood2Select,
-        qcEdgeLengthInput, qcMaterialEdgeSelect, qcInstallCostInput, qcProfitMarginInput
+        qcInstallCostInput, qcProfitMarginInput
     ];
     inputsToTrack.forEach(input => {
         if (input) {
@@ -143,25 +136,29 @@ export function initializeQuickCalc(localMaterials, showToast) {
         }
     });
 
-    // Listeners for dynamic accessories
+    // Listeners for dynamic accessories and edges
     if (qcAddAccessoryBtn) {
         qcAddAccessoryBtn.addEventListener('click', () => {
             const selectedId = qcAccessorySelect.value;
-            const quantity = parseInt(qcAccessoryQtyInput.value, 10);
+            const quantity = parseFloat(qcAccessoryQtyInput.value) || 0;
     
             if (!selectedId || !quantity || quantity <= 0) {
-                showToast('Vui lòng chọn phụ kiện và nhập số lượng.', 'error');
+                showToast('Vui lòng chọn vật tư và nhập số lượng/chiều dài hợp lệ.', 'error');
                 return;
             }
-            const accessory = localMaterials['Phụ kiện'].find(a => a.id === selectedId);
-            if (!accessory) return;
+
+            // Search in both accessories and edges
+            const allAddableItems = [...localMaterials['Phụ kiện'], ...localMaterials['Cạnh']];
+            const itemToAdd = allAddableItems.find(a => a.id === selectedId);
+
+            if (!itemToAdd) return;
     
             const existing = qcAddedAccessories.find(a => a.id === selectedId);
     
             if (existing) {
                 existing.quantity += quantity;
             } else {
-                qcAddedAccessories.push({ ...accessory, quantity });
+                qcAddedAccessories.push({ ...itemToAdd, quantity });
             }
             
             renderQCAccessories();
@@ -183,14 +180,14 @@ export function initializeQuickCalc(localMaterials, showToast) {
         qcAccessoriesList.addEventListener('change', e => {
             if (e.target.classList.contains('accessory-list-qty')) {
                 const id = e.target.dataset.id;
-                const newQuantity = parseInt(e.target.value, 10);
+                const newQuantity = parseFloat(e.target.value) || 0;
                 const accessory = qcAddedAccessories.find(a => a.id === id);
                 
                 if (accessory && newQuantity > 0) {
                     accessory.quantity = newQuantity;
                     handleQuickCalculation();
                 } else if (accessory) {
-                    // Revert to old value if input is invalid (e.g., 0 or non-number)
+                    // Revert to old value if input is invalid
                     e.target.value = accessory.quantity; 
                 }
             }
