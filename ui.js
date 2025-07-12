@@ -149,6 +149,96 @@ export function initializeTabs() {
 }
 
 /**
+ * Initializes a searchable combobox component.
+ * @param {HTMLElement} container The container element for the combobox.
+ * @param {Array<object>} optionsData Array of objects, e.g., [{id, name, price}]
+ * @param {function} onSelect Callback function when an option is selected.
+ * @param {object} config Configuration options.
+ */
+export function initializeCombobox(container, optionsData, onSelect, config = {}) {
+    const input = container.querySelector('.combobox-input');
+    const valueInput = container.querySelector('.combobox-value');
+    const optionsWrapper = container.querySelector('.combobox-options-wrapper');
+    const optionsList = container.querySelector('.combobox-options');
+
+    const { placeholder = "Chọn...", allowEmpty = false, emptyOptionText = "--- Không chọn ---" } = config;
+    if (placeholder) {
+        input.placeholder = placeholder;
+    }
+
+    const renderOptions = (filterText = '') => {
+        optionsList.innerHTML = '';
+        let filteredOptions = optionsData.filter(o => o.name.toLowerCase().includes(filterText.toLowerCase()));
+
+        if (allowEmpty) {
+            const emptyOption = document.createElement('li');
+            emptyOption.className = 'combobox-option';
+            emptyOption.dataset.id = '';
+            emptyOption.textContent = emptyOptionText;
+            optionsList.appendChild(emptyOption);
+        }
+
+        if (filteredOptions.length === 0 && !allowEmpty) {
+            optionsList.innerHTML = `<li class="combobox-option no-results">Không tìm thấy kết quả</li>`;
+        } else {
+            filteredOptions.forEach(option => {
+                const li = document.createElement('li');
+                li.className = 'combobox-option';
+                li.dataset.id = option.id;
+                li.textContent = `${option.name} (${Number(option.price).toLocaleString('vi-VN')}đ)`;
+                optionsList.appendChild(li);
+            });
+        }
+    };
+
+    const closeDropdown = () => {
+        if (optionsWrapper.classList.contains('show')) {
+            optionsWrapper.classList.remove('show');
+            document.removeEventListener('click', handleClickOutside, true);
+        }
+    };
+    
+    const handleClickOutside = (e) => {
+        if (!container.contains(e.target)) {
+            closeDropdown();
+        }
+    };
+    
+    input.addEventListener('focus', () => {
+        renderOptions(input.value);
+        optionsWrapper.classList.add('show');
+        // Use capture phase to handle clicks on other elements before they can prevent this
+        document.addEventListener('click', handleClickOutside, true);
+    });
+
+    input.addEventListener('input', () => {
+        valueInput.value = ''; // Clear value if user is typing
+        if (onSelect) onSelect(''); // Notify that value has been cleared
+        renderOptions(input.value);
+        if (!optionsWrapper.classList.contains('show')) {
+            optionsWrapper.classList.add('show');
+            document.addEventListener('click', handleClickOutside, true);
+        }
+    });
+
+    optionsList.addEventListener('click', (e) => {
+        const optionEl = e.target.closest('.combobox-option');
+        if (optionEl && !optionEl.classList.contains('no-results')) {
+            const selectedId = optionEl.dataset.id;
+            valueInput.value = selectedId;
+            input.value = optionEl.textContent;
+            closeDropdown();
+            if (onSelect) {
+                onSelect(selectedId);
+            }
+        }
+    });
+
+    // Set initial state
+    renderOptions();
+}
+
+/**
  * Safely evaluates a mathematical expression string.
  * @param {string} expr The expression to evaluate.
  * @returns {number|null} The result of the calculation or null if invalid.

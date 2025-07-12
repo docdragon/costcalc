@@ -7,7 +7,8 @@ import {
 
 import { 
     openModal, closeModal, showConfirm, showToast, updateUIVisibility, 
-    initializeImageUploader, initializeTabs, initializeModals, initializeMathInput
+    initializeImageUploader, initializeTabs, initializeModals, initializeMathInput,
+    initializeCombobox
 } from './ui.js';
 import { initializeQuickCalc } from './quick-calc.js';
 
@@ -482,8 +483,6 @@ function populateSelects() {
         { el: document.getElementById('material-back-panel'), type: 'Ván', optional: true, optionalText: 'Dùng chung ván chính' },
         { el: document.getElementById('material-edge'), type: 'Cạnh' },
         { el: document.getElementById('material-accessories'), type: 'Phụ kiện' },
-        { el: document.getElementById('qc-material-wood'), type: 'Ván' },
-        { el: document.getElementById('qc-material-wood-2'), type: 'Ván', optional: true, optionalText: '--- Không chọn ---' },
     ];
 
     standardSelects.forEach(s => {
@@ -504,32 +503,6 @@ function populateSelects() {
             }
         }
     });
-    
-    // Special handling for Quick Calc accessories dropdown to include edge banding
-    const qcAccessorySelect = document.getElementById('qc-material-accessories');
-    if (qcAccessorySelect) {
-        const currentVal = qcAccessorySelect.value;
-        qcAccessorySelect.innerHTML = ''; // Clear it
-
-        // Helper to create optgroup
-        const createOptgroup = (type, label) => {
-            const group = document.createElement('optgroup');
-            group.label = label;
-            localMaterials[type].forEach(m => group.appendChild(new Option(`${m.name} (${Number(m.price).toLocaleString('vi-VN')}đ)`, m.id)));
-            return group;
-        };
-
-        qcAccessorySelect.appendChild(createOptgroup('Phụ kiện', 'Phụ kiện'));
-        qcAccessorySelect.appendChild(createOptgroup('Cạnh', 'Nẹp Cạnh'));
-        
-        if (currentVal) {
-            // Try to set back the value
-            const optionExists = Array.from(qcAccessorySelect.options).some(opt => opt.value === currentVal);
-            if (optionExists) {
-                qcAccessorySelect.value = currentVal;
-            }
-        }
-    }
 }
 
 // --- Accessory Management ---

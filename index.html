@@ -269,8 +269,14 @@
                                     <input type="text" inputmode="decimal" id="qc-area" class="input-style" placeholder="Vd: 4.5">
                                 </div>
                                 <div>
-                                    <label for="qc-material-wood" class="form-label">Loại ván 1 (Chính)</label>
-                                    <select id="qc-material-wood" class="input-style"></select>
+                                    <label for="qc-material-wood-input" class="form-label">Loại ván 1 (Chính)</label>
+                                    <div id="qc-material-wood-combobox" class="combobox-container">
+                                        <input type="text" id="qc-material-wood-input" class="input-style combobox-input" placeholder="Tìm hoặc chọn loại ván...">
+                                        <input type="hidden" class="combobox-value">
+                                        <div class="combobox-options-wrapper">
+                                            <ul class="combobox-options"></ul>
+                                        </div>
+                                    </div>
                                     <small id="qc-sheet-count-display" class="form-text" style="margin-top: 0.5rem; text-align: right; color: var(--primary-color); font-weight: 500;"></small>
                                 </div>
                             </div>
@@ -280,8 +286,14 @@
                                     <input type="text" inputmode="decimal" id="qc-area-2" class="input-style" placeholder="Vd: 1.2">
                                 </div>
                                 <div>
-                                    <label for="qc-material-wood-2" class="form-label">Loại ván 2 (Phụ)</label>
-                                    <select id="qc-material-wood-2" class="input-style"></select>
+                                    <label for="qc-material-wood-2-input" class="form-label">Loại ván 2 (Phụ)</label>
+                                    <div id="qc-material-wood-2-combobox" class="combobox-container">
+                                        <input type="text" id="qc-material-wood-2-input" class="input-style combobox-input" placeholder="Tìm hoặc chọn loại ván...">
+                                        <input type="hidden" class="combobox-value">
+                                        <div class="combobox-options-wrapper">
+                                            <ul class="combobox-options"></ul>
+                                        </div>
+                                    </div>
                                     <small id="qc-sheet-count-display-2" class="form-text" style="margin-top: 0.5rem; text-align: right; color: var(--primary-color); font-weight: 500;"></small>
                                 </div>
                             </div>
@@ -290,8 +302,14 @@
                         <!-- Section 2: Accessories, Edge, and Other Costs -->
                         <div class="form-group">
                              <h3 class="result-box-header" style="margin-bottom: 1.5rem; font-size: 1.1rem;"><span class="step-circle">2</span>Phụ kiện, Nẹp & Chi phí Phát sinh</h3>
-                            <div class="accessory-adder">
-                                <select id="qc-material-accessories" class="input-style"></select>
+                            <div class="accessory-adder qc-accessory-adder">
+                                <div id="qc-material-accessories-combobox" class="combobox-container">
+                                    <input type="text" class="input-style combobox-input" placeholder="Tìm phụ kiện hoặc nẹp...">
+                                    <input type="hidden" class="combobox-value">
+                                    <div class="combobox-options-wrapper">
+                                        <ul class="combobox-options"></ul>
+                                    </div>
+                                </div>
                                 <input type="text" inputmode="decimal" id="qc-accessory-quantity" class="input-style accessory-qty" placeholder="SL / mét" value="1" min="1">
                                 <button id="qc-add-accessory-btn" class="btn btn-secondary accessory-add-btn"><i class="fas fa-plus"></i> Thêm</button>
                             </div>

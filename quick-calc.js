@@ -1,4 +1,5 @@
 // quick-calc.js
+import { initializeCombobox } from './ui.js';
 
 // Standard sheet area as a fallback, in m^2
 const STANDARD_SHEET_AREA = 1.22 * 2.44;
@@ -32,16 +33,18 @@ export function initializeQuickCalc(localMaterials, showToast) {
 
     // --- DOM Elements ---
     const qcAreaInput = document.getElementById('qc-area');
-    const qcMaterialWoodSelect = document.getElementById('qc-material-wood');
+    const qcMaterialWoodCombobox = document.getElementById('qc-material-wood-combobox');
     const qcSheetCountDisplay = document.getElementById('qc-sheet-count-display');
+    
     const qcArea2Input = document.getElementById('qc-area-2');
-    const qcMaterialWood2Select = document.getElementById('qc-material-wood-2');
+    const qcMaterialWood2Combobox = document.getElementById('qc-material-wood-2-combobox');
     const qcSheetCount2Display = document.getElementById('qc-sheet-count-display-2');
+    
     const qcInstallCostInput = document.getElementById('qc-install-cost');
     const qcProfitMarginInput = document.getElementById('qc-profit-margin');
 
     // Dynamic accessory/edge elements
-    const qcAccessorySelect = document.getElementById('qc-material-accessories');
+    const qcMaterialAccessoriesCombobox = document.getElementById('qc-material-accessories-combobox');
     const qcAccessoryQtyInput = document.getElementById('qc-accessory-quantity');
     const qcAddAccessoryBtn = document.getElementById('qc-add-accessory-btn');
     const qcAccessoriesList = document.getElementById('qc-accessories-list');
@@ -67,13 +70,13 @@ export function initializeQuickCalc(localMaterials, showToast) {
     /**
      * Calculates the number of sheets and total cost for a given material input group.
      * @param {HTMLInputElement} areaInput - The input element for area.
-     * @param {HTMLSelectElement} woodSelect - The select element for the material.
+     * @param {HTMLElement} woodCombobox - The container element for the combobox.
      * @param {HTMLElement} displayEl - The element to show the estimated sheet count.
      * @returns {number} The calculated cost for this wood type.
      */
-    function calculateSheetCost(areaInput, woodSelect, displayEl) {
+    function calculateSheetCost(areaInput, woodCombobox, displayEl) {
         const area = parseFloat(areaInput.value) || 0;
-        const woodId = woodSelect.value;
+        const woodId = woodCombobox.querySelector('.combobox-value').value;
         let cost = 0;
 
         if (area > 0 && woodId) {
@@ -97,8 +100,8 @@ export function initializeQuickCalc(localMaterials, showToast) {
      */
     function handleQuickCalculation() {
         // 1. Calculate Wood costs
-        const woodCost1 = calculateSheetCost(qcAreaInput, qcMaterialWoodSelect, qcSheetCountDisplay);
-        const woodCost2 = calculateSheetCost(qcArea2Input, qcMaterialWood2Select, qcSheetCount2Display);
+        const woodCost1 = calculateSheetCost(qcAreaInput, qcMaterialWoodCombobox, qcSheetCountDisplay);
+        const woodCost2 = calculateSheetCost(qcArea2Input, qcMaterialWood2Combobox, qcSheetCount2Display);
         const totalWoodCost = woodCost1 + woodCost2;
         
         // 2. Calculate dynamic accessory and edge costs
@@ -123,12 +126,38 @@ export function initializeQuickCalc(localMaterials, showToast) {
         document.getElementById('qc-estimated-profit-value').textContent = estimatedProfit.toLocaleString('vi-VN') + 'đ';
     }
 
-    // --- Event Listeners ---
+    // --- Event Listeners & Initialization ---
+
+    // Initialize Comboboxes
+    if (qcMaterialWoodCombobox) {
+        initializeCombobox(
+            qcMaterialWoodCombobox,
+            localMaterials['Ván'] || [],
+            () => handleQuickCalculation(),
+            { placeholder: "Tìm hoặc chọn loại ván chính..." }
+        );
+    }
+    if (qcMaterialWood2Combobox) {
+        initializeCombobox(
+            qcMaterialWood2Combobox,
+            localMaterials['Ván'] || [],
+            () => handleQuickCalculation(),
+            { placeholder: "Tìm hoặc chọn loại ván phụ...", allowEmpty: true, emptyOptionText: '--- Không sử dụng ván phụ ---' }
+        );
+    }
+    const allAddableItems = [...(localMaterials['Phụ kiện'] || []), ...(localMaterials['Cạnh'] || [])];
+    if (qcMaterialAccessoriesCombobox) {
+        initializeCombobox(
+            qcMaterialAccessoriesCombobox,
+            allAddableItems,
+            null, // No direct action on select, handled by 'add' button
+            { placeholder: "Tìm phụ kiện hoặc nẹp cạnh..." }
+        );
+    }
 
     // Listeners for standard inputs
     const inputsToTrack = [
-        qcAreaInput, qcMaterialWoodSelect, qcArea2Input, qcMaterialWood2Select,
-        qcInstallCostInput, qcProfitMarginInput
+        qcAreaInput, qcArea2Input, qcInstallCostInput, qcProfitMarginInput
     ];
     inputsToTrack.forEach(input => {
         if (input) {
@@ -139,7 +168,8 @@ export function initializeQuickCalc(localMaterials, showToast) {
     // Listeners for dynamic accessories and edges
     if (qcAddAccessoryBtn) {
         qcAddAccessoryBtn.addEventListener('click', () => {
-            const selectedId = qcAccessorySelect.value;
+            const selectedId = qcMaterialAccessoriesCombobox.querySelector('.combobox-value').value;
+            const inputField = qcMaterialAccessoriesCombobox.querySelector('.combobox-input');
             const quantity = parseFloat(qcAccessoryQtyInput.value) || 0;
     
             if (!selectedId || !quantity || quantity <= 0) {
@@ -147,10 +177,7 @@ export function initializeQuickCalc(localMaterials, showToast) {
                 return;
             }
 
-            // Search in both accessories and edges
-            const allAddableItems = [...localMaterials['Phụ kiện'], ...localMaterials['Cạnh']];
             const itemToAdd = allAddableItems.find(a => a.id === selectedId);
-
             if (!itemToAdd) return;
     
             const existing = qcAddedAccessories.find(a => a.id === selectedId);
@@ -162,8 +189,13 @@ export function initializeQuickCalc(localMaterials, showToast) {
             }
             
             renderQCAccessories();
-            handleQuickCalculation(); // Recalculate
+            handleQuickCalculation();
+            
+            // Clear combobox and quantity input
             qcAccessoryQtyInput.value = '1';
+            inputField.value = '';
+            qcMaterialAccessoriesCombobox.querySelector('.combobox-value').value = '';
+            inputField.placeholder = "Tìm phụ kiện hoặc nẹp cạnh...";
         });
     }
 
