@@ -217,6 +217,7 @@ function renderProductComponents() {
 function handleFormUpdate() {
     generateProductComponents();
     renderProductComponents();
+    update3DPreview();
 }
 
 
@@ -521,10 +522,9 @@ function resetMaterialForm() {
 }
 
 function populateComboboxes() {
-    // Combine all materials that can be added as accessories
+    // Combine materials for the general accessory adder (excluding edge banding)
     const allAccessoryMaterials = [
         ...localMaterials['Ván'],
-        ...localMaterials['Cạnh'],
         ...localMaterials['Phụ kiện'],
         ...localMaterials['Gia Công']
     ];
@@ -660,8 +660,7 @@ function clearInputs() {
     DOM.saveItemBtn.disabled = true;
     
     // Reset 3D viewer
-    const event = new Event('input');
-    DOM.itemLengthInput.dispatchEvent(event);
+    update3DPreview();
 }
 
 // --- Calculation Logic ---
@@ -690,34 +689,55 @@ async function runAICalculation() {
     DOM.aiLoadingPlaceholder.classList.remove('hidden');
     DOM.aiResultsContent.classList.add('hidden');
     
-    // The only thing we need from the AI is the optimized cutting layout for the main wood panels.
     const mainWoodPieces = getPanelPiecesForAI();
 
-    // If there are no pieces to cut, don't call the AI.
-    if(mainWoodPieces.length === 0) {
-        showToast("Không có chi tiết ván chính để phân tích.", "info");
-        calculationState = 'done'; // Treat as "done" but with an empty result
-        lastGeminiResult = { cuttingLayout: null }; // Set an empty result
-        recalculateFinalPrice(); // Calculate price without AI cutting data
-        DOM.aiLoadingPlaceholder.classList.add('hidden');
-        DOM.aiResultsContent.classList.remove('hidden');
+    // If there are no pieces to cut, still run for edge banding.
+    if(mainWoodPieces.length === 0 && productComponents.length === 0) {
+        showToast("Không có chi tiết nào để phân tích.", "info");
+        calculationState = 'idle'; 
         updateAnalyzeButton();
+        DOM.aiLoadingPlaceholder.classList.add('hidden');
+        DOM.aiResultsContent.add('hidden');
         return;
     }
 
+    const productInfoForAI = {
+        name: DOM.itemNameInput.value,
+        type: DOM.itemTypeSelect.value,
+        length: DOM.itemLengthInput.value,
+        width: DOM.itemWidthInput.value,
+        height: DOM.itemHeightInput.value,
+        compartments: DOM.itemCompartmentsInput.value,
+        description: DOM.productDescriptionInput.value
+    };
 
     const prompt = `
-    NHIỆM VỤ: Bạn là một trợ lý AI chuyên về tối ưu hóa cắt ván (2D bin packing) cho xưởng mộc.
+    NHIỆM VỤ: Bạn là một trợ lý AI chuyên nghiệp cho xưởng mộc, chuyên tối ưu hóa sản xuất và tính toán chi phí.
+    BỐI CẢNH: Người dùng đang thiết kế một sản phẩm nội thất.
     DỮ LIỆU ĐẦU VÀO:
-    - Danh sách các miếng ván cần cắt (JSON): ${JSON.stringify(mainWoodPieces.map(({type, ...rest}) => rest))}
-    HƯỚNG DẪN:
-    1.  **Sơ đồ cắt ván (Bin Packing):**
+    - Thông tin sản phẩm: ${JSON.stringify(productInfoForAI)}
+    - Danh sách các miếng ván chính cần cắt (JSON): ${JSON.stringify(mainWoodPieces.map(({type, ...rest}) => rest))}
+    - Toàn bộ danh sách chi tiết cấu thành (gồm cả ván hậu): ${JSON.stringify(productComponents)}
+
+    HƯỚNG DẪN THỰC HIỆN:
+    1.  **Sơ đồ cắt ván (Bin Packing) cho VÁN CHÍNH:**
+        - Chỉ sử dụng các miếng trong "Danh sách các miếng ván chính cần cắt". Nếu danh sách này trống, bỏ qua bước này.
         - Kích thước tấm ván tiêu chuẩn là 1220mm x 2440mm.
-        - Thực hiện thuật toán sắp xếp 2D để xếp các miếng ván đã cho vào số lượng tấm ván tiêu chuẩn ít nhất có thể.
+        - Thực hiện thuật toán sắp xếp 2D. Ưu tiên xếp các miếng ván theo chiều dọc (chiều cao của miếng ván song song với cạnh 2440mm của tấm ván).
+        - Cho phép xoay các miếng ván 90 độ NẾU việc đó giúp tối ưu hóa và giảm tổng số tấm ván cần dùng.
         - Trả về kết quả trong đối tượng JSON có tên "cuttingLayout".
-        - "totalSheetsUsed" phải là tổng số tấm ván cần thiết.
-        - "sheets" phải là một mảng, mỗi phần tử đại diện cho một tấm ván và chứa vị trí (x, y) của các miếng được xếp trên đó.
-    2.  **QUAN TRỌNG**: Chỉ trả về đối tượng JSON "cuttingLayout". Không thêm bất kỳ văn bản, giải thích hay chi phí nào khác.
+
+    2.  **Tính toán Dán Cạnh (Edge Banding):**
+        - Dựa vào "Toàn bộ danh sách chi tiết cấu thành" và "Thông tin sản phẩm" để xác định những cạnh nào cần dán nẹp.
+        - **Quy tắc:** Dán tất cả các cạnh lộ ra bên ngoài. KHÔNG dán các cạnh tiếp xúc với tường, sàn nhà, hoặc các tấm ván khác. Cánh tủ được dán cả 4 cạnh.
+        - Ví dụ cho tủ bếp dưới: không dán cạnh sau của đáy, nóc, hông. Không dán cạnh trên của hông (tiếp xúc với mặt đá). Không dán các cạnh của vách ngăn tiếp xúc với đáy, nóc, hậu.
+        - Tính tổng chiều dài (mm) của tất cả các cạnh cần dán.
+        - Trả về kết quả trong đối tượng JSON "edgeBanding".
+
+    3.  **ĐỊNH DẠNG ĐẦU RA (QUAN TRỌNG):**
+        - Chỉ trả về một đối tượng JSON duy nhất.
+        - Đối tượng JSON này phải chứa "cuttingLayout" và "edgeBanding".
+        - Không thêm bất kỳ văn bản, giải thích, hay ghi chú nào khác bên ngoài đối tượng JSON.
     `;
     
     try {
@@ -738,7 +758,7 @@ async function runAICalculation() {
             return;
         }
 
-        lastGeminiResult = data; // Should contain only cuttingLayout
+        lastGeminiResult = data;
         calculationState = 'done';
         
         const { cuttingLayout } = data;
@@ -817,7 +837,30 @@ function recalculateFinalPrice() {
         }
     }
     
-    // 3. All other accessories from the list
+    // 3. Edge Banding Cost (from AI)
+    const edgeBandingData = lastGeminiResult?.edgeBanding;
+    if (edgeBandingData && edgeBandingData.totalLength > 0) {
+        const edgeMaterial = allLocalMaterials.find(m => m.type === 'Cạnh');
+        if (edgeMaterial) {
+            // totalLength is in mm, price is per meter.
+            const lengthInMeters = edgeBandingData.totalLength / 1000;
+            const cost = lengthInMeters * edgeMaterial.price;
+            baseMaterialCost += cost;
+            costBreakdownItems.push({
+                name: `Nẹp cạnh: ${edgeMaterial.name}`,
+                cost: cost,
+                reason: `AI tính toán ${edgeBandingData.totalLength}mm (${lengthInMeters.toFixed(2)}m) x ${edgeMaterial.price.toLocaleString('vi-VN')}đ/m`
+            });
+        } else {
+             costBreakdownItems.push({
+                name: `Nẹp cạnh cần thiết`,
+                cost: 0,
+                reason: `AI tính toán ${edgeBandingData.totalLength}mm. Không tìm thấy vật tư loại 'Cạnh' trong kho để tính giá.`
+            });
+        }
+    }
+
+    // 4. All other accessories from the list
     addedAccessories.forEach(acc => {
         const material = allLocalMaterials.find(m => m.id === acc.id);
         if (!material) return;
@@ -949,6 +992,7 @@ DOM.saveItemBtn.addEventListener('click', async () => {
             components: productComponents // Save the components list
         },
         cuttingLayout: lastGeminiResult.cuttingLayout,
+        edgeBanding: lastGeminiResult.edgeBanding, // Save edge banding info
         finalPrices: lastGeminiResult.finalPrices, // Save the client-calculated prices and breakdown
         createdAt: serverTimestamp()
     };
@@ -1038,6 +1082,7 @@ function loadItemIntoForm(item) {
     // Reconstruct lastGeminiResult from saved data
     lastGeminiResult = {
         cuttingLayout: item.cuttingLayout,
+        edgeBanding: item.edgeBanding,
         finalPrices: item.finalPrices, 
     };
 
@@ -1066,8 +1111,8 @@ function loadItemIntoForm(item) {
     if (calculatorTabBtn) calculatorTabBtn.click();
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
-    const event = new Event('input');
-    DOM.itemLengthInput.dispatchEvent(event);
+    // Trigger form update to regenerate components and 3D view
+    handleFormUpdate();
 
     showToast('Đã tải dữ liệu dự án. Bạn có thể chỉnh sửa và phân tích lại.', 'info');
 }
@@ -1192,8 +1237,7 @@ async function handleImageAnalysis() {
         if (fieldsUpdated > 0) {
             showToast(`AI đã điền ${fieldsUpdated} thông số kích thước!`, 'success');
              // Trigger 3D viewer update and component generation
-            const event = new Event('input', { bubbles: true });
-            DOM.itemLengthInput.dispatchEvent(event);
+            handleFormUpdate();
         } else {
             showToast('Không tìm thấy kích thước nào trong ảnh. Vui lòng thử ảnh khác rõ ràng hơn.', 'info');
         }
@@ -1269,8 +1313,7 @@ async function handleAIConfig() {
         if (updatedFields > 0) {
             showToast(`AI đã điền ${updatedFields} thông tin sản phẩm!`, 'success');
             // Trigger 3D viewer update and component generation
-            const event = new Event('input', { bubbles: true });
-            DOM.itemLengthInput.dispatchEvent(event);
+            handleFormUpdate();
         } else {
             showToast('AI không thể trích xuất thông tin từ mô tả của bạn.', 'info');
         }
@@ -1286,46 +1329,109 @@ async function handleAIConfig() {
 DOM.aiConfigBtn.addEventListener('click', handleAIConfig);
 
 
-// --- New: 3D Viewer ---
-function initialize3DViewer() {
+// --- New: 3D Preview ---
+function update3DPreview() {
     const scene = DOM.viewer3dContainer.querySelector('.scene-3d');
-    const cube = DOM.viewer3dContainer.querySelector('.cube-3d');
+    if (!scene) return;
+    scene.innerHTML = '';
+
+    const l = Number(DOM.itemLengthInput.value) || 0;
+    const w = Number(DOM.itemWidthInput.value) || 0;
+    const h = Number(DOM.itemHeightInput.value) || 0;
+
+    if (l === 0 || w === 0 || h === 0 || productComponents.length === 0) {
+        return;
+    }
+
+    const productContainer = document.createElement('div');
+    productContainer.className = 'product-3d-container';
+
+    const maxDim = Math.max(l, w, h);
+    const scale = 180 / maxDim;
+    const t = 17;
+
+    const s_l = l * scale, s_w = w * scale, s_h = h * scale, s_t = t * scale;
+
+    productComponents.forEach(comp => {
+        if (comp.length <= 0 || comp.width <= 0 || comp.qty <= 0) return;
+
+        for (let i = 0; i < comp.qty; i++) {
+            const panel = document.createElement('div');
+            panel.className = 'component-3d-panel';
+            panel.dataset.label = `${comp.name}${comp.qty > 1 ? ` ${i + 1}` : ''}`;
+
+            let transforms = [];
+            let s_compW = comp.length * scale;
+            let s_compH = comp.width * scale;
+
+            switch (comp.name) {
+                case 'Hông Trái':
+                    transforms = [`translateX(${-s_l / 2 + s_t / 2}px)`, 'rotateY(90deg)'];
+                    s_compW = comp.length * scale; s_compH = comp.width * scale;
+                    break;
+                case 'Hông Phải':
+                    transforms = [`translateX(${s_l / 2 - s_t / 2}px)`, 'rotateY(90deg)'];
+                    s_compW = comp.length * scale; s_compH = comp.width * scale;
+                    break;
+                case 'Đáy':
+                    transforms = [`translateY(${s_h / 2 - s_t / 2}px)`, 'rotateX(90deg)'];
+                    s_compW = comp.length * scale; s_compH = comp.width * scale;
+                    break;
+                case 'Nóc':
+                    transforms = [`translateY(${-s_h / 2 + s_t / 2}px)`, 'rotateX(90deg)'];
+                    s_compW = comp.length * scale; s_compH = comp.width * scale;
+                    break;
+                case 'Hậu':
+                    transforms = [`translateZ(${-s_w / 2 + s_t / 2}px)`];
+                    s_compW = comp.length * scale; s_compH = comp.width * scale;
+                    break;
+                case 'Vách Ngăn':
+                    const compartmentWidth = s_l / (comp.qty + 1);
+                    transforms = [`translateX(${(i + 1) * compartmentWidth - s_l / 2}px)`];
+                    s_compW = comp.length * scale; s_compH = comp.width * scale;
+                    break;
+                case 'Cánh':
+                    const doorWidth = comp.length * scale;
+                    const totalDoorsWidth = doorWidth * comp.qty;
+                    const startX = -totalDoorsWidth / 2;
+                    transforms = [`translateX(${startX + i * doorWidth + doorWidth / 2}px)`, `translateZ(${s_w / 2}px)`];
+                    s_compW = comp.length * scale; s_compH = comp.width * scale;
+                    break;
+                case 'Đợt ngang trên':
+                     const yPos = -s_h / 2 + s_t / 2 + (i * (s_h - s_t - (comp.width*scale)));
+                     transforms = [`translateZ(${s_w / 2 - (comp.length*scale)/2}px)`, `translateY(${yPos}px)`];
+                     s_compW = comp.length * scale; s_compH = comp.width*scale;
+                     break;
+                default:
+                    transforms = ['translateZ(0)'];
+                    s_compW = comp.length * scale; s_compH = comp.width * scale;
+                    break;
+            }
+            panel.style.width = `${s_compW}px`;
+            panel.style.height = `${s_compH}px`;
+            panel.style.transform = transforms.join(' ');
+            productContainer.appendChild(panel);
+        }
+    });
+    scene.appendChild(productContainer);
+}
+
+
+function initialize3DPreview() {
+    const scene = DOM.viewer3dContainer.querySelector('.scene-3d');
     
     let mouseX = 0, mouseY = 0;
     let rotX = -20, rotY = -30;
     let isDragging = false;
 
-    function updateCubeDimensions() {
-        const length = Number(DOM.itemLengthInput.value) || 0; // Dài
-        const width = Number(DOM.itemWidthInput.value) || 0;  // Rộng
-        const height = Number(DOM.itemHeightInput.value) || 0; // Cao
-        
-        const maxDim = Math.max(length, width, height, 200);
-        const scale = 180 / maxDim; // Container size is ~200px
-        
-        // Dài (length) is mapped to width (--w)
-        // Rộng (width) is mapped to depth (--d)
-        const scaledW = length * scale;
-        const scaledD = width * scale;
-        const scaledH = height * scale;
-
-        cube.style.setProperty('--w', `${scaledW}px`);
-        cube.style.setProperty('--h', `${scaledH}px`);
-        cube.style.setProperty('--d', `${scaledD}px`);
-        
-        // Update labels
-        cube.querySelector('.cube-face--front').setAttribute('data-label', `D: ${length || 0} mm`);
-        cube.querySelector('.cube-face--right').setAttribute('data-label', `R: ${width || 0} mm`);
-        cube.querySelector('.cube-face--top').setAttribute('data-label', `C: ${height || 0} mm`);
-    }
-
     function onMouseMove(e) {
         if (!isDragging) return;
+        e.preventDefault();
         const dx = e.clientX - mouseX;
         const dy = e.clientY - mouseY;
         rotY += dx * 0.5;
         rotX -= dy * 0.5;
-        rotX = Math.max(-90, Math.min(90, rotX)); // Clamp vertical rotation
+        rotX = Math.max(-90, Math.min(90, rotX));
         scene.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
         mouseX = e.clientX;
         mouseY = e.clientY;
@@ -1339,22 +1445,19 @@ function initialize3DViewer() {
     }
 
     function onMouseUp() {
-        isDragging = false;
-        DOM.viewer3dContainer.style.cursor = 'grab';
+        if (isDragging) {
+            isDragging = false;
+            DOM.viewer3dContainer.style.cursor = 'grab';
+        }
     }
 
     DOM.viewer3dContainer.addEventListener('mousedown', onMouseDown);
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
-    DOM.viewer3dContainer.addEventListener('mouseleave', onMouseUp);
 
-    DOM.itemLengthInput.addEventListener('input', updateCubeDimensions);
-    DOM.itemWidthInput.addEventListener('input', updateCubeDimensions);
-    DOM.itemHeightInput.addEventListener('input', updateCubeDimensions);
-    
     // Initial setup
     scene.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
-    updateCubeDimensions();
+    update3DPreview();
 }
 
 
@@ -1372,7 +1475,7 @@ document.addEventListener('DOMContentLoaded', () => {
             DOM.imageAnalysisContainer.classList.add('hidden');
         }
     );
-    initialize3DViewer();
+    initialize3DPreview();
     initializeMathInput('.input-style[type="text"][inputmode="decimal"]');
     
     // Initialize main calculator comboboxes
@@ -1392,15 +1495,14 @@ document.addEventListener('DOMContentLoaded', () => {
         DOM.mainMaterialAccessoriesCombobox, 
         [], 
         null, 
-        { placeholder: "Tìm ván cánh, nẹp, phụ kiện..." }
+        { placeholder: "Tìm phụ kiện, gia công..." }
     );
 
     initializeQuickCalc(localMaterials, showToast);
 
     // --- Component Table Listeners ---
-    const formUpdateInputs = [DOM.itemLengthInput, DOM.itemWidthInput, DOM.itemHeightInput, DOM.itemCompartmentsInput];
+    const formUpdateInputs = [DOM.itemLengthInput, DOM.itemWidthInput, DOM.itemHeightInput, DOM.itemCompartmentsInput, DOM.itemTypeSelect];
     formUpdateInputs.forEach(input => input.addEventListener('input', handleFormUpdate));
-    DOM.itemTypeSelect.addEventListener('change', handleFormUpdate);
 
     DOM.componentsTableBody.addEventListener('change', e => {
         if (e.target.classList.contains('component-input')) {
@@ -1411,6 +1513,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (component) {
                 component[field] = (field === 'name') ? value : parseFloat(value) || 0;
                 component.isDefault = false; // Once edited, it's considered custom
+                update3DPreview(); // Update 3D view on component change
             }
         }
     });
@@ -1421,6 +1524,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const id = deleteBtn.dataset.id;
             productComponents = productComponents.filter(p => p.id !== id);
             renderProductComponents();
+            update3DPreview();
         }
     });
 
@@ -1434,6 +1538,7 @@ document.addEventListener('DOMContentLoaded', () => {
             isDefault: false
         });
         renderProductComponents();
+        update3DPreview();
     });
 
     // Initial population

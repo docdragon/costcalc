@@ -880,68 +880,36 @@ td button { transition: color 0.2s; }
 .scene-3d {
     transform-style: preserve-3d;
     transition: transform 0.1s linear;
-}
-.cube-3d {
-    --w: 100px; /* width */
-    --h: 150px; /* height */
-    --d: 50px;  /* depth */
-    width: var(--w);
-    height: var(--h);
-    position: relative;
-    transform-style: preserve-3d;
-    transform: translateZ(calc(var(--d) / -2));
-}
-.cube-face {
-    position: absolute;
     width: 100%;
     height: 100%;
-    background-color: hsla(225, 30%, 88%, 0.8);
-    border: 1px solid hsla(225, 30%, 65%, 1);
-    color: var(--text-dark);
-    font-size: 12px;
-    font-weight: 500;
     display: flex;
     align-items: center;
     justify-content: center;
 }
-.cube-face::before {
+.product-3d-container {
+    position: relative;
+    transform-style: preserve-3d;
+}
+.component-3d-panel {
+    position: absolute;
+    box-sizing: border-box;
+    background-color: hsla(225, 30%, 88%, 0.85);
+    border: 1px solid hsla(225, 30%, 65%, 1);
+    transform-origin: center center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dark);
+    font-size: 10px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+}
+.component-3d-panel::before {
     content: attr(data-label);
-    padding: 2px 5px;
-    background: rgba(255, 255, 255, 0.8);
+    padding: 1px 4px;
+    background: rgba(255, 255, 255, 0.7);
     border-radius: 3px;
-}
-
-.cube-face--front {
-    width: var(--w); height: var(--h);
-    transform: translateZ(calc(var(--d) / 2));
-}
-.cube-face--back {
-    width: var(--w); height: var(--h);
-    transform: rotateY(180deg) translateZ(calc(var(--d) / 2));
-}
-.cube-face--right {
-    width: var(--d); height: var(--h);
-    top: 0;
-    left: calc((var(--w) - var(--d)) / 2);
-    transform: rotateY(90deg) translateZ(calc(var(--w) / 2));
-}
-.cube-face--left {
-    width: var(--d); height: var(--h);
-    top: 0;
-    left: calc((var(--w) - var(--d)) / 2);
-    transform: rotateY(-90deg) translateZ(calc(var(--w) / 2));
-}
-.cube-face--top {
-    width: var(--w); height: var(--d);
-    left: 0;
-    top: calc((var(--h) - var(--d)) / 2);
-    transform: rotateX(90deg) translateZ(calc(var(--h) / 2));
-}
-.cube-face--bottom {
-    width: var(--w); height: var(--d);
-    left: 0;
-    top: calc((var(--h) - var(--d)) / 2);
-    transform: rotateX(-90deg) translateZ(calc(var(--h) / 2));
 }
 
 /* --- Pagination Controls --- */

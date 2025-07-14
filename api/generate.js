@@ -154,6 +154,14 @@ Ví dụ phản hồi: {\"length\": 1200, \"height\": 750}`;
                                 }
                             }
                         }
+                    },
+                    edgeBanding: {
+                        type: Type.OBJECT,
+                        properties: {
+                            totalLength: { type: Type.INTEGER, description: "Tổng chiều dài nẹp cạnh cần thiết, tính bằng mm." },
+                            reasoning: { type: Type.STRING, description: "Giải thích ngắn gọn về cách tính toán." }
+                        },
+                        required: ["totalLength"]
                     }
                 }
             };
