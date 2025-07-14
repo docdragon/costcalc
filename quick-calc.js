@@ -2,6 +2,7 @@
 import { initializeCombobox } from './ui.js';
 
 // --- Module-level state and initialization flag ---
+let localMaterialsStore = {}; // This will hold the up-to-date materials.
 let isQuickCalcInitialized = false;
 let qcAddedAccessories = [];
 let allAccessoryMaterials = []; // Combined list of accessories and edges
@@ -28,14 +29,16 @@ function parseSheetDimensions(material) {
 }
 
 /**
- * Updates the data sources for the comboboxes in the Quick Calc tab.
- * @param {object} localMaterials The application's material data store.
+ * Updates the data sources for the comboboxes and the internal material store.
+ * @param {object} newLocalMaterials The application's material data store.
  */
-export function updateQuickCalcMaterials(localMaterials) {
+export function updateQuickCalcMaterials(newLocalMaterials) {
+    localMaterialsStore = newLocalMaterials; // Update the module's store.
+
     if (!isQuickCalcInitialized) return;
 
     // Update the combined list for the accessory adder
-    allAccessoryMaterials = [...(localMaterials['Phụ kiện'] || []), ...(localMaterials['Cạnh'] || [])];
+    allAccessoryMaterials = [...(localMaterialsStore['Phụ kiện'] || []), ...(localMaterialsStore['Cạnh'] || [])];
 
     // Get combobox elements and call their update function
     const qcMaterialWoodCombobox = document.getElementById('qc-material-wood-combobox');
@@ -43,10 +46,10 @@ export function updateQuickCalcMaterials(localMaterials) {
     const qcMaterialAccessoriesCombobox = document.getElementById('qc-material-accessories-combobox');
 
     if (qcMaterialWoodCombobox && qcMaterialWoodCombobox.updateComboboxData) {
-        qcMaterialWoodCombobox.updateComboboxData(localMaterials['Ván'] || []);
+        qcMaterialWoodCombobox.updateComboboxData(localMaterialsStore['Ván'] || []);
     }
     if (qcMaterialWood2Combobox && qcMaterialWood2Combobox.updateComboboxData) {
-        qcMaterialWood2Combobox.updateComboboxData(localMaterials['Ván'] || []);
+        qcMaterialWood2Combobox.updateComboboxData(localMaterialsStore['Ván'] || []);
     }
     if (qcMaterialAccessoriesCombobox && qcMaterialAccessoriesCombobox.updateComboboxData) {
         qcMaterialAccessoriesCombobox.updateComboboxData(allAccessoryMaterials);
@@ -57,12 +60,14 @@ export function updateQuickCalcMaterials(localMaterials) {
 /**
  * Initializes the functionality for the Quick Calculator tab.
  * This should only be called once on DOMContentLoaded.
- * @param {object} localMaterials - A reference to the application's local materials store.
+ * @param {object} initialLocalMaterials - A reference to the application's local materials store.
  * @param {function} showToast - A function to display toast notifications.
  */
-export function initializeQuickCalc(localMaterials, showToast) {
+export function initializeQuickCalc(initialLocalMaterials, showToast) {
     if (isQuickCalcInitialized) return;
     isQuickCalcInitialized = true;
+
+    localMaterialsStore = initialLocalMaterials; // Set initial state
 
     // --- DOM Elements ---
     const qcAreaInput = document.getElementById('qc-area');
@@ -110,7 +115,7 @@ export function initializeQuickCalc(localMaterials, showToast) {
         const area = parseFloat(areaInput.value) || 0;
         const woodId = woodCombobox.querySelector('.combobox-value').value;
         let cost = 0;
-        const woodMaterials = localMaterials['Ván'] || [];
+        const woodMaterials = localMaterialsStore['Ván'] || []; // Use the module's store
 
         if (area > 0 && woodId) {
             const woodMaterial = woodMaterials.find(m => m.id === woodId);
@@ -173,7 +178,7 @@ export function initializeQuickCalc(localMaterials, showToast) {
     }
     
     // Call the updater to populate with any initial data that might exist
-    updateQuickCalcMaterials(localMaterials);
+    updateQuickCalcMaterials(localMaterialsStore);
 
     // Listeners for standard inputs
     const inputsToTrack = [ qcAreaInput, qcArea2Input, qcInstallCostInput, qcProfitMarginInput ];
