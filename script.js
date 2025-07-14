@@ -442,54 +442,86 @@ function resetMaterialForm() {
 }
 
 function populateSelects() {
-    // Define standard selects that are populated with a single material type
-    const standardSelects = [
-        { el: DOM.materialWoodSelect, type: 'Ván' },
-        { el: DOM.materialDoorSelect, type: 'Ván', optional: true, optionalText: 'Dùng chung ván chính' },
-        { el: DOM.materialBackPanelSelect, type: 'Ván', optional: true, optionalText: 'Dùng chung ván chính' },
-        { el: DOM.materialEdgeSelect, type: 'Cạnh' },
-        { el: DOM.materialAccessoriesSelect, type: 'Phụ kiện' },
-    ];
-
-    standardSelects.forEach(s => {
-        if (!s.el) return;
-        const currentVal = s.el.value;
-        s.el.innerHTML = '';
-
-        if (s.optional) {
-            s.el.add(new Option(s.optionalText, ''));
+    // Helper to populate a simple select
+    const populateSimpleSelect = (selectEl, type, optional, optionalText) => {
+        if (!selectEl) return;
+        const currentVal = selectEl.value;
+        selectEl.innerHTML = '';
+        if (optional) {
+            selectEl.add(new Option(optionalText, ''));
         }
-
-        localMaterials[s.type].forEach(m => s.el.add(new Option(`${m.name} (${Number(m.price).toLocaleString('vi-VN')}đ)`, m.id)));
+        localMaterials[type].forEach(m => selectEl.add(new Option(`${m.name} (${Number(m.price).toLocaleString('vi-VN')}đ)`, m.id)));
         
-        if (currentVal) {
-            const optionExists = Array.from(s.el.options).some(opt => opt.value === currentVal);
-            if (optionExists) {
-                s.el.value = currentVal;
-            }
+        // Restore selection
+        const optionExists = Array.from(selectEl.options).some(opt => opt.value === currentVal);
+        if (optionExists) {
+            selectEl.value = currentVal;
         }
-    });
+    };
+
+    // Populate standard selects
+    populateSimpleSelect(DOM.materialWoodSelect, 'Ván');
+    populateSimpleSelect(DOM.materialBackPanelSelect, 'Ván', true, 'Dùng chung ván chính');
+
+    // Populate the unified accessories select with optgroups
+    const accessoriesSelect = DOM.materialAccessoriesSelect;
+    if (accessoriesSelect) {
+        const currentVal = accessoriesSelect.value;
+        accessoriesSelect.innerHTML = ''; // Clear it
+
+        accessoriesSelect.add(new Option('Chọn vật tư (cánh, nẹp, phụ kiện...)', ''));
+
+        // Group materials by type
+        ['Ván', 'Cạnh', 'Phụ kiện', 'Gia Công'].forEach(type => {
+            const materialsOfType = localMaterials[type];
+            if (materialsOfType && materialsOfType.length > 0) {
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = type;
+                materialsOfType.forEach(m => {
+                    const option = new Option(`${m.name} (${Number(m.price).toLocaleString('vi-VN')}đ / ${m.unit})`, m.id);
+                    optgroup.appendChild(option);
+                });
+                accessoriesSelect.appendChild(optgroup);
+            }
+        });
+
+        if (currentVal) {
+            accessoriesSelect.value = currentVal;
+        }
+    }
 }
+
 
 // --- Accessory Management ---
 DOM.addAccessoryBtn.addEventListener('click', () => {
     const selectedId = DOM.materialAccessoriesSelect.value;
-    const quantity = parseInt(DOM.accessoryQuantityInput.value);
+    const quantity = parseFloat(DOM.accessoryQuantityInput.value);
 
-    if (!selectedId || !quantity || quantity <= 0) {
-        showToast('Vui lòng chọn phụ kiện và nhập số lượng hợp lệ.', 'error');
+    if (!selectedId) {
+        showToast('Vui lòng chọn một vật tư từ danh sách.', 'error');
         return;
     }
-    const accessory = localMaterials['Phụ kiện'].find(a => a.id === selectedId);
+    if (!quantity || quantity <= 0) {
+        showToast('Vui lòng nhập số lượng hợp lệ.', 'error');
+        return;
+    }
+
+    const material = allLocalMaterials.find(a => a.id === selectedId);
+     if (!material) {
+        showToast('Lỗi: Không tìm thấy vật tư đã chọn.', 'error');
+        return;
+    }
+
     const existing = addedAccessories.find(a => a.id === selectedId);
 
     if (existing) {
         existing.quantity += quantity;
     } else {
-        addedAccessories.push({ ...accessory, quantity });
+        addedAccessories.push({ ...material, quantity });
     }
     renderAccessories();
     DOM.accessoryQuantityInput.value = '1';
+    DOM.materialAccessoriesSelect.value = ''; // Reset select
 
     // Recalculate price if analysis is already done
     if (calculationState === 'done') {
@@ -503,7 +535,7 @@ function renderAccessories() {
         const li = document.createElement('li');
         li.dataset.id = acc.id;
         li.innerHTML = `
-            <span class="flex-grow">${acc.name}</span>
+            <span class="flex-grow">${acc.name} <span class="tag-type" style="font-size: 0.65rem; padding: 0.1rem 0.4rem; vertical-align: middle;">${acc.type}</span></span>
             <input type="text" inputmode="decimal" value="${acc.quantity}" min="1" class="input-style accessory-list-qty" data-id="${acc.id}">
             <span class="accessory-unit">${acc.unit}</span>
             <button class="remove-acc-btn" data-id="${acc.id}">&times;</button>
@@ -548,7 +580,6 @@ function clearInputs() {
     DOM.profitMarginInput.value = '50';
     DOM.laborCostInput.value = '0';
     DOM.itemCompartmentsInput.value = '1';
-    DOM.materialDoorSelect.value = ''; // Reset door material
     DOM.aiConfigPrompt.value = '';
     addedAccessories = [];
     renderAccessories();
@@ -603,17 +634,22 @@ async function runAICalculation() {
     };
 
     const mainWoodId = DOM.materialWoodSelect.value;
-    const doorWoodId = DOM.materialDoorSelect.value;
     const backPanelId = DOM.materialBackPanelSelect.value;
-    const edgeId = DOM.materialEdgeSelect.value;
 
     const mainWood = localMaterials['Ván'].find(m => m.id === mainWoodId);
-    const doorWood = localMaterials['Ván'].find(m => m.id === doorWoodId); 
     const backPanel = localMaterials['Ván'].find(m => m.id === backPanelId);
-    const edge = localMaterials['Cạnh'].find(m => m.id === edgeId);
+    
+    // Find door wood and edge from the accessories list
+    const doorWoodAccessory = addedAccessories.find(a => a.type === 'Ván');
+    const edgeAccessory = addedAccessories.find(a => a.type === 'Cạnh');
+
+    const doorWood = doorWoodAccessory ? allLocalMaterials.find(m => m.id === doorWoodAccessory.id) : null;
+    const edge = edgeAccessory ? allLocalMaterials.find(m => m.id === edgeAccessory.id) : null;
+    
+    const otherAccessories = addedAccessories.filter(a => a.type !== 'Ván' && a.type !== 'Cạnh');
 
     const allPieces = getPanelPieces();
-    const useSeparateDoorWood = !!doorWoodId && doorWood && doorWood.id !== mainWood.id;
+    const useSeparateDoorWood = !!doorWood;
 
     let mainWoodPieces = allPieces.filter(p => p.type === 'body');
     let doorPiecesForPrompt = [];
@@ -636,8 +672,8 @@ async function runAICalculation() {
     - Vật liệu VÁN CHÍNH (dùng cho Thùng): ${mainWood.name} (${mainWood.price} VND/${mainWood.unit})
     - Vật liệu VÁN CÁNH: ${useSeparateDoorWood ? `${doorWood.name} (${doorWood.price} VND/${doorWood.unit})` : 'Sử dụng chung vật liệu Ván Chính.'}
     - Vật liệu VÁN HẬU: ${backPanel ? `${backPanel.name} (${backPanel.price} VND/${backPanel.unit})` : 'Không có hoặc đã được gộp vào Ván Chính.'}
-    - Nẹp cạnh: ${edge.name} (${edge.price} VND/mét)
-    - Phụ kiện: ${addedAccessories.map(a => `${a.name} (SL: ${a.quantity}, Đơn giá: ${a.price})`).join(', ')}
+    - Nẹp cạnh: ${edge ? `${edge.name} (${edge.price} VND/mét)` : 'Không sử dụng.'}
+    - Phụ kiện: ${otherAccessories.length > 0 ? otherAccessories.map(a => `${a.name} (SL: ${a.quantity}, Đơn giá: ${a.price})`).join(', ') : 'Không có.'}
 
     DANH SÁCH CHI TIẾT VÀ VẬT LIỆU TƯƠNG ỨNG (Đây là bản bóc tách chi tiết đã được xử lý):
     - Chi tiết cắt từ VÁN CHÍNH: ${JSON.stringify(mainWoodPieces.map(({type, ...rest}) => rest))}
@@ -723,17 +759,19 @@ function recalculateFinalPrice() {
     // Calculate base cost of wood and edge from the AI's result
     const woodAndEdgeBaseCost = [...(woodCosts || []), ...(edgeCosts || [])].reduce((sum, item) => sum + (item.cost || 0), 0);
     
-    // Recalculate accessory costs based on the current client-side list
-    const currentAccessoryCostItems = addedAccessories.map(acc => {
-        const material = localMaterials['Phụ kiện'].find(m => m.id === acc.id);
-        const cost = material ? material.price * acc.quantity : 0;
-        return {
-            name: `${acc.name} (SL: ${acc.quantity})`,
-            cost: cost,
-            reason: `Đơn giá: ${material ? material.price.toLocaleString('vi-VN') : 0}đ`
-        };
+    // Recalculate costs for "true" accessories (not door panels or edges) based on the current client-side list
+    const currentRealAccessoryCostItems = addedAccessories
+        .filter(acc => acc.type === 'Phụ kiện' || acc.type === 'Gia Công')
+        .map(acc => {
+            const material = allLocalMaterials.find(m => m.id === acc.id);
+            const cost = material ? material.price * acc.quantity : 0;
+            return {
+                name: `${acc.name} (SL: ${acc.quantity})`,
+                cost: cost,
+                reason: `Đơn giá: ${material ? material.price.toLocaleString('vi-VN') : 0}đ`
+            };
     });
-    const currentAccessoryTotalCost = currentAccessoryCostItems.reduce((sum, item) => sum + item.cost, 0);
+    const currentAccessoryTotalCost = currentRealAccessoryCostItems.reduce((sum, item) => sum + item.cost, 0);
 
     const baseMaterialCost = woodAndEdgeBaseCost + currentAccessoryTotalCost;
     
@@ -750,12 +788,12 @@ function recalculateFinalPrice() {
     DOM.estimatedProfitValue.textContent = estimatedProfit.toLocaleString('vi-VN') + 'đ';
     DOM.priceSummaryContainer.classList.remove('hidden');
 
-    // Update the detailed cost breakdown view
-    const allCostsForDisplay = [...(woodCosts || []), ...(edgeCosts || []), ...currentAccessoryCostItems];
+    // Update the detailed cost breakdown view, combining AI results with client-side updates
+    const allCostsForDisplay = [...(woodCosts || []), ...(edgeCosts || []), ...currentRealAccessoryCostItems];
     renderCostBreakdown(allCostsForDisplay, DOM.costBreakdownContainer);
 
     // Update the lastGeminiResult object to reflect the current state for saving
-    lastGeminiResult.costBreakdown.accessoryCosts = currentAccessoryCostItems; // Update with latest
+    lastGeminiResult.costBreakdown.accessoryCosts = currentRealAccessoryCostItems; // Update with latest
     lastGeminiResult.finalPrices = { totalCost, suggestedPrice, estimatedProfit };
 }
 
@@ -782,9 +820,8 @@ DOM.analyzeBtn.addEventListener('click', async () => {
         return;
     }
      const mainWoodId = DOM.materialWoodSelect.value;
-    const edgeId = DOM.materialEdgeSelect.value;
-     if (!mainWoodId || !edgeId) {
-        showToast('Vui lòng chọn vật liệu Ván chính và Nẹp cạnh.', 'error');
+     if (!mainWoodId) {
+        showToast('Vui lòng chọn vật liệu Ván chính.', 'error');
         return;
     }
 
@@ -846,9 +883,7 @@ DOM.saveItemBtn.addEventListener('click', async () => {
             profitMargin: DOM.profitMarginInput.value,
             laborCost: DOM.laborCostInput.value,
             mainWoodId: DOM.materialWoodSelect.value,
-            doorWoodId: DOM.materialDoorSelect.value,
             backPanelId: DOM.materialBackPanelSelect.value,
-            edgeId: DOM.materialEdgeSelect.value,
             accessories: addedAccessories
         },
         ...lastGeminiResult,
@@ -916,9 +951,7 @@ function loadItemIntoForm(item) {
     DOM.laborCostInput.value = inputs.laborCost || '0';
 
     DOM.materialWoodSelect.value = inputs.mainWoodId || '';
-    DOM.materialDoorSelect.value = inputs.doorWoodId || '';
     DOM.materialBackPanelSelect.value = inputs.backPanelId || '';
-    DOM.materialEdgeSelect.value = inputs.edgeId || '';
     
     if (inputs.accessories && Array.isArray(inputs.accessories)) {
         addedAccessories = JSON.parse(JSON.stringify(inputs.accessories));
@@ -983,13 +1016,23 @@ function renderItemDetailsToModal(itemId) {
     DOM.viewItemTitle.textContent = `Chi tiết dự án: ${inputs.name || 'Không tên'}`;
     
     const mainWood = localMaterials['Ván'].find(m => m.id === inputs.mainWoodId)?.name || 'Không rõ';
-    const doorWood = localMaterials['Ván'].find(m => m.id === inputs.doorWoodId)?.name || 'Dùng ván chính';
     const backPanel = localMaterials['Ván'].find(m => m.id === inputs.backPanelId)?.name || 'Dùng ván chính';
-    const edge = localMaterials['Cạnh'].find(m => m.id === inputs.edgeId)?.name || 'Không rõ';
-
+    
+    let doorWood = 'Dùng ván chính';
+    let edge = 'Không sử dụng';
     let accessoriesHtml = 'Không có';
+
     if (inputs.accessories && inputs.accessories.length > 0) {
-        accessoriesHtml = '<ul>' + inputs.accessories.map(a => `<li>${a.name} (SL: ${a.quantity})</li>`).join('') + '</ul>';
+        const doorAcc = inputs.accessories.find(a => a.type === 'Ván');
+        if (doorAcc) doorWood = doorAcc.name;
+
+        const edgeAcc = inputs.accessories.find(a => a.type === 'Cạnh');
+        if (edgeAcc) edge = edgeAcc.name;
+
+        const otherAcc = inputs.accessories.filter(a => a.type !== 'Ván' && a.type !== 'Cạnh');
+        if (otherAcc.length > 0) {
+            accessoriesHtml = '<ul>' + otherAcc.map(a => `<li>${a.name} (SL: ${a.quantity})</li>`).join('') + '</ul>';
+        }
     }
 
     const allCosts = [

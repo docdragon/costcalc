@@ -29,8 +29,6 @@ export const profitMarginInput = document.getElementById('profit-margin');
 
 // Materials
 export const materialWoodSelect = document.getElementById('material-wood');
-export const materialDoorSelect = document.getElementById('material-door');
-export const materialEdgeSelect = document.getElementById('material-edge');
 export const materialBackPanelSelect = document.getElementById('material-back-panel');
 
 // Accessories

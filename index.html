@@ -109,24 +109,24 @@
                             </div>
                            
                             <div class="form-group">
-                                <label class="form-label">Vật liệu chính & Hậu tủ</label>
-                                <div class="grid-2-col" style="margin-bottom: 1rem;">
-                                    <div><label for="material-wood" class="sub-label">Ván chính (Thùng)</label><select id="material-wood" class="input-style"></select></div>
-                                    <div><label for="material-door" class="sub-label">Ván cánh (Để trống nếu dùng chung)</label><select id="material-door" class="input-style"></select></div>
-                                </div>
+                                <label class="form-label">Vật liệu ván chính</label>
                                 <div class="grid-2-col">
-                                    <div><label for="material-edge" class="sub-label">Nẹp cạnh</label><select id="material-edge" class="input-style"></select></div>
                                     <div>
-                                        <label for="material-back-panel" class="sub-label">Ván hậu tủ (Để trống nếu dùng chung)</label>
+                                        <label for="material-wood" class="sub-label">Ván chính (Thùng)</label>
+                                        <select id="material-wood" class="input-style"></select>
+                                    </div>
+                                    <div>
+                                        <label for="material-back-panel" class="sub-label">Ván hậu tủ (nếu khác ván chính)</label>
                                         <select id="material-back-panel" class="input-style"></select>
                                     </div>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label for="material-accessories" class="form-label">Phụ kiện & Vật tư khác</label>
+                                <label for="material-accessories" class="form-label">Vật tư phụ & Phụ kiện</label>
+                                <p class="form-text" style="margin-top: -0.25rem; margin-bottom: 0.75rem;">Thêm ván làm cánh, nẹp cạnh, hoặc các phụ kiện khác tại đây.</p>
                                 <div class="accessory-adder">
                                     <select id="material-accessories" class="input-style"></select>
-                                    <input type="text" inputmode="decimal" id="accessory-quantity" class="input-style accessory-qty" placeholder="SL" value="1" min="1">
+                                    <input type="text" inputmode="decimal" id="accessory-quantity" class="input-style accessory-qty" placeholder="SL / mét" value="1" min="1">
                                     <button id="add-accessory-btn" class="btn btn-secondary accessory-add-btn"><i class="fas fa-plus"></i> Thêm</button>
                                 </div>
                                 <ul id="accessories-list" class="accessory-list"></ul>
