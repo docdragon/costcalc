@@ -22,7 +22,6 @@ export const itemNameInput = document.getElementById('item-name');
 export const itemLengthInput = document.getElementById('item-length');
 export const itemWidthInput = document.getElementById('item-width');
 export const itemHeightInput = document.getElementById('item-height');
-export const itemCompartmentsInput = document.getElementById('item-compartments');
 export const itemTypeSelect = document.getElementById('item-type');
 export const laborCostInput = document.getElementById('labor-cost');
 export const profitMarginInput = document.getElementById('profit-margin');
@@ -30,6 +29,7 @@ export const profitMarginInput = document.getElementById('profit-margin');
 // Materials
 export const mainMaterialWoodCombobox = document.getElementById('main-material-wood-combobox');
 export const mainMaterialBackPanelCombobox = document.getElementById('main-material-back-panel-combobox');
+export const edgeMaterialCombobox = document.getElementById('edge-material-combobox');
 
 // NEW: Components
 export const componentsTableBody = document.getElementById('components-table-body');
@@ -98,6 +98,11 @@ export const pageInfo = document.getElementById('page-info');
 export const prevPageBtn = document.getElementById('prev-page-btn');
 export const nextPageBtn = document.getElementById('next-page-btn');
 export const cancelEditBtn = document.getElementById('cancel-edit-button');
+
+// --- Component Names (in Materials Tab) ---
+export const componentNameForm = document.getElementById('component-name-form');
+export const componentNamesTableBody = document.getElementById('component-names-table-body');
+export const cancelComponentNameEditBtn = document.getElementById('cancel-component-name-edit-btn');
 
 // --- Saved Projects Tab ---
 export const savedItemsTableBody = document.getElementById('saved-items-table-body');

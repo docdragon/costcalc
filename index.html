@@ -85,11 +85,10 @@
                                     <label for="item-name" class="form-label">Tên sản phẩm / dự án</label>
                                     <input type="text" id="item-name" class="input-style" placeholder="Vd: Tủ bếp dưới chân sắt">
                                 </div>
-                                <div class="grid-4-col">
+                                <div class="grid-3-col">
                                     <div><label for="item-length" class="form-label">Dài (mm)</label><input type="text" inputmode="decimal" id="item-length" class="input-style" placeholder="Vd: 2000"></div>
                                     <div><label for="item-width" class="form-label">Rộng (mm)</label><input type="text" inputmode="decimal" id="item-width" class="input-style" placeholder="Vd: 600"></div>
                                     <div><label for="item-height" class="form-label">Cao (mm)</label><input type="text" inputmode="decimal" id="item-height" class="input-style" placeholder="Vd: 850"></div>
-                                    <div><label for="item-compartments" class="form-label">Số khoang</label><input type="text" inputmode="decimal" id="item-compartments" class="input-style" value="1" min="1" placeholder="Vd: 2"></div>
                                 </div>
                                 <div class="form-group" style="margin-top: 1.25rem;">
                                     <label for="item-type" class="form-label">Loại sản phẩm</label>
@@ -157,8 +156,19 @@
                              <div class="form-section">
                                 <h3 class="form-section-header"><span class="step-circle">3</span>Phụ kiện & Chi phí Hoàn thiện</h3>
                                 <div class="form-group">
-                                    <label for="material-accessories" class="form-label">Vật tư phụ & Phụ kiện</label>
-                                    <p class="form-text" style="margin-top: -0.25rem; margin-bottom: 0.75rem;">Nẹp cạnh sẽ được AI tính tự động. Thêm các phụ kiện khác như bản lề, ray trượt tại đây.</p>
+                                    <label for="edge-material-input" class="form-label">Vật liệu nẹp cạnh</label>
+                                    <p class="form-text" style="margin-top: -0.25rem; margin-bottom: 0.75rem;">Chọn loại nẹp để AI tính toán chi phí dán cạnh tự động.</p>
+                                    <div id="edge-material-combobox" class="combobox-container">
+                                        <input type="text" id="edge-material-input" class="input-style combobox-input" placeholder="Tìm hoặc chọn loại nẹp...">
+                                        <input type="hidden" class="combobox-value">
+                                        <div class="combobox-options-wrapper">
+                                            <ul class="combobox-options"></ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="material-accessories" class="form-label">Vật tư phụ & Phụ kiện khác</label>
+                                    <p class="form-text" style="margin-top: -0.25rem; margin-bottom: 0.75rem;">Thêm các phụ kiện khác như bản lề, ray trượt tại đây. Chi phí nẹp cạnh được tính riêng ở trên.</p>
                                     <div class="accessory-adder">
                                         <div id="main-material-accessories-combobox" class="combobox-container">
                                             <input type="text" class="input-style combobox-input" placeholder="Tìm phụ kiện, gia công...">
@@ -491,6 +501,51 @@
                         <div class="icon-prompt"><i class="fas fa-boxes"></i></div>
                         <h3>Quản lý vật tư của bạn</h3>
                         <p>Vui lòng đăng nhập để thêm, sửa, xóa các loại vật tư cho xưởng của mình.</p>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 2rem;">
+                    <h2 class="card-header">Quản lý Tên Chi tiết Cấu thành</h2>
+                    <div class="content-wrapper component-names-content">
+                        <form id="component-name-form" class="material-form">
+                            <input type="hidden" id="component-name-id">
+                            <div class="grid-2-col">
+                                 <div>
+                                    <label for="component-name-input" class="form-label">Tên chi tiết</label>
+                                    <input type="text" id="component-name-input" class="input-style" placeholder="Vd: Hông Trái, Đáy, Nóc..." required>
+                                </div>
+                                <div>
+                                     <label for="component-name-notes" class="form-label">Ghi chú</label>
+                                     <input type="text" id="component-name-notes" class="input-style" placeholder="Tùy chọn">
+                                </div>
+                            </div>
+                            <div class="button-group" style="justify-content: flex-end;">
+                                <button type="button" id="cancel-component-name-edit-btn" class="btn btn-secondary hidden">Hủy</button>
+                                <button type="submit" class="btn btn-primary"><i class="fas fa-plus mr-2"></i> Thêm Tên</button>
+                            </div>
+                        </form>
+                        <div class="table-container">
+                            <h3 class="table-header">Danh sách Tên Chi tiết</h3>
+                            <div class="table-wrapper">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="th-style" style="width: 50%;">Tên</th>
+                                            <th class="th-style">Ghi chú</th>
+                                            <th class="th-style text-center">Thao tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="component-names-table-body">
+                                        <!-- JS will render here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="login-prompt-view">
+                        <div class="icon-prompt"><i class="fas fa-list-alt"></i></div>
+                        <h3>Tùy chỉnh danh sách chi tiết</h3>
+                        <p>Vui lòng đăng nhập để quản lý danh sách tên chi tiết của bạn.</p>
                     </div>
                 </div>
             </div>

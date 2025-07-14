@@ -62,7 +62,7 @@ export function updateUIVisibility(isLoggedIn, user) {
     DOM.loggedOutView.classList.toggle('hidden', isLoggedIn);
     DOM.userEmailDisplay.textContent = isLoggedIn ? (user.displayName || user.email) : '';
     
-    document.querySelectorAll('.calculator-form-content, .materials-form-content, .saved-items-content, .quick-calc-form-content').forEach(el => {
+    document.querySelectorAll('.calculator-form-content, .materials-form-content, .saved-items-content, .quick-calc-form-content, .component-names-content').forEach(el => {
         el.style.display = isLoggedIn ? 'block' : 'none';
     });
     document.querySelectorAll('.login-prompt-view').forEach(el => {
@@ -132,12 +132,11 @@ export function initializeTabs() {
 /**
  * Initializes a searchable combobox component.
  * @param {HTMLElement} container The container element for the combobox.
- * @param {Array<object>} optionsData Array of objects, e.g., [{id, name, price}]
+ * @param {Array<object>} optionsData Array of objects, e.g., [{id, name, price, unit}]
  * @param {function} onSelect Callback function when an option is selected.
  * @param {object} config Configuration options.
  */
 export function initializeCombobox(container, optionsData, onSelect, config = {}) {
-    // Prevent re-initializing listeners if called again on the same element
     if (container.dataset.comboboxInitialized) {
         if (container.updateComboboxData) {
             container.updateComboboxData(optionsData);
@@ -150,15 +149,14 @@ export function initializeCombobox(container, optionsData, onSelect, config = {}
     const optionsWrapper = container.querySelector('.combobox-options-wrapper');
     const optionsList = container.querySelector('.combobox-options');
 
-    let currentOptionsData = optionsData || []; // Store data locally
-    const { placeholder = "Chọn...", allowEmpty = false, emptyOptionText = "--- Không chọn ---" } = config;
+    let currentOptionsData = optionsData || [];
+    const { placeholder = "Chọn...", allowEmpty = false, emptyOptionText = "--- Không chọn ---", allowCustom = false } = config;
     if (placeholder) {
         input.placeholder = placeholder;
     }
 
     const renderOptions = (filterText = '') => {
         optionsList.innerHTML = '';
-        // Use the local, updatable data source
         let filteredOptions = currentOptionsData.filter(o => o.name.toLowerCase().includes(filterText.toLowerCase()));
 
         if (allowEmpty) {
@@ -176,10 +174,13 @@ export function initializeCombobox(container, optionsData, onSelect, config = {}
                 const li = document.createElement('li');
                 li.className = 'combobox-option';
                 li.dataset.id = option.id;
-                // Handle different types of items
-                const unit = option.unit || 'item';
-                const priceText = Number(option.price).toLocaleString('vi-VN');
-                li.textContent = `${option.name} (${priceText}đ / ${unit})`;
+                
+                let displayText = option.name;
+                if(option.price && option.unit) {
+                    const priceText = Number(option.price).toLocaleString('vi-VN');
+                    displayText += ` (${priceText}đ / ${option.unit})`;
+                }
+                li.textContent = displayText;
                 optionsList.appendChild(li);
             });
         }
@@ -198,23 +199,20 @@ export function initializeCombobox(container, optionsData, onSelect, config = {}
         }
     };
 
-    // Attach an update function to the container element itself
     container.updateComboboxData = (newOptions) => {
         currentOptionsData = newOptions || [];
-        // If the user is currently filtering, update the list in place
         if (optionsWrapper.classList.contains('show') || input.value) {
             renderOptions(input.value);
         }
     };
 
-    // Attach a function to programmatically set the value
     container.setValue = (id) => {
         valueInput.value = id;
         if (id) {
             const item = currentOptionsData.find(o => o.id === id);
             input.value = item ? item.name : '';
         } else {
-            input.value = ''; // Clear the input, placeholder will show.
+            input.value = '';
         }
     };
     
@@ -225,13 +223,27 @@ export function initializeCombobox(container, optionsData, onSelect, config = {}
     });
 
     input.addEventListener('input', () => {
-        valueInput.value = ''; // Clear value if user is typing
-        if (onSelect) onSelect(''); // Notify that value has been cleared
+        if (!allowCustom) {
+            valueInput.value = ''; 
+            if (onSelect) onSelect('');
+        }
         renderOptions(input.value);
         if (!optionsWrapper.classList.contains('show')) {
             optionsWrapper.classList.add('show');
-            document.addEventListener('click', handleClickOutside, true);
         }
+    });
+
+    // Handle losing focus - for custom values
+    input.addEventListener('blur', () => {
+        // A small delay to allow a click on an option to register before closing
+        setTimeout(() => {
+            closeDropdown();
+            // If custom values allowed, the input's text itself is the value
+            // and we need to trigger the change event on it for other listeners.
+            if (allowCustom) {
+                 input.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }, 150);
     });
 
     optionsList.addEventListener('click', (e) => {
@@ -241,61 +253,53 @@ export function initializeCombobox(container, optionsData, onSelect, config = {}
             const selectedItem = currentOptionsData.find(o => o.id === selectedId);
             
             valueInput.value = selectedId;
-            input.value = selectedItem ? selectedItem.name : optionEl.textContent; // Show clean name on select
+            input.value = selectedItem ? selectedItem.name : (allowEmpty && !selectedId ? '' : optionEl.textContent);
+            
             closeDropdown();
+            
             if (onSelect) {
                 onSelect(selectedId);
             }
+            // Trigger change event to ensure other listeners pick up the update
+            input.dispatchEvent(new Event('change', { bubbles: true }));
         }
     });
 
-    // Mark as initialized to prevent re-adding listeners
     container.dataset.comboboxInitialized = 'true';
     renderOptions();
 }
 
 /**
  * Safely evaluates a mathematical expression string.
- * @param {string} expr The expression to evaluate.
- * @returns {number|null} The result of the calculation or null if invalid.
  */
 function evaluateMathExpression(expr) {
-    // Allow numbers, whitespace, parentheses, and basic operators.
-    // This regex ensures no letters or other symbols can be injected.
     if (/[^0-9\s.()+\-*/]/.test(expr)) {
-        return null; // Invalid characters found
+        return null;
     }
     try {
-        // Use the Function constructor which is safer than eval.
-        // It executes in the global scope, not the local one.
         const result = new Function(`return ${expr}`)();
         if (typeof result === 'number' && isFinite(result)) {
             return result;
         }
-        return null; // Result is not a finite number (e.g., from '1/0')
+        return null;
     } catch (e) {
-        return null; // Syntax error in expression
+        return null;
     }
 }
 
 /**
  * Initializes number inputs to evaluate math expressions on Enter.
- * @param {string} selector CSS selector for the input elements.
  */
 export function initializeMathInput(selector) {
     document.body.addEventListener('keydown', e => {
-        // Use event delegation on the body for dynamically added inputs
         if (e.key === 'Enter' && e.target.matches(selector)) {
             const input = e.target;
-            e.preventDefault(); // Prevent form submission
+            e.preventDefault(); 
             const expression = input.value;
             const result = evaluateMathExpression(expression);
 
             if (result !== null) {
-                // Format result to avoid excessive decimals from floating point math
                 input.value = Number(result.toFixed(4)); 
-                // Dispatch an 'input' event to trigger any listeners
-                // that depend on this input's value changing.
                 input.dispatchEvent(new Event('input', { bubbles: true }));
             }
         }

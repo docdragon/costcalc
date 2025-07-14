@@ -40,16 +40,13 @@ body {
 .main-container { padding: 1.5rem 0; }
 .grid-layout { display: grid; grid-template-columns: 1fr; gap: 2rem; }
 @media (min-width: 1024px) {
-    .grid-layout { grid-template-columns: repeat(3, 1fr); }
-    .main-card { grid-column: span 2 / span 2; }
+    .grid-layout { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
     .sidebar-card { position: sticky; top: 7rem; align-self: start; }
 }
 .grid-2-col { display: grid; grid-template-columns: repeat(1, 1fr); gap: 1.25rem; }
 @media (min-width: 768px) { .grid-2-col { grid-template-columns: repeat(2, 1fr); } }
-.grid-3-col { display: grid; grid-template-columns: repeat(1, 1fr); gap: 1.25rem; }
-@media (min-width: 768px) { .grid-3-col { grid-template-columns: repeat(3, 1fr); } }
-.grid-4-col { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
-@media (min-width: 1024px) { .grid-4-col { grid-template-columns: repeat(4, 1fr); gap: 1.25rem; } }
+.grid-3-col { display: grid; grid-template-columns: repeat(1, 1fr); gap: 1rem; }
+@media (min-width: 768px) { .grid-3-col { grid-template-columns: repeat(3, 1fr); gap: 1.25rem; } }
 
 
 /* --- Header --- */
@@ -406,11 +403,19 @@ td button { transition: color 0.2s; }
 
 /* --- Component Table --- */
 .component-table td {
-    padding: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    vertical-align: top;
 }
 .component-table .input-style {
     padding: 0.4rem 0.6rem;
     font-size: 0.875rem;
+}
+.component-table .combobox-container {
+    min-height: 35px; /* Ensure row height is consistent */
+}
+.component-table .combobox-option {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
 }
 
 /* --- Material List Controls --- */
@@ -763,7 +768,7 @@ td button { transition: color 0.2s; }
 .toast--info .toast-icon { color: #17a2b8; }
 
 /* --- Login/Disabled Placeholders --- */
-.login-prompt-view, .calculator-form-content, .materials-form-content, .saved-items-content, .settings-form-content, .quick-calc-form-content {
+.login-prompt-view, .calculator-form-content, .materials-form-content, .saved-items-content, .settings-form-content, .quick-calc-form-content, .component-names-content {
     display: none;
 }
 .login-prompt-view { text-align: center; padding: 2.5rem 0; }
@@ -904,6 +909,7 @@ td button { transition: color 0.2s; }
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
+    backface-visibility: hidden;
 }
 .component-3d-panel::before {
     content: attr(data-label);

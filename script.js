@@ -18,11 +18,14 @@ import * as DOM from './dom.js';
 let currentUserId = null;
 let materialsCollectionRef = null;
 let savedItemsCollectionRef = null;
+let componentNamesCollectionRef = null;
 let unsubscribeMaterials = null; 
 let unsubscribeSavedItems = null;
+let unsubscribeComponentNames = null;
 let localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [], 'Gia Công': [] };
 let allLocalMaterials = []; // Flat array for filtering and sorting
 let localSavedItems = [];
+let localComponentNames = []; // For the new component name manager
 let lastGeminiResult = null;
 let addedAccessories = [];
 let productComponents = [];
@@ -44,10 +47,25 @@ const sampleMaterials = [
     { name: 'Tay nắm âm', type: 'Phụ kiện', price: 25000, unit: 'cái', notes: 'Màu đen' },
 ];
 
+const sampleComponentNames = [
+    { name: 'Hông Trái', notes: 'Vách bên trái tủ' },
+    { name: 'Hông Phải', notes: 'Vách bên phải tủ' },
+    { name: 'Đáy', notes: 'Tấm ván dưới cùng' },
+    { name: 'Nóc', notes: 'Tấm ván trên cùng' },
+    { name: 'Hậu', notes: 'Tấm ván phía sau' },
+    { name: 'Cánh Mở', notes: '' },
+    { name: 'Đợt Cố Định', notes: '' },
+    { name: 'Vách Ngăn', notes: 'Vách chia khoang' },
+];
+
 async function addSampleData(userId) {
     const materialsRef = collection(db, `users/${userId}/materials`);
     for (const material of sampleMaterials) {
         await addDoc(materialsRef, material);
+    }
+    const componentNamesRef = collection(db, `users/${userId}/componentNames`);
+    for (const name of sampleComponentNames) {
+        await addDoc(componentNamesRef, name);
     }
 }
 
@@ -60,7 +78,7 @@ async function checkAndAddSampleData(userId) {
         if (snapshot.empty) {
             console.log("No materials found for user, adding sample data.");
             await addSampleData(userId);
-            showToast('Đã thêm dữ liệu vật tư mẫu cho bạn!', 'info');
+            showToast('Đã thêm dữ liệu vật tư và chi tiết mẫu cho bạn!', 'info');
         }
     } catch (error) {
         console.error("Error checking/adding sample data:", error);
@@ -74,12 +92,14 @@ onAuthStateChanged(auth, async (user) => {
         currentUserId = user.uid;
         materialsCollectionRef = collection(db, `users/${currentUserId}/materials`);
         savedItemsCollectionRef = collection(db, `users/${currentUserId}/savedItems`);
+        componentNamesCollectionRef = collection(db, `users/${currentUserId}/componentNames`);
         await checkAndAddSampleData(currentUserId);
         listenForData();
     } else {
         currentUserId = null;
         if (unsubscribeMaterials) unsubscribeMaterials();
         if (unsubscribeSavedItems) unsubscribeSavedItems();
+        if (unsubscribeComponentNames) unsubscribeComponentNames();
         clearLocalData();
     }
     updateUIVisibility(loggedIn, user);
@@ -90,14 +110,17 @@ onAuthStateChanged(auth, async (user) => {
 function listenForData() {
     listenForMaterials();
     listenForSavedItems();
+    listenForComponentNames();
 }
 
 function clearLocalData() {
     localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [], 'Gia Công': [] };
     allLocalMaterials = [];
     localSavedItems = [];
+    localComponentNames = [];
     renderMaterials([]);
     renderSavedItems([]);
+    renderComponentNames([]);
     populateComboboxes();
     updateQuickCalcMaterials(localMaterials); // Clear quick calc comboboxes too
 }
@@ -125,6 +148,23 @@ function getSheetArea(material) {
     return STANDARD_SHEET_AREA_M2;
 }
 
+/**
+ * Parses board thickness from material name or notes.
+ * @param {object} material The material object.
+ * @returns {number} The thickness in mm.
+ */
+function getBoardThickness(material) {
+    const DEFAULT_THICKNESS = 17;
+    if (!material) return DEFAULT_THICKNESS;
+    const combinedText = `${material.name} ${material.notes || ''}`;
+    // Matches "17mm", "17ly", "17 mm" etc.
+    const match = combinedText.match(/(\d+)\s*(mm|ly|li)/i);
+    if (match && match[1]) {
+        return parseInt(match[1], 10);
+    }
+    return DEFAULT_THICKNESS;
+}
+
 
 // --- New: Component Management ---
 
@@ -135,7 +175,6 @@ function generateProductComponents() {
     const l = parseFloat(DOM.itemLengthInput.value) || 0;
     const w = parseFloat(DOM.itemWidthInput.value) || 0;
     const h = parseFloat(DOM.itemHeightInput.value) || 0;
-    const compartments = parseInt(DOM.itemCompartmentsInput.value, 10) || 1;
     const type = DOM.itemTypeSelect.value;
     
     const newComponents = [];
@@ -170,15 +209,6 @@ function generateProductComponents() {
             newComponents.push({ id: `comp_${Date.now()}_4`, name: 'Nóc', length: l, width: w, qty: 1, isDefault: true });
             break;
     }
-
-    // Dividers and Doors based on compartments
-    if (type.includes('tu-') && compartments > 1) {
-        newComponents.push({ id: `comp_${Date.now()}_6`, name: 'Vách Ngăn', length: w, width: h, qty: compartments - 1, isDefault: true });
-    }
-    if (type.includes('tu-') && compartments > 0) {
-        const doorWidth = Math.round(l / compartments);
-        newComponents.push({ id: `comp_${Date.now()}_7`, name: 'Cánh', length: doorWidth, width: h, qty: compartments, isDefault: true });
-    }
     
     // Merge with existing custom components
     const customComponents = productComponents.filter(p => !p.isDefault);
@@ -199,7 +229,13 @@ function renderProductComponents() {
         const tr = document.createElement('tr');
         tr.dataset.id = comp.id;
         tr.innerHTML = `
-            <td data-label="Tên Chi tiết"><input type="text" class="input-style component-input" data-field="name" value="${comp.name}"></td>
+            <td data-label="Tên Chi tiết">
+                 <div id="comp-name-combobox-${comp.id}" class="combobox-container component-combobox">
+                    <input type="text" class="input-style combobox-input component-input" data-field="name" placeholder="Chọn hoặc nhập..." value="${comp.name}">
+                    <input type="hidden" class="combobox-value">
+                    <div class="combobox-options-wrapper"><ul class="combobox-options"></ul></div>
+                </div>
+            </td>
             <td data-label="Dài (mm)"><input type="text" inputmode="decimal" class="input-style component-input" data-field="length" value="${comp.length}"></td>
             <td data-label="Rộng (mm)"><input type="text" inputmode="decimal" class="input-style component-input" data-field="width" value="${comp.width}"></td>
             <td data-label="SL"><input type="text" inputmode="decimal" class="input-style component-input" data-field="qty" value="${comp.qty}" style="max-width: 60px; text-align: center;"></td>
@@ -208,6 +244,25 @@ function renderProductComponents() {
             </td>
         `;
         DOM.componentsTableBody.appendChild(tr);
+
+        // Initialize the combobox for this new row
+        const comboboxContainer = tr.querySelector(`#comp-name-combobox-${comp.id}`);
+        if(comboboxContainer) {
+            initializeCombobox(
+                comboboxContainer, 
+                localComponentNames.map(c => ({ id: c.id, name: c.name, price: '', unit: ''})), // Adapt data for combobox
+                (selectedId) => {
+                    const selectedName = localComponentNames.find(c => c.id === selectedId)?.name;
+                    const component = productComponents.find(p => p.id === comp.id);
+                    if (component && selectedName) {
+                        component.name = selectedName;
+                        // The main input's change listener will handle the rest
+                    }
+                },
+                { placeholder: 'Chọn tên...', allowCustom: true }
+            );
+        }
+
     });
 }
 
@@ -223,22 +278,17 @@ function handleFormUpdate() {
 
 /**
  * Reads the component table and returns a list of pieces for AI analysis.
- * This function now replaces the old, static getPanelPieces.
  */
 function getPanelPiecesForAI() {
     const pieces = [];
     const backPanelId = DOM.mainMaterialBackPanelCombobox.querySelector('.combobox-value').value;
 
     productComponents.forEach(comp => {
-        // Exclude pieces that use the back panel material if it's specified separately.
-        // The AI's job is to optimize the MAIN wood. The back panel is calculated separately.
         if (comp.materialType === 'back' && backPanelId) {
-            return; // Skip this component for the AI prompt
+            return;
         }
 
-        // Add a piece for each quantity
         for (let i = 0; i < comp.qty; i++) {
-            // AI prompt needs width & height, which corresponds to our length & width
             const pieceName = `${comp.name}${comp.qty > 1 ? ` (${i + 1})` : ''}`;
             pieces.push({ name: pieceName, width: comp.length, height: comp.width });
         }
@@ -321,7 +371,6 @@ function renderCostBreakdown(breakdown, container) {
 function listenForMaterials() {
     if (unsubscribeMaterials) unsubscribeMaterials(); 
     unsubscribeMaterials = onSnapshot(materialsCollectionRef, snapshot => {
-        // Clear categorized object for dropdowns
         localMaterials['Ván'] = [];
         localMaterials['Cạnh'] = [];
         localMaterials['Phụ kiện'] = [];
@@ -334,12 +383,11 @@ function listenForMaterials() {
             }
         });
 
-        // Update the flat array used for the main list view
         allLocalMaterials = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        displayMaterials(); // Render with current filters/sort
-        populateComboboxes();  // Update all dropdowns in the app
-        updateQuickCalcMaterials(localMaterials); // Update Quick Calc comboboxes
+        displayMaterials(); 
+        populateComboboxes();
+        updateQuickCalcMaterials(localMaterials);
     }, console.error);
 }
 
@@ -352,7 +400,6 @@ function displayMaterials() {
     const filterText = DOM.materialFilterInput.value.toLowerCase().trim();
     const sortBy = DOM.materialSortSelect.value;
 
-    // 1. Filter
     if (filterText) {
         materialsToProcess = materialsToProcess.filter(m => 
             m.name.toLowerCase().includes(filterText) || 
@@ -360,7 +407,6 @@ function displayMaterials() {
         );
     }
 
-    // 2. Sort
     switch (sortBy) {
         case 'name-asc':
             materialsToProcess.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
@@ -379,7 +425,6 @@ function displayMaterials() {
             break;
     }
     
-    // 3. Paginate
     const totalItems = materialsToProcess.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
 
@@ -391,7 +436,6 @@ function displayMaterials() {
     const endIndex = startIndex + itemsPerPage;
     const paginatedItems = materialsToProcess.slice(startIndex, endIndex);
 
-    // 4. Render
     renderMaterials(paginatedItems);
     updatePaginationControls(totalPages);
 }
@@ -423,7 +467,6 @@ DOM.prevPageBtn.addEventListener('click', () => {
     }
 });
 DOM.nextPageBtn.addEventListener('click', () => {
-    // A check to prevent going beyond the actual last page if items were deleted.
     const totalPages = Math.ceil(allLocalMaterials.length / itemsPerPage) || 1;
     if (currentPage < totalPages) {
         currentPage++;
@@ -485,7 +528,6 @@ DOM.materialsTableBody.addEventListener('click', async e => {
     const deleteBtn = e.target.closest('.delete-btn');
     if (editBtn) {
         const id = editBtn.dataset.id;
-        // Use the flat array to find the material
         const material = allLocalMaterials.find(m => m.id === id);
         if (material) {
             DOM.materialForm['material-id'].value = id;
@@ -521,23 +563,116 @@ function resetMaterialForm() {
     DOM.cancelEditBtn.classList.add('hidden');
 }
 
+
+// --- Component Name Management ---
+function listenForComponentNames() {
+    if (unsubscribeComponentNames) unsubscribeComponentNames();
+    unsubscribeComponentNames = onSnapshot(componentNamesCollectionRef, snapshot => {
+        localComponentNames = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        localComponentNames.sort((a,b) => a.name.localeCompare(b.name, 'vi'));
+        renderComponentNames(localComponentNames);
+        renderProductComponents(); // Re-render table with new combobox options
+    }, console.error);
+}
+
+function renderComponentNames(names) {
+    DOM.componentNamesTableBody.innerHTML = '';
+    if (names.length === 0) {
+        DOM.componentNamesTableBody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 1rem; color: var(--text-light);">Chưa có tên chi tiết nào được tạo.</td></tr>`;
+        return;
+    }
+    names.forEach(cn => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td data-label="Tên">${cn.name}</td>
+            <td data-label="Ghi chú">${cn.notes || ''}</td>
+            <td data-label="Thao tác" class="text-center">
+                <button class="edit-cn-btn text-blue-500 hover:text-blue-700 mr-2" data-id="${cn.id}"><i class="fas fa-edit"></i></button>
+                <button class="delete-cn-btn text-red-500 hover:text-red-700" data-id="${cn.id}"><i class="fas fa-trash"></i></button>
+            </td>
+        `;
+        DOM.componentNamesTableBody.appendChild(tr);
+    });
+}
+
+DOM.componentNameForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentUserId) return;
+    const nameData = {
+        name: DOM.componentNameForm['component-name-input'].value,
+        notes: DOM.componentNameForm['component-name-notes'].value
+    };
+    const id = DOM.componentNameForm['component-name-id'].value;
+    try {
+        if (id) {
+            await updateDoc(doc(db, `users/${currentUserId}/componentNames`, id), nameData);
+            showToast('Cập nhật tên thành công!', 'success');
+        } else {
+            await addDoc(componentNamesCollectionRef, nameData);
+            showToast('Thêm tên thành công!', 'success');
+        }
+        resetComponentNameForm();
+    } catch (error) {
+        showToast('Đã có lỗi xảy ra.', 'error');
+        console.error("Error adding/updating component name:", error);
+    }
+});
+
+DOM.componentNamesTableBody.addEventListener('click', async (e) => {
+    const editBtn = e.target.closest('.edit-cn-btn');
+    const deleteBtn = e.target.closest('.delete-cn-btn');
+    if (editBtn) {
+        const id = editBtn.dataset.id;
+        const cn = localComponentNames.find(c => c.id === id);
+        if (cn) {
+            DOM.componentNameForm['component-name-id'].value = id;
+            DOM.componentNameForm['component-name-input'].value = cn.name;
+            DOM.componentNameForm['component-name-notes'].value = cn.notes;
+            DOM.componentNameForm.querySelector('button[type="submit"]').textContent = 'Cập nhật Tên';
+            DOM.cancelComponentNameEditBtn.classList.remove('hidden');
+        }
+    } else if (deleteBtn) {
+        const id = deleteBtn.dataset.id;
+        const confirmed = await showConfirm('Bạn có chắc chắn muốn xóa tên chi tiết này?');
+        if (confirmed) {
+            try {
+                await deleteDoc(doc(db, `users/${currentUserId}/componentNames`, id));
+                showToast('Xóa tên thành công.', 'success');
+            } catch (error) {
+                showToast('Lỗi khi xóa.', 'error');
+            }
+        }
+    }
+});
+
+DOM.cancelComponentNameEditBtn.addEventListener('click', resetComponentNameForm);
+
+function resetComponentNameForm() {
+    DOM.componentNameForm.reset();
+    DOM.componentNameForm['component-name-id'].value = '';
+    DOM.componentNameForm.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-plus mr-2"></i> Thêm Tên';
+    DOM.cancelComponentNameEditBtn.classList.add('hidden');
+}
+
+
 function populateComboboxes() {
-    // Combine materials for the general accessory adder (excluding edge banding)
     const allAccessoryMaterials = [
         ...localMaterials['Ván'],
         ...localMaterials['Phụ kiện'],
         ...localMaterials['Gia Công']
     ];
 
-    // Update main calculator comboboxes
-    if (DOM.mainMaterialWoodCombobox && DOM.mainMaterialWoodCombobox.updateComboboxData) {
+    if (DOM.mainMaterialWoodCombobox?.updateComboboxData) {
         DOM.mainMaterialWoodCombobox.updateComboboxData(localMaterials['Ván']);
     }
-    if (DOM.mainMaterialBackPanelCombobox && DOM.mainMaterialBackPanelCombobox.updateComboboxData) {
+    if (DOM.mainMaterialBackPanelCombobox?.updateComboboxData) {
         DOM.mainMaterialBackPanelCombobox.updateComboboxData(localMaterials['Ván']);
     }
-    if (DOM.mainMaterialAccessoriesCombobox && DOM.mainMaterialAccessoriesCombobox.updateComboboxData) {
+    if (DOM.mainMaterialAccessoriesCombobox?.updateComboboxData) {
         DOM.mainMaterialAccessoriesCombobox.updateComboboxData(allAccessoryMaterials);
+    }
+    if (DOM.edgeMaterialCombobox?.updateComboboxData) {
+        DOM.edgeMaterialCombobox.updateComboboxData(localMaterials['Cạnh']);
     }
 }
 
@@ -572,16 +707,10 @@ DOM.addAccessoryBtn.addEventListener('click', () => {
     renderAccessories();
     DOM.accessoryQuantityInput.value = '1';
     
-    // Reset combobox
     if (DOM.mainMaterialAccessoriesCombobox.setValue) {
         DOM.mainMaterialAccessoriesCombobox.setValue('');
-    } else { // Fallback
-        DOM.mainMaterialAccessoriesCombobox.querySelector('.combobox-input').value = '';
-        DOM.mainMaterialAccessoriesCombobox.querySelector('.combobox-value').value = '';
     }
 
-
-    // Recalculate price if analysis is already done
     if (calculationState === 'done') {
         recalculateFinalPrice();
     }
@@ -637,7 +766,6 @@ function clearInputs() {
     DOM.productDescriptionInput.value = '';
     DOM.profitMarginInput.value = '50';
     DOM.laborCostInput.value = '0';
-    DOM.itemCompartmentsInput.value = '1';
     DOM.aiConfigPrompt.value = '';
     
     addedAccessories = [];
@@ -653,13 +781,12 @@ function clearInputs() {
     // Reset comboboxes
     if (DOM.mainMaterialWoodCombobox.setValue) DOM.mainMaterialWoodCombobox.setValue('');
     if (DOM.mainMaterialBackPanelCombobox.setValue) DOM.mainMaterialBackPanelCombobox.setValue('');
+    if (DOM.edgeMaterialCombobox.setValue) DOM.edgeMaterialCombobox.setValue('');
 
-    // Reset UI
     updateAnalyzeButton();
     DOM.aiAnalysisSection.classList.add('hidden');
     DOM.saveItemBtn.disabled = true;
     
-    // Reset 3D viewer
     update3DPreview();
 }
 
@@ -691,7 +818,6 @@ async function runAICalculation() {
     
     const mainWoodPieces = getPanelPiecesForAI();
 
-    // If there are no pieces to cut, still run for edge banding.
     if(mainWoodPieces.length === 0 && productComponents.length === 0) {
         showToast("Không có chi tiết nào để phân tích.", "info");
         calculationState = 'idle'; 
@@ -707,7 +833,6 @@ async function runAICalculation() {
         length: DOM.itemLengthInput.value,
         width: DOM.itemWidthInput.value,
         height: DOM.itemHeightInput.value,
-        compartments: DOM.itemCompartmentsInput.value,
         description: DOM.productDescriptionInput.value
     };
 
@@ -729,8 +854,7 @@ async function runAICalculation() {
 
     2.  **Tính toán Dán Cạnh (Edge Banding):**
         - Dựa vào "Toàn bộ danh sách chi tiết cấu thành" và "Thông tin sản phẩm" để xác định những cạnh nào cần dán nẹp.
-        - **Quy tắc:** Dán tất cả các cạnh lộ ra bên ngoài. KHÔNG dán các cạnh tiếp xúc với tường, sàn nhà, hoặc các tấm ván khác. Cánh tủ được dán cả 4 cạnh.
-        - Ví dụ cho tủ bếp dưới: không dán cạnh sau của đáy, nóc, hông. Không dán cạnh trên của hông (tiếp xúc với mặt đá). Không dán các cạnh của vách ngăn tiếp xúc với đáy, nóc, hậu.
+        - **Quy tắc:** Một chi tiết ván sẽ được dán cả 4 cạnh. Tuy nhiên, những cạnh giao nhau hoặc tiếp xúc với các chi tiết khác (ví dụ: đáy, nóc, hậu) sẽ KHÔNG được dán. Cạnh tiếp xúc sàn nhà, tường, hoặc mặt đá bếp cũng không dán. Chỉ tính các cạnh có thể nhìn thấy hoặc chạm vào được ở sản phẩm cuối cùng. Cánh tủ luôn được dán cả 4 cạnh.
         - Tính tổng chiều dài (mm) của tất cả các cạnh cần dán.
         - Trả về kết quả trong đối tượng JSON "edgeBanding".
 
@@ -770,8 +894,8 @@ async function runAICalculation() {
             DOM.cuttingLayoutSection.classList.add('hidden');
         }
         
-        recalculateFinalPrice(); // Perform initial client-side price calculation
-        addDynamicPricingListeners(); // Add listeners for dynamic updates
+        recalculateFinalPrice();
+        addDynamicPricingListeners();
         
         DOM.saveItemBtn.disabled = false;
 
@@ -782,7 +906,7 @@ async function runAICalculation() {
         } else {
              showToast(`Lỗi khi phân tích: ${error.message}`, 'error');
         }
-        calculationState = 'idle'; // Revert state
+        calculationState = 'idle';
     } finally {
         DOM.aiLoadingPlaceholder.classList.add('hidden');
         DOM.aiResultsContent.classList.remove('hidden');
@@ -792,7 +916,6 @@ async function runAICalculation() {
 
 /**
  * Recalculates the final price based on the last AI analysis and current form inputs.
- * This is now the single source of truth for all pricing.
  */
 function recalculateFinalPrice() {
     if (calculationState !== 'done') return;
@@ -837,12 +960,13 @@ function recalculateFinalPrice() {
         }
     }
     
-    // 3. Edge Banding Cost (from AI)
+    // 3. Edge Banding Cost (from AI and selected material)
     const edgeBandingData = lastGeminiResult?.edgeBanding;
+    const edgeMaterialId = DOM.edgeMaterialCombobox.querySelector('.combobox-value').value;
+    const edgeMaterial = localMaterials['Cạnh'].find(m => m.id === edgeMaterialId);
+
     if (edgeBandingData && edgeBandingData.totalLength > 0) {
-        const edgeMaterial = allLocalMaterials.find(m => m.type === 'Cạnh');
         if (edgeMaterial) {
-            // totalLength is in mm, price is per meter.
             const lengthInMeters = edgeBandingData.totalLength / 1000;
             const cost = lengthInMeters * edgeMaterial.price;
             baseMaterialCost += cost;
@@ -855,7 +979,7 @@ function recalculateFinalPrice() {
              costBreakdownItems.push({
                 name: `Nẹp cạnh cần thiết`,
                 cost: 0,
-                reason: `AI tính toán ${edgeBandingData.totalLength}mm. Không tìm thấy vật tư loại 'Cạnh' trong kho để tính giá.`
+                reason: `AI tính ${edgeBandingData.totalLength}mm. Vui lòng chọn vật tư 'Nẹp cạnh' để tính giá.`
             });
         }
     }
@@ -885,16 +1009,13 @@ function recalculateFinalPrice() {
     const suggestedPrice = totalCost * (1 + profitMargin / 100);
     const estimatedProfit = suggestedPrice - totalCost;
     
-    // Update the summary cards
     DOM.totalCostValue.textContent = totalCost.toLocaleString('vi-VN') + 'đ';
     DOM.suggestedPriceValue.textContent = suggestedPrice.toLocaleString('vi-VN') + 'đ';
     DOM.estimatedProfitValue.textContent = estimatedProfit.toLocaleString('vi-VN') + 'đ';
     DOM.priceSummaryContainer.classList.remove('hidden');
 
-    // Update the detailed cost breakdown view
     renderCostBreakdown(costBreakdownItems, DOM.costBreakdownContainer);
 
-    // Update the lastGeminiResult object to store the calculated prices for saving
     if(!lastGeminiResult) lastGeminiResult = {};
     lastGeminiResult.finalPrices = { totalCost, suggestedPrice, estimatedProfit, costBreakdown: costBreakdownItems };
 }
@@ -906,9 +1027,7 @@ function addDynamicPricingListeners() {
     
     DOM.laborCostInput.addEventListener('input', recalculateFinalPrice);
     DOM.profitMarginInput.addEventListener('input', recalculateFinalPrice);
-    // Accessory changes are handled by their own listeners which now also call recalculateFinalPrice
-    // The combobox onSelect listeners also now call recalculateFinalPrice
-
+    
     dynamicListenersAdded = true;
 }
 
@@ -982,18 +1101,18 @@ DOM.saveItemBtn.addEventListener('click', async () => {
             width: DOM.itemWidthInput.value,
             height: DOM.itemHeightInput.value,
             type: DOM.itemTypeSelect.value,
-            compartments: DOM.itemCompartmentsInput.value,
             description: DOM.productDescriptionInput.value,
             profitMargin: DOM.profitMarginInput.value,
             laborCost: DOM.laborCostInput.value,
             mainWoodId: DOM.mainMaterialWoodCombobox.querySelector('.combobox-value').value,
             backPanelId: DOM.mainMaterialBackPanelCombobox.querySelector('.combobox-value').value,
+            edgeMaterialId: DOM.edgeMaterialCombobox.querySelector('.combobox-value').value,
             accessories: addedAccessories,
-            components: productComponents // Save the components list
+            components: productComponents
         },
         cuttingLayout: lastGeminiResult.cuttingLayout,
-        edgeBanding: lastGeminiResult.edgeBanding, // Save edge banding info
-        finalPrices: lastGeminiResult.finalPrices, // Save the client-calculated prices and breakdown
+        edgeBanding: lastGeminiResult.edgeBanding,
+        finalPrices: lastGeminiResult.finalPrices,
         createdAt: serverTimestamp()
     };
     
@@ -1038,10 +1157,6 @@ DOM.savedItemsTableBody.addEventListener('click', async e => {
 });
 
 
-/**
- * Loads a saved item's data back into the main calculator form.
- * @param {object} item The saved item object from Firestore.
- */
 function loadItemIntoForm(item) {
     clearInputs();
 
@@ -1052,7 +1167,6 @@ function loadItemIntoForm(item) {
     DOM.itemHeightInput.value = inputs.height || '';
     DOM.itemNameInput.value = inputs.name || '';
     DOM.itemTypeSelect.value = inputs.type || 'khac';
-    DOM.itemCompartmentsInput.value = inputs.compartments || '1';
     DOM.productDescriptionInput.value = inputs.description || '';
     DOM.profitMarginInput.value = inputs.profitMargin || '50';
     DOM.laborCostInput.value = inputs.laborCost || '0';
@@ -1063,23 +1177,23 @@ function loadItemIntoForm(item) {
     if (DOM.mainMaterialBackPanelCombobox.setValue) {
         DOM.mainMaterialBackPanelCombobox.setValue(inputs.backPanelId || '');
     }
+     if (DOM.edgeMaterialCombobox.setValue) {
+        DOM.edgeMaterialCombobox.setValue(inputs.edgeMaterialId || '');
+    }
     
     if (inputs.accessories && Array.isArray(inputs.accessories)) {
         addedAccessories = JSON.parse(JSON.stringify(inputs.accessories));
         renderAccessories();
     }
     
-    // Load components list
     if (inputs.components && Array.isArray(inputs.components)) {
         productComponents = JSON.parse(JSON.stringify(inputs.components));
-        renderProductComponents();
     } else {
-        // If old save format, generate them
-        handleFormUpdate();
+        generateProductComponents();
     }
+    renderProductComponents();
 
 
-    // Reconstruct lastGeminiResult from saved data
     lastGeminiResult = {
         cuttingLayout: item.cuttingLayout,
         edgeBanding: item.edgeBanding,
@@ -1094,7 +1208,7 @@ function loadItemIntoForm(item) {
         DOM.aiAnalysisSection.classList.remove('hidden');
         DOM.aiResultsContent.classList.remove('hidden');
 
-        recalculateFinalPrice(); // Recalculate and render prices and breakdown
+        recalculateFinalPrice();
         
         const { cuttingLayout } = lastGeminiResult;
         if (cuttingLayout) {
@@ -1111,17 +1225,12 @@ function loadItemIntoForm(item) {
     if (calculatorTabBtn) calculatorTabBtn.click();
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
-    // Trigger form update to regenerate components and 3D view
-    handleFormUpdate();
+    update3DPreview();
 
     showToast('Đã tải dữ liệu dự án. Bạn có thể chỉnh sửa và phân tích lại.', 'info');
 }
 
 
-/**
- * Renders the details of a saved item to a modal.
- * @param {string} itemId The ID of the item to render.
- */
 function renderItemDetailsToModal(itemId) {
     const item = localSavedItems.find(i => i.id === itemId);
     if (!item) {
@@ -1131,8 +1240,7 @@ function renderItemDetailsToModal(itemId) {
 
     const inputs = item.inputs || {};
     const finalPrices = item.finalPrices || {};
-    const costBreakdown = finalPrices.costBreakdown || item.costBreakdown?.woodCosts ? 
-        [...(item.costBreakdown.woodCosts || []), ...(item.costBreakdown.edgeCosts || []), ...(item.costBreakdown.accessoryCosts || [])] : []; // For backwards compatibility
+    const costBreakdown = finalPrices.costBreakdown || [];
     const cuttingLayout = item.cuttingLayout || {};
     
     DOM.viewItemTitle.textContent = `Chi tiết dự án: ${inputs.name || 'Không tên'}`;
@@ -1197,7 +1305,7 @@ function renderItemDetailsToModal(itemId) {
     openModal(DOM.viewItemModal);
 }
 
-// --- New: Image Dimension Analysis ---
+// --- Image Dimension Analysis ---
 async function handleImageAnalysis() {
     if (!uploadedImage) {
         showToast('Vui lòng tải lên một hình ảnh trước.', 'error');
@@ -1236,7 +1344,6 @@ async function handleImageAnalysis() {
 
         if (fieldsUpdated > 0) {
             showToast(`AI đã điền ${fieldsUpdated} thông số kích thước!`, 'success');
-             // Trigger 3D viewer update and component generation
             handleFormUpdate();
         } else {
             showToast('Không tìm thấy kích thước nào trong ảnh. Vui lòng thử ảnh khác rõ ràng hơn.', 'info');
@@ -1253,7 +1360,7 @@ async function handleImageAnalysis() {
 
 DOM.analyzeImageBtn.addEventListener('click', handleImageAnalysis);
 
-// --- New: AI Configuration from Text ---
+// --- AI Configuration from Text ---
 async function handleAIConfig() {
     const text = DOM.aiConfigPrompt.value.trim();
     if (!text) {
@@ -1284,14 +1391,12 @@ async function handleAIConfig() {
         if(data.height) { DOM.itemHeightInput.value = data.height; updatedFields++; }
         if(data.itemName) { DOM.itemNameInput.value = data.itemName; updatedFields++; }
         if(data.itemType) { DOM.itemTypeSelect.value = data.itemType; updatedFields++; }
-        if(data.compartments) { DOM.itemCompartmentsInput.value = data.compartments; updatedFields++; }
         
         if(data.materialName) {
             const allWood = localMaterials['Ván'];
             let bestMatch = null;
             let highestScore = 0;
 
-            // Simple fuzzy match
             allWood.forEach(wood => {
                 const name = wood.name.toLowerCase();
                 const aiName = data.materialName.toLowerCase();
@@ -1312,7 +1417,6 @@ async function handleAIConfig() {
         
         if (updatedFields > 0) {
             showToast(`AI đã điền ${updatedFields} thông tin sản phẩm!`, 'success');
-            // Trigger 3D viewer update and component generation
             handleFormUpdate();
         } else {
             showToast('AI không thể trích xuất thông tin từ mô tả của bạn.', 'info');
@@ -1329,7 +1433,7 @@ async function handleAIConfig() {
 DOM.aiConfigBtn.addEventListener('click', handleAIConfig);
 
 
-// --- New: 3D Preview ---
+// --- 3D Preview ---
 function update3DPreview() {
     const scene = DOM.viewer3dContainer.querySelector('.scene-3d');
     if (!scene) return;
@@ -1342,15 +1446,21 @@ function update3DPreview() {
     if (l === 0 || w === 0 || h === 0 || productComponents.length === 0) {
         return;
     }
+    
+    const mainWoodId = DOM.mainMaterialWoodCombobox.querySelector('.combobox-value').value;
+    const mainWoodMaterial = localMaterials['Ván'].find(m => m.id === mainWoodId);
+    const t = getBoardThickness(mainWoodMaterial); // Get dynamic thickness
 
     const productContainer = document.createElement('div');
     productContainer.className = 'product-3d-container';
 
     const maxDim = Math.max(l, w, h);
     const scale = 180 / maxDim;
-    const t = 17;
 
-    const s_l = l * scale, s_w = w * scale, s_h = h * scale, s_t = t * scale;
+    const s_l = l * scale;
+    const s_w = w * scale;
+    const s_h = h * scale;
+    const s_t = t * scale; // Scaled thickness
 
     productComponents.forEach(comp => {
         if (comp.length <= 0 || comp.width <= 0 || comp.qty <= 0) return;
@@ -1364,52 +1474,39 @@ function update3DPreview() {
             let s_compW = comp.length * scale;
             let s_compH = comp.width * scale;
 
+            // Positioning logic now accounts for thickness (t)
             switch (comp.name) {
                 case 'Hông Trái':
                     transforms = [`translateX(${-s_l / 2 + s_t / 2}px)`, 'rotateY(90deg)'];
-                    s_compW = comp.length * scale; s_compH = comp.width * scale;
+                    s_compW = w * scale; s_compH = h * scale;
                     break;
                 case 'Hông Phải':
                     transforms = [`translateX(${s_l / 2 - s_t / 2}px)`, 'rotateY(90deg)'];
-                    s_compW = comp.length * scale; s_compH = comp.width * scale;
+                    s_compW = w * scale; s_compH = h * scale;
                     break;
                 case 'Đáy':
                     transforms = [`translateY(${s_h / 2 - s_t / 2}px)`, 'rotateX(90deg)'];
-                    s_compW = comp.length * scale; s_compH = comp.width * scale;
+                    s_compW = l * scale; s_compH = w * scale;
                     break;
                 case 'Nóc':
                     transforms = [`translateY(${-s_h / 2 + s_t / 2}px)`, 'rotateX(90deg)'];
-                    s_compW = comp.length * scale; s_compH = comp.width * scale;
+                    s_compW = l * scale; s_compH = w * scale;
                     break;
                 case 'Hậu':
                     transforms = [`translateZ(${-s_w / 2 + s_t / 2}px)`];
-                    s_compW = comp.length * scale; s_compH = comp.width * scale;
+                    s_compW = l * scale; s_compH = h * scale;
                     break;
-                case 'Vách Ngăn':
-                    const compartmentWidth = s_l / (comp.qty + 1);
-                    transforms = [`translateX(${(i + 1) * compartmentWidth - s_l / 2}px)`];
-                    s_compW = comp.length * scale; s_compH = comp.width * scale;
-                    break;
-                case 'Cánh':
-                    const doorWidth = comp.length * scale;
-                    const totalDoorsWidth = doorWidth * comp.qty;
-                    const startX = -totalDoorsWidth / 2;
-                    transforms = [`translateX(${startX + i * doorWidth + doorWidth / 2}px)`, `translateZ(${s_w / 2}px)`];
-                    s_compW = comp.length * scale; s_compH = comp.width * scale;
-                    break;
-                case 'Đợt ngang trên':
-                     const yPos = -s_h / 2 + s_t / 2 + (i * (s_h - s_t - (comp.width*scale)));
-                     transforms = [`translateZ(${s_w / 2 - (comp.length*scale)/2}px)`, `translateY(${yPos}px)`];
-                     s_compW = comp.length * scale; s_compH = comp.width*scale;
-                     break;
-                default:
-                    transforms = ['translateZ(0)'];
-                    s_compW = comp.length * scale; s_compH = comp.width * scale;
+                // Default for custom components like 'Cánh', 'Vách ngăn'
+                default: 
+                    // Center the custom component for visualization
+                    transforms = [`translateZ(${s_w / 2 - s_t}px)`];
                     break;
             }
             panel.style.width = `${s_compW}px`;
             panel.style.height = `${s_compH}px`;
             panel.style.transform = transforms.join(' ');
+            // Give the panel visual thickness
+            panel.style.setProperty('--thickness', `${s_t}px`);
             productContainer.appendChild(panel);
         }
     });
@@ -1455,7 +1552,6 @@ function initialize3DPreview() {
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
 
-    // Initial setup
     scene.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
     update3DPreview();
 }
@@ -1478,30 +1574,29 @@ document.addEventListener('DOMContentLoaded', () => {
     initialize3DPreview();
     initializeMathInput('.input-style[type="text"][inputmode="decimal"]');
     
-    // Initialize main calculator comboboxes
     initializeCombobox(
-        DOM.mainMaterialWoodCombobox, 
-        [], 
-        () => { if (calculationState === 'done') recalculateFinalPrice(); }, 
+        DOM.mainMaterialWoodCombobox, [], 
+        () => { if (calculationState === 'done') recalculateFinalPrice(); update3DPreview(); }, 
         { placeholder: "Tìm hoặc chọn ván chính..." }
     );
     initializeCombobox(
-        DOM.mainMaterialBackPanelCombobox, 
-        [], 
+        DOM.mainMaterialBackPanelCombobox, [], 
         () => { if (calculationState === 'done') recalculateFinalPrice(); }, 
         { placeholder: "Tìm hoặc chọn ván hậu...", allowEmpty: true, emptyOptionText: 'Dùng chung ván chính' }
     );
     initializeCombobox(
-        DOM.mainMaterialAccessoriesCombobox, 
-        [], 
-        null, 
+        DOM.edgeMaterialCombobox, [], 
+        () => { if (calculationState === 'done') recalculateFinalPrice(); }, 
+        { placeholder: "Tìm hoặc chọn loại nẹp..." }
+    );
+    initializeCombobox(
+        DOM.mainMaterialAccessoriesCombobox, [], null, 
         { placeholder: "Tìm phụ kiện, gia công..." }
     );
 
     initializeQuickCalc(localMaterials, showToast);
 
-    // --- Component Table Listeners ---
-    const formUpdateInputs = [DOM.itemLengthInput, DOM.itemWidthInput, DOM.itemHeightInput, DOM.itemCompartmentsInput, DOM.itemTypeSelect];
+    const formUpdateInputs = [DOM.itemLengthInput, DOM.itemWidthInput, DOM.itemHeightInput, DOM.itemTypeSelect];
     formUpdateInputs.forEach(input => input.addEventListener('input', handleFormUpdate));
 
     DOM.componentsTableBody.addEventListener('change', e => {
@@ -1512,8 +1607,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const component = productComponents.find(p => p.id === id);
             if (component) {
                 component[field] = (field === 'name') ? value : parseFloat(value) || 0;
-                component.isDefault = false; // Once edited, it's considered custom
-                update3DPreview(); // Update 3D view on component change
+                component.isDefault = false;
+                update3DPreview();
             }
         }
     });
@@ -1541,6 +1636,5 @@ document.addEventListener('DOMContentLoaded', () => {
         update3DPreview();
     });
 
-    // Initial population
     handleFormUpdate();
 });
