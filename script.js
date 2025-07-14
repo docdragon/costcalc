@@ -11,42 +11,7 @@ import {
     initializeCombobox
 } from './ui.js';
 import { initializeQuickCalc, updateQuickCalcMaterials } from './quick-calc.js';
-
-// --- DOM Elements ---
-const logoutBtn = document.getElementById('logout-btn');
-const materialForm = document.getElementById('material-form');
-const materialsTableBody = document.getElementById('materials-table-body');
-const savedItemsTableBody = document.getElementById('saved-items-table-body');
-const analyzeBtn = document.getElementById('analyze-btn');
-const saveItemBtn = document.getElementById('save-item-btn');
-const addAccessoryBtn = document.getElementById('add-accessory-btn');
-const accessoriesList = document.getElementById('accessories-list');
-const priceSummaryContainer = document.getElementById('price-summary-container');
-const totalCostValue = document.getElementById('total-cost-value');
-const suggestedPriceValue = document.getElementById('suggested-price-value');
-const estimatedProfitValue = document.getElementById('estimated-profit-value');
-const costBreakdownContainer = document.getElementById('cost-breakdown-container');
-const chatForm = document.getElementById('chat-form');
-const chatInput = document.getElementById('chat-input');
-const sendChatBtn = document.getElementById('send-chat-btn');
-const chatMessagesContainer = document.getElementById('chat-messages');
-const viewItemModal = document.getElementById('view-item-modal');
-const viewItemTitle = document.getElementById('view-item-title');
-const viewItemContent = document.getElementById('view-item-content');
-const cuttingLayoutSection = document.getElementById('cutting-layout-section');
-let cuttingLayoutContainer = document.getElementById('cutting-layout-container');
-let cuttingLayoutSummary = document.getElementById('cutting-layout-summary');
-const aiAnalysisSection = document.getElementById('ai-analysis-section');
-const analyzeImageBtn = document.getElementById('analyze-image-btn');
-const imageAnalysisContainer = document.getElementById('image-analysis-container');
-const aiConfigPrompt = document.getElementById('ai-config-prompt');
-const aiConfigBtn = document.getElementById('ai-config-btn');
-const materialFilterInput = document.getElementById('material-filter-input');
-const materialSortSelect = document.getElementById('material-sort-select');
-const prevPageBtn = document.getElementById('prev-page-btn');
-const nextPageBtn = document.getElementById('next-page-btn');
-const pageInfo = document.getElementById('page-info');
-const paginationControls = document.getElementById('pagination-controls');
+import * as DOM from './dom.js';
 
 
 // --- Global State ---
@@ -76,7 +41,7 @@ const sampleMaterials = [
     { name: 'Nẹp chỉ PVC An Cường 1mm', type: 'Cạnh', price: 5000, unit: 'mét', notes: 'Cùng màu ván' },
     { name: 'Bản lề hơi Ivan giảm chấn', type: 'Phụ kiện', price: 15000, unit: 'cái', notes: 'Loại thẳng' },
     { name: 'Ray bi 3 tầng', type: 'Phụ kiện', price: 45000, unit: 'cặp', notes: 'Dài 45cm' },
-    { name: 'Cam chốt liên kết', type: 'Phụ kiện', price: 500, unit: 'bộ', notes: 'Chất lượng tốt' },
+    { name: 'Sơn PU Inchem', type: 'Gia Công', price: 250000, unit: 'm²', notes: 'Sơn hoàn thiện 2 mặt' },
     { name: 'Tay nắm âm', type: 'Phụ kiện', price: 25000, unit: 'cái', notes: 'Màu đen' },
 ];
 
@@ -120,8 +85,8 @@ onAuthStateChanged(auth, async (user) => {
         clearLocalData();
     }
     updateUIVisibility(loggedIn, user);
-    document.getElementById('initial-loader').style.opacity = '0';
-    setTimeout(() => document.getElementById('initial-loader').style.display = 'none', 300);
+    DOM.initialLoader.style.opacity = '0';
+    setTimeout(() => DOM.initialLoader.style.display = 'none', 300);
 });
 
 function listenForData() {
@@ -134,25 +99,24 @@ function clearLocalData() {
     allLocalMaterials = [];
     localSavedItems = [];
     chatHistory = [];
-    if (chatMessagesContainer) chatMessagesContainer.innerHTML = '';
+    if (DOM.chatMessagesContainer) DOM.chatMessagesContainer.innerHTML = '';
     renderMaterials([]);
     renderSavedItems([]);
     populateSelects();
     updateQuickCalcMaterials(localMaterials); // Clear quick calc comboboxes too
 }
 
-logoutBtn.addEventListener('click', () => signOut(auth));
+DOM.logoutBtn.addEventListener('click', () => signOut(auth));
 
 // --- Helper & Renderer Functions ---
 
 function getPanelPieces() {
-    const length = parseFloat(document.getElementById('item-length').value) || 0;
-    const width = parseFloat(document.getElementById('item-width').value) || 0;
-    const height = parseFloat(document.getElementById('item-height').value) || 0;
-    const compartments = parseInt(document.getElementById('item-compartments').value, 10) || 1;
-    const type = document.getElementById('item-type').value;
-    const backPanelSelect = document.getElementById('material-back-panel');
-    const usesMainWoodForBack = !backPanelSelect.value || backPanelSelect.value === '';
+    const length = parseFloat(DOM.itemLengthInput.value) || 0;
+    const width = parseFloat(DOM.itemWidthInput.value) || 0;
+    const height = parseFloat(DOM.itemHeightInput.value) || 0;
+    const compartments = parseInt(DOM.itemCompartmentsInput.value, 10) || 1;
+    const type = DOM.itemTypeSelect.value;
+    const usesMainWoodForBack = !DOM.materialBackPanelSelect.value || DOM.materialBackPanelSelect.value === '';
 
     const pieces = [];
     if (!length || !width || !height) return [];
@@ -310,8 +274,8 @@ function listenForMaterials() {
  */
 function displayMaterials() {
     let materialsToProcess = [...allLocalMaterials];
-    const filterText = materialFilterInput.value.toLowerCase().trim();
-    const sortBy = materialSortSelect.value;
+    const filterText = DOM.materialFilterInput.value.toLowerCase().trim();
+    const sortBy = DOM.materialSortSelect.value;
 
     // 1. Filter
     if (filterText) {
@@ -359,40 +323,44 @@ function displayMaterials() {
 
 function updatePaginationControls(totalPages) {
     if (totalPages <= 1) {
-        paginationControls.classList.add('hidden');
+        DOM.paginationControls.classList.add('hidden');
         return;
     }
-    paginationControls.classList.remove('hidden');
+    DOM.paginationControls.classList.remove('hidden');
 
-    pageInfo.textContent = `Trang ${currentPage} / ${totalPages}`;
-    prevPageBtn.disabled = currentPage === 1;
-    nextPageBtn.disabled = currentPage === totalPages;
+    DOM.pageInfo.textContent = `Trang ${currentPage} / ${totalPages}`;
+    DOM.prevPageBtn.disabled = currentPage === 1;
+    DOM.nextPageBtn.disabled = currentPage === totalPages;
 }
 
-materialFilterInput.addEventListener('input', () => {
+DOM.materialFilterInput.addEventListener('input', () => {
     currentPage = 1;
     displayMaterials();
 });
-materialSortSelect.addEventListener('change', () => {
+DOM.materialSortSelect.addEventListener('change', () => {
     currentPage = 1;
     displayMaterials();
 });
-prevPageBtn.addEventListener('click', () => {
+DOM.prevPageBtn.addEventListener('click', () => {
     if (currentPage > 1) {
         currentPage--;
         displayMaterials();
     }
 });
-nextPageBtn.addEventListener('click', () => {
-    currentPage++;
-    displayMaterials();
+DOM.nextPageBtn.addEventListener('click', () => {
+    // A check to prevent going beyond the actual last page if items were deleted.
+    const totalPages = Math.ceil(allLocalMaterials.length / itemsPerPage) || 1;
+    if (currentPage < totalPages) {
+        currentPage++;
+        displayMaterials();
+    }
 });
 
 
 function renderMaterials(materials) {
-    materialsTableBody.innerHTML = '';
+    DOM.materialsTableBody.innerHTML = '';
     if (materials.length === 0) {
-        materialsTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 1rem; color: var(--text-light);">Không tìm thấy vật tư nào.</td></tr>`;
+        DOM.materialsTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 1rem; color: var(--text-light);">Không tìm thấy vật tư nào.</td></tr>`;
         return;
     }
     materials.forEach(m => {
@@ -407,21 +375,21 @@ function renderMaterials(materials) {
                 <button class="delete-btn text-red-500 hover:text-red-700" data-id="${m.id}"><i class="fas fa-trash"></i></button>
             </td>
         `;
-        materialsTableBody.appendChild(tr);
+        DOM.materialsTableBody.appendChild(tr);
     });
 }
 
-materialForm.addEventListener('submit', async e => {
+DOM.materialForm.addEventListener('submit', async e => {
     e.preventDefault();
     if (!currentUserId) return;
     const materialData = {
-        name: materialForm['material-name'].value,
-        type: materialForm['material-type'].value,
-        price: Number(materialForm['material-price'].value),
-        unit: materialForm['material-unit'].value,
-        notes: materialForm['material-notes'].value
+        name: DOM.materialForm['material-name'].value,
+        type: DOM.materialForm['material-type'].value,
+        price: Number(DOM.materialForm['material-price'].value),
+        unit: DOM.materialForm['material-unit'].value,
+        notes: DOM.materialForm['material-notes'].value
     };
-    const id = materialForm['material-id'].value;
+    const id = DOM.materialForm['material-id'].value;
     try {
         if (id) {
             await updateDoc(doc(db, `users/${currentUserId}/materials`, id), materialData);
@@ -437,7 +405,7 @@ materialForm.addEventListener('submit', async e => {
     }
 });
 
-materialsTableBody.addEventListener('click', async e => {
+DOM.materialsTableBody.addEventListener('click', async e => {
     const editBtn = e.target.closest('.edit-btn');
     const deleteBtn = e.target.closest('.delete-btn');
     if (editBtn) {
@@ -445,14 +413,14 @@ materialsTableBody.addEventListener('click', async e => {
         // Use the flat array to find the material
         const material = allLocalMaterials.find(m => m.id === id);
         if (material) {
-            materialForm['material-id'].value = id;
-            materialForm['material-name'].value = material.name;
-            materialForm['material-type'].value = material.type;
-            materialForm['material-price'].value = material.price;
-            materialForm['material-unit'].value = material.unit;
-            materialForm['material-notes'].value = material.notes;
-            materialForm.querySelector('button[type="submit"]').textContent = 'Cập nhật Vật tư';
-            document.getElementById('cancel-edit-button').classList.remove('hidden');
+            DOM.materialForm['material-id'].value = id;
+            DOM.materialForm['material-name'].value = material.name;
+            DOM.materialForm['material-type'].value = material.type;
+            DOM.materialForm['material-price'].value = material.price;
+            DOM.materialForm['material-unit'].value = material.unit;
+            DOM.materialForm['material-notes'].value = material.notes;
+            DOM.materialForm.querySelector('button[type="submit"]').textContent = 'Cập nhật Vật tư';
+            DOM.cancelEditBtn.classList.remove('hidden');
         }
     } else if (deleteBtn) {
         const id = deleteBtn.dataset.id;
@@ -469,23 +437,23 @@ materialsTableBody.addEventListener('click', async e => {
     }
 });
 
-document.getElementById('cancel-edit-button').addEventListener('click', resetMaterialForm);
+DOM.cancelEditBtn.addEventListener('click', resetMaterialForm);
 
 function resetMaterialForm() {
-    materialForm.reset();
-    materialForm['material-id'].value = '';
-    materialForm.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-plus mr-2"></i> Thêm Vật tư';
-    document.getElementById('cancel-edit-button').classList.add('hidden');
+    DOM.materialForm.reset();
+    DOM.materialForm['material-id'].value = '';
+    DOM.materialForm.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-plus mr-2"></i> Thêm Vật tư';
+    DOM.cancelEditBtn.classList.add('hidden');
 }
 
 function populateSelects() {
     // Define standard selects that are populated with a single material type
     const standardSelects = [
-        { el: document.getElementById('material-wood'), type: 'Ván' },
-        { el: document.getElementById('material-door'), type: 'Ván', optional: true, optionalText: 'Dùng chung ván chính' },
-        { el: document.getElementById('material-back-panel'), type: 'Ván', optional: true, optionalText: 'Dùng chung ván chính' },
-        { el: document.getElementById('material-edge'), type: 'Cạnh' },
-        { el: document.getElementById('material-accessories'), type: 'Phụ kiện' },
+        { el: DOM.materialWoodSelect, type: 'Ván' },
+        { el: DOM.materialDoorSelect, type: 'Ván', optional: true, optionalText: 'Dùng chung ván chính' },
+        { el: DOM.materialBackPanelSelect, type: 'Ván', optional: true, optionalText: 'Dùng chung ván chính' },
+        { el: DOM.materialEdgeSelect, type: 'Cạnh' },
+        { el: DOM.materialAccessoriesSelect, type: 'Phụ kiện' },
     ];
 
     standardSelects.forEach(s => {
@@ -509,11 +477,9 @@ function populateSelects() {
 }
 
 // --- Accessory Management ---
-addAccessoryBtn.addEventListener('click', () => {
-    const accessorySelect = document.getElementById('material-accessories');
-    const quantityInput = document.getElementById('accessory-quantity');
-    const selectedId = accessorySelect.value;
-    const quantity = parseInt(quantityInput.value);
+DOM.addAccessoryBtn.addEventListener('click', () => {
+    const selectedId = DOM.materialAccessoriesSelect.value;
+    const quantity = parseInt(DOM.accessoryQuantityInput.value);
 
     if (!selectedId || !quantity || quantity <= 0) {
         showToast('Vui lòng chọn phụ kiện và nhập số lượng hợp lệ.', 'error');
@@ -528,7 +494,7 @@ addAccessoryBtn.addEventListener('click', () => {
         addedAccessories.push({ ...accessory, quantity });
     }
     renderAccessories();
-    quantityInput.value = '1';
+    DOM.accessoryQuantityInput.value = '1';
 
     // Recalculate price if analysis is already done
     if (calculationState === 'done') {
@@ -537,7 +503,7 @@ addAccessoryBtn.addEventListener('click', () => {
 });
 
 function renderAccessories() {
-    accessoriesList.innerHTML = '';
+    DOM.accessoriesList.innerHTML = '';
     addedAccessories.forEach(acc => {
         const li = document.createElement('li');
         li.dataset.id = acc.id;
@@ -547,11 +513,11 @@ function renderAccessories() {
             <span class="accessory-unit">${acc.unit}</span>
             <button class="remove-acc-btn" data-id="${acc.id}">&times;</button>
         `;
-        accessoriesList.appendChild(li);
+        DOM.accessoriesList.appendChild(li);
     });
 }
 
-accessoriesList.addEventListener('click', e => {
+DOM.accessoriesList.addEventListener('click', e => {
     if (e.target.classList.contains('remove-acc-btn')) {
         const id = e.target.dataset.id;
         addedAccessories = addedAccessories.filter(a => a.id !== id);
@@ -562,7 +528,7 @@ accessoriesList.addEventListener('click', e => {
     }
 });
 
-accessoriesList.addEventListener('change', e => {
+DOM.accessoriesList.addEventListener('change', e => {
     if (e.target.classList.contains('accessory-list-qty')) {
         const id = e.target.dataset.id;
         const newQuantity = parseInt(e.target.value);
@@ -579,46 +545,46 @@ accessoriesList.addEventListener('change', e => {
 });
 
 function clearInputs() {
-    document.getElementById('item-length').value = '';
-    document.getElementById('item-width').value = '';
-    document.getElementById('item-height').value = '';
-    document.getElementById('item-name').value = '';
-    document.getElementById('product-description').value = '';
-    document.getElementById('profit-margin').value = '50';
-    document.getElementById('labor-cost').value = '0';
-    document.getElementById('item-compartments').value = '1';
-    document.getElementById('material-door').value = ''; // Reset door material
-    aiConfigPrompt.value = '';
+    DOM.itemLengthInput.value = '';
+    DOM.itemWidthInput.value = '';
+    DOM.itemHeightInput.value = '';
+    DOM.itemNameInput.value = '';
+    DOM.productDescriptionInput.value = '';
+    DOM.profitMarginInput.value = '50';
+    DOM.laborCostInput.value = '0';
+    DOM.itemCompartmentsInput.value = '1';
+    DOM.materialDoorSelect.value = ''; // Reset door material
+    DOM.aiConfigPrompt.value = '';
     addedAccessories = [];
     renderAccessories();
     lastGeminiResult = null;
     calculationState = 'idle';
-    document.querySelector('#remove-image-btn').click();
+    DOM.removeImageBtn.click();
 
     // Reset UI
     updateAnalyzeButton();
-    aiAnalysisSection.classList.add('hidden');
-    saveItemBtn.disabled = true;
+    DOM.aiAnalysisSection.classList.add('hidden');
+    DOM.saveItemBtn.disabled = true;
     
     // Reset 3D viewer
     const event = new Event('input');
-    document.getElementById('item-length').dispatchEvent(event);
+    DOM.itemLengthInput.dispatchEvent(event);
 }
 
 // --- Calculation Logic ---
 function updateAnalyzeButton() {
     switch(calculationState) {
         case 'idle':
-            analyzeBtn.disabled = false;
-            analyzeBtn.innerHTML = '<i class="fas fa-microchip"></i> Phân tích & Báo giá với AI';
+            DOM.analyzeBtn.disabled = false;
+            DOM.analyzeBtn.innerHTML = '<i class="fas fa-microchip"></i> Phân tích & Báo giá với AI';
             break;
         case 'calculating':
-            analyzeBtn.disabled = true;
-            analyzeBtn.innerHTML = `<span class="spinner-sm"></span> Đang phân tích...`;
+            DOM.analyzeBtn.disabled = true;
+            DOM.analyzeBtn.innerHTML = `<span class="spinner-sm"></span> Đang phân tích...`;
             break;
         case 'done':
-            analyzeBtn.disabled = false;
-            analyzeBtn.innerHTML = '<i class="fas fa-redo"></i> Phân tích lại';
+            DOM.analyzeBtn.disabled = false;
+            DOM.analyzeBtn.innerHTML = '<i class="fas fa-redo"></i> Phân tích lại';
             break;
     }
 }
@@ -626,27 +592,25 @@ function updateAnalyzeButton() {
 async function runAICalculation() {
     calculationState = 'calculating';
     updateAnalyzeButton();
-    aiAnalysisSection.classList.remove('hidden');
+    DOM.aiAnalysisSection.classList.remove('hidden');
     
-    const loadingPlaceholder = document.getElementById('ai-loading-placeholder');
-    const resultsContent = document.getElementById('ai-results-content');
-    loadingPlaceholder.classList.remove('hidden');
-    resultsContent.classList.add('hidden');
+    DOM.aiLoadingPlaceholder.classList.remove('hidden');
+    DOM.aiResultsContent.classList.add('hidden');
     
     const inputs = {
-        name: document.getElementById('item-name').value,
-        length: document.getElementById('item-length').value,
-        width: document.getElementById('item-width').value,
-        height: document.getElementById('item-height').value,
-        type: document.getElementById('item-type').value,
-        compartments: document.getElementById('item-compartments').value,
-        description: document.getElementById('product-description').value,
+        name: DOM.itemNameInput.value,
+        length: DOM.itemLengthInput.value,
+        width: DOM.itemWidthInput.value,
+        height: DOM.itemHeightInput.value,
+        type: DOM.itemTypeSelect.value,
+        compartments: DOM.itemCompartmentsInput.value,
+        description: DOM.productDescriptionInput.value,
     };
 
-    const mainWoodId = document.getElementById('material-wood').value;
-    const doorWoodId = document.getElementById('material-door').value;
-    const backPanelId = document.getElementById('material-back-panel').value;
-    const edgeId = document.getElementById('material-edge').value;
+    const mainWoodId = DOM.materialWoodSelect.value;
+    const doorWoodId = DOM.materialDoorSelect.value;
+    const backPanelId = DOM.materialBackPanelSelect.value;
+    const edgeId = DOM.materialEdgeSelect.value;
 
     const mainWood = localMaterials['Ván'].find(m => m.id === mainWoodId);
     const doorWood = localMaterials['Ván'].find(m => m.id === doorWoodId); 
@@ -726,16 +690,16 @@ async function runAICalculation() {
         const { cuttingLayout } = data;
         
         if (cuttingLayout) {
-            renderCuttingLayout(cuttingLayout, cuttingLayoutContainer, cuttingLayoutSummary);
-            cuttingLayoutSection.classList.remove('hidden');
+            renderCuttingLayout(cuttingLayout, DOM.cuttingLayoutContainer, DOM.cuttingLayoutSummary);
+            DOM.cuttingLayoutSection.classList.remove('hidden');
         } else {
-            cuttingLayoutSection.classList.add('hidden');
+            DOM.cuttingLayoutSection.classList.add('hidden');
         }
         
         recalculateFinalPrice(); // Perform initial client-side price calculation
         addDynamicPricingListeners(); // Add listeners for dynamic updates
         
-        saveItemBtn.disabled = false;
+        DOM.saveItemBtn.disabled = false;
 
     } catch (error) {
         console.error("Error calling AI:", error);
@@ -746,8 +710,8 @@ async function runAICalculation() {
         }
         calculationState = 'idle'; // Revert state
     } finally {
-        loadingPlaceholder.classList.add('hidden');
-        resultsContent.classList.remove('hidden');
+        DOM.aiLoadingPlaceholder.classList.add('hidden');
+        DOM.aiResultsContent.classList.remove('hidden');
         updateAnalyzeButton();
     }
 }
@@ -778,22 +742,22 @@ function recalculateFinalPrice() {
 
     const baseMaterialCost = woodAndEdgeBaseCost + currentAccessoryTotalCost;
     
-    const laborCost = parseFloat(document.getElementById('labor-cost').value) || 0;
-    const profitMargin = parseFloat(document.getElementById('profit-margin').value) || 0;
+    const laborCost = parseFloat(DOM.laborCostInput.value) || 0;
+    const profitMargin = parseFloat(DOM.profitMarginInput.value) || 0;
     
     const totalCost = baseMaterialCost + laborCost;
     const suggestedPrice = totalCost * (1 + profitMargin / 100);
     const estimatedProfit = suggestedPrice - totalCost;
     
     // Update the summary cards
-    totalCostValue.textContent = totalCost.toLocaleString('vi-VN') + 'đ';
-    suggestedPriceValue.textContent = suggestedPrice.toLocaleString('vi-VN') + 'đ';
-    estimatedProfitValue.textContent = estimatedProfit.toLocaleString('vi-VN') + 'đ';
-    priceSummaryContainer.classList.remove('hidden');
+    DOM.totalCostValue.textContent = totalCost.toLocaleString('vi-VN') + 'đ';
+    DOM.suggestedPriceValue.textContent = suggestedPrice.toLocaleString('vi-VN') + 'đ';
+    DOM.estimatedProfitValue.textContent = estimatedProfit.toLocaleString('vi-VN') + 'đ';
+    DOM.priceSummaryContainer.classList.remove('hidden');
 
     // Update the detailed cost breakdown view
     const allCostsForDisplay = [...(woodCosts || []), ...(edgeCosts || []), ...currentAccessoryCostItems];
-    renderCostBreakdown(allCostsForDisplay, costBreakdownContainer);
+    renderCostBreakdown(allCostsForDisplay, DOM.costBreakdownContainer);
 
     // Update the lastGeminiResult object to reflect the current state for saving
     lastGeminiResult.costBreakdown.accessoryCosts = currentAccessoryCostItems; // Update with latest
@@ -803,30 +767,27 @@ function recalculateFinalPrice() {
 let dynamicListenersAdded = false;
 function addDynamicPricingListeners() {
     if (dynamicListenersAdded) return;
-
-    const laborCostInput = document.getElementById('labor-cost');
-    const profitMarginInput = document.getElementById('profit-margin');
     
-    laborCostInput.addEventListener('input', recalculateFinalPrice);
-    profitMarginInput.addEventListener('input', recalculateFinalPrice);
+    DOM.laborCostInput.addEventListener('input', recalculateFinalPrice);
+    DOM.profitMarginInput.addEventListener('input', recalculateFinalPrice);
     // Accessory changes are handled by their own listeners which now also call recalculateFinalPrice
 
     dynamicListenersAdded = true;
 }
 
 
-analyzeBtn.addEventListener('click', async () => {
+DOM.analyzeBtn.addEventListener('click', async () => {
     if (!currentUserId) {
         showToast('Vui lòng đăng nhập để sử dụng tính năng này.', 'error');
         return;
     }
-    const itemName = document.getElementById('item-name').value.trim();
+    const itemName = DOM.itemNameInput.value.trim();
     if (!itemName) {
         showToast('Vui lòng nhập Tên sản phẩm / dự án.', 'error');
         return;
     }
-     const mainWoodId = document.getElementById('material-wood').value;
-    const edgeId = document.getElementById('material-edge').value;
+     const mainWoodId = DOM.materialWoodSelect.value;
+    const edgeId = DOM.materialEdgeSelect.value;
      if (!mainWoodId || !edgeId) {
         showToast('Vui lòng chọn vật liệu Ván chính và Nẹp cạnh.', 'error');
         return;
@@ -846,9 +807,9 @@ function listenForSavedItems() {
 }
 
 function renderSavedItems(items) {
-    savedItemsTableBody.innerHTML = '';
+    DOM.savedItemsTableBody.innerHTML = '';
     if (items.length === 0) {
-        savedItemsTableBody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 1rem; color: var(--text-light);">Chưa có dự án nào được lưu.</td></tr>`;
+        DOM.savedItemsTableBody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 1rem; color: var(--text-light);">Chưa có dự án nào được lưu.</td></tr>`;
         return;
     }
     items.sort((a, b) => (b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0) - (a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0));
@@ -867,12 +828,12 @@ function renderSavedItems(items) {
                 <button class="delete-saved-item-btn text-red-500 hover:text-red-700" data-id="${item.id}" title="Xóa dự án"><i class="fas fa-trash"></i></button>
             </td>
         `;
-        savedItemsTableBody.appendChild(tr);
+        DOM.savedItemsTableBody.appendChild(tr);
     });
 }
 
 
-saveItemBtn.addEventListener('click', async () => {
+DOM.saveItemBtn.addEventListener('click', async () => {
     if (!currentUserId || !lastGeminiResult) {
         showToast('Không có kết quả phân tích để lưu.', 'error');
         return;
@@ -880,19 +841,19 @@ saveItemBtn.addEventListener('click', async () => {
     
     const itemData = {
         inputs: {
-            name: document.getElementById('item-name').value,
-            length: document.getElementById('item-length').value,
-            width: document.getElementById('item-width').value,
-            height: document.getElementById('item-height').value,
-            type: document.getElementById('item-type').value,
-            compartments: document.getElementById('item-compartments').value,
-            description: document.getElementById('product-description').value,
-            profitMargin: document.getElementById('profit-margin').value,
-            laborCost: document.getElementById('labor-cost').value,
-            mainWoodId: document.getElementById('material-wood').value,
-            doorWoodId: document.getElementById('material-door').value,
-            backPanelId: document.getElementById('material-back-panel').value,
-            edgeId: document.getElementById('material-edge').value,
+            name: DOM.itemNameInput.value,
+            length: DOM.itemLengthInput.value,
+            width: DOM.itemWidthInput.value,
+            height: DOM.itemHeightInput.value,
+            type: DOM.itemTypeSelect.value,
+            compartments: DOM.itemCompartmentsInput.value,
+            description: DOM.productDescriptionInput.value,
+            profitMargin: DOM.profitMarginInput.value,
+            laborCost: DOM.laborCostInput.value,
+            mainWoodId: DOM.materialWoodSelect.value,
+            doorWoodId: DOM.materialDoorSelect.value,
+            backPanelId: DOM.materialBackPanelSelect.value,
+            edgeId: DOM.materialEdgeSelect.value,
             accessories: addedAccessories
         },
         ...lastGeminiResult,
@@ -909,7 +870,7 @@ saveItemBtn.addEventListener('click', async () => {
     }
 });
 
-savedItemsTableBody.addEventListener('click', async e => {
+DOM.savedItemsTableBody.addEventListener('click', async e => {
     const viewBtn = e.target.closest('.view-btn');
     const deleteBtn = e.target.closest('.delete-saved-item-btn');
     const loadBtn = e.target.closest('.load-btn');
@@ -949,20 +910,20 @@ function loadItemIntoForm(item) {
 
     const inputs = item.inputs || {};
 
-    document.getElementById('item-length').value = inputs.length || '';
-    document.getElementById('item-width').value = inputs.width || '';
-    document.getElementById('item-height').value = inputs.height || '';
-    document.getElementById('item-name').value = inputs.name || '';
-    document.getElementById('item-type').value = inputs.type || 'khac';
-    document.getElementById('item-compartments').value = inputs.compartments || '1';
-    document.getElementById('product-description').value = inputs.description || '';
-    document.getElementById('profit-margin').value = inputs.profitMargin || '50';
-    document.getElementById('labor-cost').value = inputs.laborCost || '0';
+    DOM.itemLengthInput.value = inputs.length || '';
+    DOM.itemWidthInput.value = inputs.width || '';
+    DOM.itemHeightInput.value = inputs.height || '';
+    DOM.itemNameInput.value = inputs.name || '';
+    DOM.itemTypeSelect.value = inputs.type || 'khac';
+    DOM.itemCompartmentsInput.value = inputs.compartments || '1';
+    DOM.productDescriptionInput.value = inputs.description || '';
+    DOM.profitMarginInput.value = inputs.profitMargin || '50';
+    DOM.laborCostInput.value = inputs.laborCost || '0';
 
-    document.getElementById('material-wood').value = inputs.mainWoodId || '';
-    document.getElementById('material-door').value = inputs.doorWoodId || '';
-    document.getElementById('material-back-panel').value = inputs.backPanelId || '';
-    document.getElementById('material-edge').value = inputs.edgeId || '';
+    DOM.materialWoodSelect.value = inputs.mainWoodId || '';
+    DOM.materialDoorSelect.value = inputs.doorWoodId || '';
+    DOM.materialBackPanelSelect.value = inputs.backPanelId || '';
+    DOM.materialEdgeSelect.value = inputs.edgeId || '';
     
     if (inputs.accessories && Array.isArray(inputs.accessories)) {
         addedAccessories = JSON.parse(JSON.stringify(inputs.accessories));
@@ -977,21 +938,21 @@ function loadItemIntoForm(item) {
 
     if(lastGeminiResult) {
         calculationState = 'done';
-        saveItemBtn.disabled = false;
+        DOM.saveItemBtn.disabled = false;
         updateAnalyzeButton();
         
-        aiAnalysisSection.classList.remove('hidden');
-        document.getElementById('ai-results-content').classList.remove('hidden');
+        DOM.aiAnalysisSection.classList.remove('hidden');
+        DOM.aiResultsContent.classList.remove('hidden');
 
         const { cuttingLayout } = lastGeminiResult;
         
         recalculateFinalPrice(); // Recalculate and render prices and breakdown
         
         if (cuttingLayout) {
-            renderCuttingLayout(cuttingLayout, cuttingLayoutContainer, cuttingLayoutSummary);
-            cuttingLayoutSection.classList.remove('hidden');
+            renderCuttingLayout(cuttingLayout, DOM.cuttingLayoutContainer, DOM.cuttingLayoutSummary);
+            DOM.cuttingLayoutSection.classList.remove('hidden');
         } else {
-            cuttingLayoutSection.classList.add('hidden');
+            DOM.cuttingLayoutSection.classList.add('hidden');
         }
 
         addDynamicPricingListeners();
@@ -1002,7 +963,7 @@ function loadItemIntoForm(item) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
     const event = new Event('input');
-    document.getElementById('item-length').dispatchEvent(event);
+    DOM.itemLengthInput.dispatchEvent(event);
 
     showToast('Đã tải dữ liệu dự án. Bạn có thể chỉnh sửa và phân tích lại.', 'info');
 }
@@ -1024,7 +985,7 @@ function renderItemDetailsToModal(itemId) {
     const cuttingLayout = item.cuttingLayout || {};
     const finalPrices = item.finalPrices || {};
     
-    viewItemTitle.textContent = `Chi tiết dự án: ${inputs.name || 'Không tên'}`;
+    DOM.viewItemTitle.textContent = `Chi tiết dự án: ${inputs.name || 'Không tên'}`;
     
     const mainWood = localMaterials['Ván'].find(m => m.id === inputs.mainWoodId)?.name || 'Không rõ';
     const doorWood = localMaterials['Ván'].find(m => m.id === inputs.doorWoodId)?.name || 'Dùng ván chính';
@@ -1058,7 +1019,7 @@ function renderItemDetailsToModal(itemId) {
         layoutHtml = tempSummary.innerHTML + tempContainer.innerHTML;
     }
 
-    viewItemContent.innerHTML = `
+    DOM.viewItemContent.innerHTML = `
         <div class="final-price-recommendation">
             <div class="final-price-label">Giá Bán Đề Xuất</div>
             <div class="final-price-value">${(finalPrices.suggestedPrice || 0).toLocaleString('vi-VN')}đ</div>
@@ -1092,7 +1053,7 @@ function renderItemDetailsToModal(itemId) {
         </div>
     `;
 
-    openModal(viewItemModal);
+    openModal(DOM.viewItemModal);
 }
 
 // --- AI Chat ---
@@ -1101,7 +1062,7 @@ function initializeChat() {
         role: "system",
         parts: [{ text: "Bạn là một trợ lý AI hữu ích chuyên về ước tính chi phí sản xuất đồ gỗ. Hãy trả lời ngắn gọn, tập trung vào lĩnh vực làm đồ gỗ tại Việt Nam. Toàn bộ các câu trả lời phải bằng tiếng Việt. Cuộc hội thoại này sẽ được lưu lại để tham khảo trong tương lai." }],
     }];
-    chatMessagesContainer.innerHTML = ''; // Clear previous chat
+    DOM.chatMessagesContainer.innerHTML = ''; // Clear previous chat
     renderChatMessage('Chào bạn, tôi là trợ lý AI. Tôi có thể giúp gì cho bạn?', 'model');
 }
 
@@ -1124,8 +1085,8 @@ function renderChatMessage(message, role, options = {}) {
     
     messageWrapper.appendChild(icon);
     messageWrapper.appendChild(content);
-    chatMessagesContainer.appendChild(messageWrapper);
-    chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+    DOM.chatMessagesContainer.appendChild(messageWrapper);
+    DOM.chatMessagesContainer.scrollTop = DOM.chatMessagesContainer.scrollHeight;
     return messageWrapper;
 }
 
@@ -1161,7 +1122,7 @@ async function handleTextChat(message) {
             const chunk = decoder.decode(value, { stream: true });
             fullResponseText += chunk;
             aiMessageContent.innerHTML = renderFormattedText(fullResponseText);
-            chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+            DOM.chatMessagesContainer.scrollTop = DOM.chatMessagesContainer.scrollHeight;
         }
 
         if (fullResponseText) {
@@ -1174,23 +1135,23 @@ async function handleTextChat(message) {
     }
 }
 
-chatForm.addEventListener('submit', async (e) => {
+DOM.chatForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (isAwaitingChatResponse) return;
-    const message = chatInput.value.trim();
+    const message = DOM.chatInput.value.trim();
     if (!message) return;
     
     isAwaitingChatResponse = true;
-    chatInput.value = '';
-    chatInput.disabled = true;
-    sendChatBtn.disabled = true;
+    DOM.chatInput.value = '';
+    DOM.chatInput.disabled = true;
+    DOM.sendChatBtn.disabled = true;
 
     await handleTextChat(message);
 
     isAwaitingChatResponse = false;
-    chatInput.disabled = false;
-    sendChatBtn.disabled = false;
-    chatInput.focus();
+    DOM.chatInput.disabled = false;
+    DOM.sendChatBtn.disabled = false;
+    DOM.chatInput.focus();
 });
 
 // --- New: Image Dimension Analysis ---
@@ -1200,8 +1161,8 @@ async function handleImageAnalysis() {
         return;
     }
 
-    analyzeImageBtn.disabled = true;
-    analyzeImageBtn.innerHTML = `<span class="spinner-sm"></span> Đang phân tích ảnh...`;
+    DOM.analyzeImageBtn.disabled = true;
+    DOM.analyzeImageBtn.innerHTML = `<span class="spinner-sm"></span> Đang phân tích ảnh...`;
 
     try {
         const response = await fetch('/api/generate', {
@@ -1218,15 +1179,15 @@ async function handleImageAnalysis() {
 
         let fieldsUpdated = 0;
         if (data.length) {
-            document.getElementById('item-length').value = data.length;
+            DOM.itemLengthInput.value = data.length;
             fieldsUpdated++;
         }
         if (data.width) {
-            document.getElementById('item-width').value = data.width;
+            DOM.itemWidthInput.value = data.width;
             fieldsUpdated++;
         }
         if (data.height) {
-            document.getElementById('item-height').value = data.height;
+            DOM.itemHeightInput.value = data.height;
             fieldsUpdated++;
         }
 
@@ -1234,7 +1195,7 @@ async function handleImageAnalysis() {
             showToast(`AI đã điền ${fieldsUpdated} thông số kích thước!`, 'success');
              // Trigger 3D viewer update
             const event = new Event('input');
-            document.getElementById('item-length').dispatchEvent(event);
+            DOM.itemLengthInput.dispatchEvent(event);
         } else {
             showToast('Không tìm thấy kích thước nào trong ảnh. Vui lòng thử ảnh khác rõ ràng hơn.', 'info');
         }
@@ -1243,23 +1204,23 @@ async function handleImageAnalysis() {
         console.error("Error analyzing image dimensions:", error);
         showToast(`Lỗi phân tích ảnh: ${error.message}`, 'error');
     } finally {
-        analyzeImageBtn.disabled = false;
-        analyzeImageBtn.innerHTML = `<i class="fas fa-search-plus"></i><span>Phân tích Kích thước từ Ảnh</span>`;
+        DOM.analyzeImageBtn.disabled = false;
+        DOM.analyzeImageBtn.innerHTML = `<i class="fas fa-search-plus"></i><span>Phân tích Kích thước từ Ảnh</span>`;
     }
 }
 
-analyzeImageBtn.addEventListener('click', handleImageAnalysis);
+DOM.analyzeImageBtn.addEventListener('click', handleImageAnalysis);
 
 // --- New: AI Configuration from Text ---
 async function handleAIConfig() {
-    const text = aiConfigPrompt.value.trim();
+    const text = DOM.aiConfigPrompt.value.trim();
     if (!text) {
         showToast('Vui lòng nhập mô tả sản phẩm.', 'error');
         return;
     }
     
-    aiConfigBtn.disabled = true;
-    aiConfigBtn.innerHTML = `<span class="spinner-sm"></span> Đang phân tích...`;
+    DOM.aiConfigBtn.disabled = true;
+    DOM.aiConfigBtn.innerHTML = `<span class="spinner-sm"></span> Đang phân tích...`;
     
     try {
         const response = await fetch('/api/generate', {
@@ -1276,15 +1237,14 @@ async function handleAIConfig() {
         
         let updatedFields = 0;
         
-        if(data.length) { document.getElementById('item-length').value = data.length; updatedFields++; }
-        if(data.width) { document.getElementById('item-width').value = data.width; updatedFields++; }
-        if(data.height) { document.getElementById('item-height').value = data.height; updatedFields++; }
-        if(data.itemName) { document.getElementById('item-name').value = data.itemName; updatedFields++; }
-        if(data.itemType) { document.getElementById('item-type').value = data.itemType; updatedFields++; }
-        if(data.compartments) { document.getElementById('item-compartments').value = data.compartments; updatedFields++; }
+        if(data.length) { DOM.itemLengthInput.value = data.length; updatedFields++; }
+        if(data.width) { DOM.itemWidthInput.value = data.width; updatedFields++; }
+        if(data.height) { DOM.itemHeightInput.value = data.height; updatedFields++; }
+        if(data.itemName) { DOM.itemNameInput.value = data.itemName; updatedFields++; }
+        if(data.itemType) { DOM.itemTypeSelect.value = data.itemType; updatedFields++; }
+        if(data.compartments) { DOM.itemCompartmentsInput.value = data.compartments; updatedFields++; }
         
         if(data.materialName) {
-            const materialSelect = document.getElementById('material-wood');
             const allWood = localMaterials['Ván'];
             let bestMatch = null;
             let highestScore = 0;
@@ -1303,7 +1263,7 @@ async function handleAIConfig() {
             });
 
             if (bestMatch) {
-                materialSelect.value = bestMatch;
+                DOM.materialWoodSelect.value = bestMatch;
                 updatedFields++;
             }
         }
@@ -1312,7 +1272,7 @@ async function handleAIConfig() {
             showToast(`AI đã điền ${updatedFields} thông tin sản phẩm!`, 'success');
             // Trigger 3D viewer update
             const event = new Event('input');
-            document.getElementById('item-length').dispatchEvent(event);
+            DOM.itemLengthInput.dispatchEvent(event);
         } else {
             showToast('AI không thể trích xuất thông tin từ mô tả của bạn.', 'info');
         }
@@ -1321,30 +1281,26 @@ async function handleAIConfig() {
         console.error("AI Config Error:", error);
         showToast(`Lỗi cấu hình AI: ${error.message}`);
     } finally {
-        aiConfigBtn.disabled = false;
-        aiConfigBtn.innerHTML = `<i class="fas fa-cogs"></i> Tạo Sản phẩm từ Mô tả`;
+        DOM.aiConfigBtn.disabled = false;
+        DOM.aiConfigBtn.innerHTML = `<i class="fas fa-cogs"></i> Tạo Sản phẩm từ Mô tả`;
     }
 }
-aiConfigBtn.addEventListener('click', handleAIConfig);
+DOM.aiConfigBtn.addEventListener('click', handleAIConfig);
 
 
 // --- New: 3D Viewer ---
 function initialize3DViewer() {
-    const container = document.getElementById('viewer-3d-container');
-    const scene = container.querySelector('.scene-3d');
-    const cube = container.querySelector('.cube-3d');
-    const lengthInput = document.getElementById('item-length');
-    const widthInput = document.getElementById('item-width');
-    const heightInput = document.getElementById('item-height');
-
+    const scene = DOM.viewer3dContainer.querySelector('.scene-3d');
+    const cube = DOM.viewer3dContainer.querySelector('.cube-3d');
+    
     let mouseX = 0, mouseY = 0;
     let rotX = -20, rotY = -30;
     let isDragging = false;
 
     function updateCubeDimensions() {
-        const length = Number(lengthInput.value) || 0; // Dài
-        const width = Number(widthInput.value) || 0;  // Rộng
-        const height = Number(heightInput.value) || 0; // Cao
+        const length = Number(DOM.itemLengthInput.value) || 0; // Dài
+        const width = Number(DOM.itemWidthInput.value) || 0;  // Rộng
+        const height = Number(DOM.itemHeightInput.value) || 0; // Cao
         
         const maxDim = Math.max(length, width, height, 200);
         const scale = 180 / maxDim; // Container size is ~200px
@@ -1381,22 +1337,22 @@ function initialize3DViewer() {
         isDragging = true;
         mouseX = e.clientX;
         mouseY = e.clientY;
-        container.style.cursor = 'grabbing';
+        DOM.viewer3dContainer.style.cursor = 'grabbing';
     }
 
     function onMouseUp() {
         isDragging = false;
-        container.style.cursor = 'grab';
+        DOM.viewer3dContainer.style.cursor = 'grab';
     }
 
-    container.addEventListener('mousedown', onMouseDown);
+    DOM.viewer3dContainer.addEventListener('mousedown', onMouseDown);
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
-    container.addEventListener('mouseleave', onMouseUp);
+    DOM.viewer3dContainer.addEventListener('mouseleave', onMouseUp);
 
-    lengthInput.addEventListener('input', updateCubeDimensions);
-    widthInput.addEventListener('input', updateCubeDimensions);
-    heightInput.addEventListener('input', updateCubeDimensions);
+    DOM.itemLengthInput.addEventListener('input', updateCubeDimensions);
+    DOM.itemWidthInput.addEventListener('input', updateCubeDimensions);
+    DOM.itemHeightInput.addEventListener('input', updateCubeDimensions);
     
     // Initial setup
     scene.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
@@ -1411,11 +1367,11 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeImageUploader(
         (imageData) => { 
             uploadedImage = imageData;
-            imageAnalysisContainer.classList.remove('hidden');
+            DOM.imageAnalysisContainer.classList.remove('hidden');
         },
         () => { 
             uploadedImage = null; 
-            imageAnalysisContainer.classList.add('hidden');
+            DOM.imageAnalysisContainer.classList.add('hidden');
         }
     );
     initialize3DViewer();

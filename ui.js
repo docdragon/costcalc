@@ -1,20 +1,6 @@
 // ui.js
 import { auth, signInWithPopup, GoogleAuthProvider } from './firebase.js';
-
-// --- DOM Elements ---
-const loginModal = document.getElementById('login-modal');
-const viewItemModal = document.getElementById('view-item-modal');
-const confirmModal = document.getElementById('confirm-modal');
-const imageUploader = document.getElementById('image-uploader');
-const imageInput = document.getElementById('image-input');
-const imageUploadPrompt = document.getElementById('image-upload-prompt');
-const imagePreviewContainer = document.getElementById('image-preview-container');
-const imagePreview = document.getElementById('image-preview');
-const removeImageBtn = document.getElementById('remove-image-btn');
-const tabs = document.getElementById('tabs');
-const tabContent = document.getElementById('tab-content');
-const loggedInView = document.getElementById('logged-in-view');
-const userEmailDisplay = document.getElementById('user-email-display');
+import * as DOM from './dom.js';
 
 // --- State for UI ---
 let onImageUploadedCallback = null;
@@ -24,18 +10,14 @@ let onImageRemovedCallback = null;
 export function openModal(modal) { modal.classList.remove('hidden'); }
 export function closeModal(modal) { modal.classList.add('hidden'); }
 export function closeAllModals() {
-    [loginModal, viewItemModal, confirmModal].forEach(closeModal);
+    [DOM.loginModal, DOM.viewItemModal, DOM.confirmModal].forEach(modal => modal && closeModal(modal));
 }
 
 // --- Custom Confirm Modal ---
 export function showConfirm(message) {
-    const confirmOkBtn = document.getElementById('confirm-ok-btn');
-    const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
-    const confirmMessage = document.getElementById('confirm-message');
-    
     return new Promise((resolve) => {
-        confirmMessage.textContent = message;
-        openModal(confirmModal);
+        DOM.confirmMessage.textContent = message;
+        openModal(DOM.confirmModal);
 
         const onOk = () => {
             resolve(true);
@@ -48,26 +30,25 @@ export function showConfirm(message) {
         };
         
         const cleanup = () => {
-            closeModal(confirmModal);
-            confirmOkBtn.removeEventListener('click', onOk);
-            confirmCancelBtn.removeEventListener('click', onCancel);
+            closeModal(DOM.confirmModal);
+            DOM.confirmOkBtn.removeEventListener('click', onOk);
+            DOM.confirmCancelBtn.removeEventListener('click', onCancel);
         };
 
-        confirmOkBtn.addEventListener('click', onOk, { once: true });
-        confirmCancelBtn.addEventListener('click', onCancel, { once: true });
+        DOM.confirmOkBtn.addEventListener('click', onOk, { once: true });
+        DOM.confirmCancelBtn.addEventListener('click', onCancel, { once: true });
     });
 }
 
 // --- Toast Notification ---
 export function showToast(message, type = 'info') {
-    const toastContainer = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast toast--${type}`;
     
     const icons = { info: 'info-circle', success: 'check-circle', error: 'exclamation-triangle' };
     toast.innerHTML = `<i class="fas fa-${icons[type]} toast-icon"></i> ${message}`;
     
-    toastContainer.appendChild(toast);
+    DOM.toastContainer.appendChild(toast);
     setTimeout(() => toast.classList.add('show'), 10);
     setTimeout(() => {
         toast.classList.remove('show');
@@ -77,9 +58,9 @@ export function showToast(message, type = 'info') {
 
 // --- UI Visibility ---
 export function updateUIVisibility(isLoggedIn, user) {
-    loggedInView.classList.toggle('hidden', !isLoggedIn);
-    document.getElementById('logged-out-view').classList.toggle('hidden', isLoggedIn);
-    userEmailDisplay.textContent = isLoggedIn ? (user.displayName || user.email) : '';
+    DOM.loggedInView.classList.toggle('hidden', !isLoggedIn);
+    DOM.loggedOutView.classList.toggle('hidden', isLoggedIn);
+    DOM.userEmailDisplay.textContent = isLoggedIn ? (user.displayName || user.email) : '';
     
     document.querySelectorAll('.calculator-form-content, .materials-form-content, .saved-items-content, .assistant-content, .quick-calc-form-content').forEach(el => {
         el.style.display = isLoggedIn ? 'block' : 'none';
@@ -100,9 +81,9 @@ function handleImageFile(file) {
         if(onImageUploadedCallback) {
             onImageUploadedCallback(imageData);
         }
-        imagePreview.src = reader.result;
-        imageUploadPrompt.classList.add('hidden');
-        imagePreviewContainer.classList.remove('hidden');
+        DOM.imagePreview.src = reader.result;
+        DOM.imageUploadPrompt.classList.add('hidden');
+        DOM.imagePreviewContainer.classList.remove('hidden');
     };
     reader.readAsDataURL(file);
 }
@@ -110,38 +91,38 @@ function handleImageFile(file) {
 export function initializeImageUploader(uploadedCallback, removedCallback) {
     onImageUploadedCallback = uploadedCallback;
     onImageRemovedCallback = removedCallback;
-    imageUploader.addEventListener('click', () => imageInput.click());
-    imageUploader.addEventListener('dragover', (e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--primary-color)'; });
-    imageUploader.addEventListener('dragleave', (e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--border-color)'; });
-    imageUploader.addEventListener('drop', (e) => {
+    DOM.imageUploader.addEventListener('click', () => DOM.imageInput.click());
+    DOM.imageUploader.addEventListener('dragover', (e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--primary-color)'; });
+    DOM.imageUploader.addEventListener('dragleave', (e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--border-color)'; });
+    DOM.imageUploader.addEventListener('drop', (e) => {
         e.preventDefault();
         e.currentTarget.style.borderColor = 'var(--border-color)';
         if (e.dataTransfer.files.length > 0) handleImageFile(e.dataTransfer.files[0]);
     });
-    imageInput.addEventListener('change', (e) => { if (e.target.files.length > 0) handleImageFile(e.target.files[0]); });
-    removeImageBtn.addEventListener('click', (e) => {
+    DOM.imageInput.addEventListener('change', (e) => { if (e.target.files.length > 0) handleImageFile(e.target.files[0]); });
+    DOM.removeImageBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         if(onImageRemovedCallback) {
             onImageRemovedCallback();
         }
-        imageInput.value = '';
-        imagePreview.src = '#';
-        imagePreviewContainer.classList.add('hidden');
-        imageUploadPrompt.classList.remove('hidden');
+        DOM.imageInput.value = '';
+        DOM.imagePreview.src = '#';
+        DOM.imagePreviewContainer.classList.add('hidden');
+        DOM.imageUploadPrompt.classList.remove('hidden');
     });
 }
 
 // --- Tab Navigation ---
 export function initializeTabs() {
-    tabs.addEventListener('click', (e) => {
+    DOM.tabs.addEventListener('click', (e) => {
         const button = e.target.closest('button');
         if (button) {
             const tabName = button.dataset.tab;
-            const currentActive = tabs.querySelector('.active');
+            const currentActive = DOM.tabs.querySelector('.active');
             if(currentActive) currentActive.classList.remove('active');
             button.classList.add('active');
             
-            for (let pane of tabContent.children) {
+            for (let pane of DOM.tabContent.children) {
                 pane.classList.toggle('hidden', pane.id !== `${tabName}-tab`);
             }
         }
@@ -195,7 +176,10 @@ export function initializeCombobox(container, optionsData, onSelect, config = {}
                 const li = document.createElement('li');
                 li.className = 'combobox-option';
                 li.dataset.id = option.id;
-                li.textContent = `${option.name} (${Number(option.price).toLocaleString('vi-VN')}đ)`;
+                // Handle different types of items
+                const unit = option.unit || 'item';
+                const priceText = Number(option.price).toLocaleString('vi-VN');
+                li.textContent = `${option.name} (${priceText}đ / ${unit})`;
                 optionsList.appendChild(li);
             });
         }
@@ -243,8 +227,10 @@ export function initializeCombobox(container, optionsData, onSelect, config = {}
         const optionEl = e.target.closest('.combobox-option');
         if (optionEl && !optionEl.classList.contains('no-results')) {
             const selectedId = optionEl.dataset.id;
+            const selectedItem = currentOptionsData.find(o => o.id === selectedId);
+            
             valueInput.value = selectedId;
-            input.value = optionEl.textContent;
+            input.value = selectedItem ? selectedItem.name : optionEl.textContent; // Show clean name on select
             closeDropdown();
             if (onSelect) {
                 onSelect(selectedId);
@@ -312,21 +298,18 @@ async function handleGoogleLogin() {
 }
 
 export function initializeModals() {
-    document.getElementById('open-login-modal-btn').addEventListener('click', () => openModal(loginModal));
+    DOM.openLoginModalBtn.addEventListener('click', () => openModal(DOM.loginModal));
     document.querySelectorAll('.modal-close-btn, .modal-overlay').forEach(el => {
         el.addEventListener('click', (e) => { if (e.target === el) closeAllModals(); });
     });
     
-    const googleLoginBtn = document.getElementById('google-login-btn');
-    const loginError = document.getElementById('login-error');
-    
-    googleLoginBtn.addEventListener('click', async () => {
-        loginError.textContent = '';
+    DOM.googleLoginBtn.addEventListener('click', async () => {
+        DOM.loginError.textContent = '';
         try {
             await handleGoogleLogin();
         } catch (error) {
             console.error("Google Sign-In Error:", error);
-            loginError.textContent = "Không thể đăng nhập với Google. Vui lòng thử lại.";
+            DOM.loginError.textContent = "Không thể đăng nhập với Google. Vui lòng thử lại.";
         }
     });
 }

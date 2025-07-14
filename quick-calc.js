@@ -1,5 +1,6 @@
 // quick-calc.js
 import { initializeCombobox } from './ui.js';
+import * as DOM from './dom.js';
 
 // --- Module-level state and initialization flag ---
 let localMaterialsStore = {}; // This will hold the up-to-date materials.
@@ -38,21 +39,17 @@ export function updateQuickCalcMaterials(newLocalMaterials) {
     if (!isQuickCalcInitialized) return;
 
     // Update the combined list for the accessory adder
-    allAccessoryMaterials = [...(localMaterialsStore['Phụ kiện'] || []), ...(localMaterialsStore['Cạnh'] || [])];
+    allAccessoryMaterials = [...(localMaterialsStore['Phụ kiện'] || []), ...(localMaterialsStore['Cạnh'] || []), ...(localMaterialsStore['Gia Công'] || [])];
 
     // Get combobox elements and call their update function
-    const qcMaterialWoodCombobox = document.getElementById('qc-material-wood-combobox');
-    const qcMaterialWood2Combobox = document.getElementById('qc-material-wood-2-combobox');
-    const qcMaterialAccessoriesCombobox = document.getElementById('qc-material-accessories-combobox');
-
-    if (qcMaterialWoodCombobox && qcMaterialWoodCombobox.updateComboboxData) {
-        qcMaterialWoodCombobox.updateComboboxData(localMaterialsStore['Ván'] || []);
+    if (DOM.qcMaterialWoodCombobox && DOM.qcMaterialWoodCombobox.updateComboboxData) {
+        DOM.qcMaterialWoodCombobox.updateComboboxData(localMaterialsStore['Ván'] || []);
     }
-    if (qcMaterialWood2Combobox && qcMaterialWood2Combobox.updateComboboxData) {
-        qcMaterialWood2Combobox.updateComboboxData(localMaterialsStore['Ván'] || []);
+    if (DOM.qcMaterialWood2Combobox && DOM.qcMaterialWood2Combobox.updateComboboxData) {
+        DOM.qcMaterialWood2Combobox.updateComboboxData(localMaterialsStore['Ván'] || []);
     }
-    if (qcMaterialAccessoriesCombobox && qcMaterialAccessoriesCombobox.updateComboboxData) {
-        qcMaterialAccessoriesCombobox.updateComboboxData(allAccessoryMaterials);
+    if (DOM.qcMaterialAccessoriesCombobox && DOM.qcMaterialAccessoriesCombobox.updateComboboxData) {
+        DOM.qcMaterialAccessoriesCombobox.updateComboboxData(allAccessoryMaterials);
     }
 }
 
@@ -69,28 +66,11 @@ export function initializeQuickCalc(initialLocalMaterials, showToast) {
 
     localMaterialsStore = initialLocalMaterials; // Set initial state
 
-    // --- DOM Elements ---
-    const qcAreaInput = document.getElementById('qc-area');
-    const qcMaterialWoodCombobox = document.getElementById('qc-material-wood-combobox');
-    const qcSheetCountDisplay = document.getElementById('qc-sheet-count-display');
-    
-    const qcArea2Input = document.getElementById('qc-area-2');
-    const qcMaterialWood2Combobox = document.getElementById('qc-material-wood-2-combobox');
-    const qcSheetCount2Display = document.getElementById('qc-sheet-count-display-2');
-    
-    const qcInstallCostInput = document.getElementById('qc-install-cost');
-    const qcProfitMarginInput = document.getElementById('qc-profit-margin');
-
-    const qcMaterialAccessoriesCombobox = document.getElementById('qc-material-accessories-combobox');
-    const qcAccessoryQtyInput = document.getElementById('qc-accessory-quantity');
-    const qcAddAccessoryBtn = document.getElementById('qc-add-accessory-btn');
-    const qcAccessoriesList = document.getElementById('qc-accessories-list');
-
     /**
      * Renders the list of added accessories/edges into the DOM.
      */
     function renderQCAccessories() {
-        qcAccessoriesList.innerHTML = '';
+        DOM.qcAccessoriesList.innerHTML = '';
         qcAddedAccessories.forEach(acc => {
             const li = document.createElement('li');
             li.dataset.id = acc.id;
@@ -100,7 +80,7 @@ export function initializeQuickCalc(initialLocalMaterials, showToast) {
                 <span class="accessory-unit">${acc.unit}</span>
                 <button class="remove-acc-btn" data-id="${acc.id}">&times;</button>
             `;
-            qcAccessoriesList.appendChild(li);
+            DOM.qcAccessoriesList.appendChild(li);
         });
     }
 
@@ -138,8 +118,8 @@ export function initializeQuickCalc(initialLocalMaterials, showToast) {
      */
     function handleQuickCalculation() {
         // 1. Calculate Wood costs
-        const woodCost1 = calculateSheetCost(qcAreaInput, qcMaterialWoodCombobox, qcSheetCountDisplay);
-        const woodCost2 = calculateSheetCost(qcArea2Input, qcMaterialWood2Combobox, qcSheetCount2Display);
+        const woodCost1 = calculateSheetCost(DOM.qcAreaInput, DOM.qcMaterialWoodCombobox, DOM.qcSheetCountDisplay);
+        const woodCost2 = calculateSheetCost(DOM.qcArea2Input, DOM.qcMaterialWood2Combobox, DOM.qcSheetCount2Display);
         const totalWoodCost = woodCost1 + woodCost2;
         
         // 2. Calculate dynamic accessory and edge costs
@@ -148,8 +128,8 @@ export function initializeQuickCalc(initialLocalMaterials, showToast) {
         }, 0);
 
         // 3. Get other costs
-        const installCost = parseFloat(qcInstallCostInput.value) || 0;
-        const profitMargin = parseFloat(qcProfitMarginInput.value) || 0;
+        const installCost = parseFloat(DOM.qcInstallCostInput.value) || 0;
+        const profitMargin = parseFloat(DOM.qcProfitMarginInput.value) || 0;
 
         // 4. Sum up total cost
         const totalCost = totalWoodCost + totalAccessoryCost + installCost;
@@ -159,29 +139,29 @@ export function initializeQuickCalc(initialLocalMaterials, showToast) {
         const estimatedProfit = suggestedPrice - totalCost;
 
         // 6. Display results
-        document.getElementById('qc-total-cost-value').textContent = totalCost.toLocaleString('vi-VN') + 'đ';
-        document.getElementById('qc-suggested-price-value').textContent = suggestedPrice.toLocaleString('vi-VN') + 'đ';
-        document.getElementById('qc-estimated-profit-value').textContent = estimatedProfit.toLocaleString('vi-VN') + 'đ';
+        DOM.qcTotalCostValue.textContent = totalCost.toLocaleString('vi-VN') + 'đ';
+        DOM.qcSuggestedPriceValue.textContent = suggestedPrice.toLocaleString('vi-VN') + 'đ';
+        DOM.qcEstimatedProfitValue.textContent = estimatedProfit.toLocaleString('vi-VN') + 'đ';
     }
 
     // --- Event Listeners & Initialization ---
 
     // Initialize Comboboxes with empty data; they will be populated by updateQuickCalcMaterials
-    if (qcMaterialWoodCombobox) {
-        initializeCombobox(qcMaterialWoodCombobox, [], () => handleQuickCalculation(), { placeholder: "Tìm hoặc chọn loại ván chính..." });
+    if (DOM.qcMaterialWoodCombobox) {
+        initializeCombobox(DOM.qcMaterialWoodCombobox, [], () => handleQuickCalculation(), { placeholder: "Tìm hoặc chọn loại ván chính..." });
     }
-    if (qcMaterialWood2Combobox) {
-        initializeCombobox(qcMaterialWood2Combobox, [], () => handleQuickCalculation(), { placeholder: "Tìm hoặc chọn loại ván phụ...", allowEmpty: true, emptyOptionText: '--- Không sử dụng ván phụ ---' });
+    if (DOM.qcMaterialWood2Combobox) {
+        initializeCombobox(DOM.qcMaterialWood2Combobox, [], () => handleQuickCalculation(), { placeholder: "Tìm hoặc chọn loại ván phụ...", allowEmpty: true, emptyOptionText: '--- Không sử dụng ván phụ ---' });
     }
-    if (qcMaterialAccessoriesCombobox) {
-        initializeCombobox(qcMaterialAccessoriesCombobox, [], null, { placeholder: "Tìm phụ kiện hoặc nẹp cạnh..." });
+    if (DOM.qcMaterialAccessoriesCombobox) {
+        initializeCombobox(DOM.qcMaterialAccessoriesCombobox, [], null, { placeholder: "Tìm phụ kiện, nẹp hoặc gia công..." });
     }
     
     // Call the updater to populate with any initial data that might exist
     updateQuickCalcMaterials(localMaterialsStore);
 
     // Listeners for standard inputs
-    const inputsToTrack = [ qcAreaInput, qcArea2Input, qcInstallCostInput, qcProfitMarginInput ];
+    const inputsToTrack = [ DOM.qcAreaInput, DOM.qcArea2Input, DOM.qcInstallCostInput, DOM.qcProfitMarginInput ];
     inputsToTrack.forEach(input => {
         if (input) {
             input.addEventListener('input', handleQuickCalculation);
@@ -189,16 +169,21 @@ export function initializeQuickCalc(initialLocalMaterials, showToast) {
     });
 
     // Listeners for dynamic accessories and edges
-    if (qcAddAccessoryBtn) {
-        qcAddAccessoryBtn.addEventListener('click', () => {
-            const selectedId = qcMaterialAccessoriesCombobox.querySelector('.combobox-value').value;
-            const inputField = qcMaterialAccessoriesCombobox.querySelector('.combobox-input');
-            const quantity = parseFloat(qcAccessoryQtyInput.value) || 0;
+    if (DOM.qcAddAccessoryBtn) {
+        DOM.qcAddAccessoryBtn.addEventListener('click', () => {
+            const selectedId = DOM.qcMaterialAccessoriesCombobox.querySelector('.combobox-value').value;
+            const inputField = DOM.qcMaterialAccessoriesCombobox.querySelector('.combobox-input');
+            const quantity = parseFloat(DOM.qcAccessoryQtyInput.value) || 0;
     
-            if (!selectedId || !quantity || quantity <= 0) {
-                showToast('Vui lòng chọn vật tư và nhập số lượng/chiều dài hợp lệ.', 'error');
+            if (!selectedId) {
+                showToast('Vui lòng chọn một vật tư từ danh sách.', 'error');
                 return;
             }
+            if (quantity <= 0) {
+                 showToast('Vui lòng nhập số lượng/chiều dài lớn hơn 0.', 'error');
+                return;
+            }
+
 
             const itemToAdd = allAccessoryMaterials.find(a => a.id === selectedId);
             if (!itemToAdd) return;
@@ -215,15 +200,15 @@ export function initializeQuickCalc(initialLocalMaterials, showToast) {
             handleQuickCalculation();
             
             // Clear combobox and quantity input
-            qcAccessoryQtyInput.value = '1';
+            DOM.qcAccessoryQtyInput.value = '1';
             inputField.value = '';
-            qcMaterialAccessoriesCombobox.querySelector('.combobox-value').value = '';
-            inputField.placeholder = "Tìm phụ kiện hoặc nẹp cạnh...";
+            DOM.qcMaterialAccessoriesCombobox.querySelector('.combobox-value').value = '';
+            inputField.placeholder = "Tìm phụ kiện, nẹp hoặc gia công...";
         });
     }
 
-    if (qcAccessoriesList) {
-        qcAccessoriesList.addEventListener('click', e => {
+    if (DOM.qcAccessoriesList) {
+        DOM.qcAccessoriesList.addEventListener('click', e => {
             if (e.target.classList.contains('remove-acc-btn')) {
                 const id = e.target.dataset.id;
                 qcAddedAccessories = qcAddedAccessories.filter(a => a.id !== id);
@@ -232,7 +217,7 @@ export function initializeQuickCalc(initialLocalMaterials, showToast) {
             }
         });
     
-        qcAccessoriesList.addEventListener('change', e => {
+        DOM.qcAccessoriesList.addEventListener('change', e => {
             if (e.target.classList.contains('accessory-list-qty')) {
                 const id = e.target.dataset.id;
                 const newQuantity = parseFloat(e.target.value) || 0;
