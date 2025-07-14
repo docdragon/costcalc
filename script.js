@@ -26,8 +26,6 @@ let localSavedItems = [];
 let lastGeminiResult = null;
 let addedAccessories = [];
 let uploadedImage = null;
-let chatHistory = [];
-let isAwaitingChatResponse = false;
 let calculationState = 'idle'; // idle, calculating, done
 let currentPage = 1;
 const itemsPerPage = 10;
@@ -76,7 +74,6 @@ onAuthStateChanged(auth, async (user) => {
         materialsCollectionRef = collection(db, `users/${currentUserId}/materials`);
         savedItemsCollectionRef = collection(db, `users/${currentUserId}/savedItems`);
         await checkAndAddSampleData(currentUserId);
-        initializeChat();
         listenForData();
     } else {
         currentUserId = null;
@@ -98,8 +95,6 @@ function clearLocalData() {
     localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [], 'Gia Công': [] };
     allLocalMaterials = [];
     localSavedItems = [];
-    chatHistory = [];
-    if (DOM.chatMessagesContainer) DOM.chatMessagesContainer.innerHTML = '';
     renderMaterials([]);
     renderSavedItems([]);
     populateSelects();
@@ -1055,104 +1050,6 @@ function renderItemDetailsToModal(itemId) {
 
     openModal(DOM.viewItemModal);
 }
-
-// --- AI Chat ---
-function initializeChat() {
-    chatHistory = [{
-        role: "system",
-        parts: [{ text: "Bạn là một trợ lý AI hữu ích chuyên về ước tính chi phí sản xuất đồ gỗ. Hãy trả lời ngắn gọn, tập trung vào lĩnh vực làm đồ gỗ tại Việt Nam. Toàn bộ các câu trả lời phải bằng tiếng Việt. Cuộc hội thoại này sẽ được lưu lại để tham khảo trong tương lai." }],
-    }];
-    DOM.chatMessagesContainer.innerHTML = ''; // Clear previous chat
-    renderChatMessage('Chào bạn, tôi là trợ lý AI. Tôi có thể giúp gì cho bạn?', 'model');
-}
-
-function renderChatMessage(message, role, options = {}) {
-    const messageWrapper = document.createElement('div');
-    messageWrapper.className = `chat-message ${role}`;
-    
-    const icon = document.createElement('div');
-    icon.className = 'icon';
-    icon.innerHTML = `<i class="fas fa-${role === 'user' ? 'user' : 'robot'}"></i>`;
-    
-    const content = document.createElement('div');
-    content.className = 'message-content';
-
-    if (options.isLoading) {
-        content.innerHTML = `<div class="loading-placeholder"><span class="spinner-sm" style="border-bottom-color: var(--primary-color);"></span> ${message}</div>`;
-    } else {
-        content.innerHTML = renderFormattedText(message);
-    }
-    
-    messageWrapper.appendChild(icon);
-    messageWrapper.appendChild(content);
-    DOM.chatMessagesContainer.appendChild(messageWrapper);
-    DOM.chatMessagesContainer.scrollTop = DOM.chatMessagesContainer.scrollHeight;
-    return messageWrapper;
-}
-
-
-async function handleTextChat(message) {
-    renderChatMessage(message, 'user');
-    chatHistory.push({ role: 'user', parts: [{ text: message }] });
-
-    const aiMessageWrapper = renderChatMessage('Đang suy nghĩ...', 'model', { isLoading: true });
-    const aiMessageContent = aiMessageWrapper.querySelector('.message-content');
-    
-    let fullResponseText = '';
-    try {
-        const response = await fetch('/api/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ newChatMessage: true, chatHistory: chatHistory })
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Lỗi không xác định từ server');
-        }
-        
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        aiMessageContent.innerHTML = ''; // Clear "thinking..."
-
-        while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            
-            const chunk = decoder.decode(value, { stream: true });
-            fullResponseText += chunk;
-            aiMessageContent.innerHTML = renderFormattedText(fullResponseText);
-            DOM.chatMessagesContainer.scrollTop = DOM.chatMessagesContainer.scrollHeight;
-        }
-
-        if (fullResponseText) {
-            chatHistory.push({ role: 'model', parts: [{ text: fullResponseText }] });
-        }
-        
-    } catch (error) {
-        console.error("Chat error:", error);
-        aiMessageContent.innerHTML = renderFormattedText(`Xin lỗi, tôi gặp sự cố: ${error.message}`);
-    }
-}
-
-DOM.chatForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (isAwaitingChatResponse) return;
-    const message = DOM.chatInput.value.trim();
-    if (!message) return;
-    
-    isAwaitingChatResponse = true;
-    DOM.chatInput.value = '';
-    DOM.chatInput.disabled = true;
-    DOM.sendChatBtn.disabled = true;
-
-    await handleTextChat(message);
-
-    isAwaitingChatResponse = false;
-    DOM.chatInput.disabled = false;
-    DOM.sendChatBtn.disabled = false;
-    DOM.chatInput.focus();
-});
 
 // --- New: Image Dimension Analysis ---
 async function handleImageAnalysis() {

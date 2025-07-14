@@ -15,7 +15,7 @@ export default async function handler(request, response) {
     const ai = new GoogleGenAI({ apiKey });
     
     try {
-        const { prompt, image, chatHistory, newChatMessage, analyzeDimensions, configureFromText, text } = request.body;
+        const { prompt, image, analyzeDimensions, configureFromText, text } = request.body;
         
         // --- New: Handle Form Configuration from Text Request ---
         if (configureFromText) {
@@ -108,42 +108,6 @@ Ví dụ phản hồi: {\"length\": 1200, \"height\": 750}`;
                 console.error("Original text from Gemini:", genAIResponse.text);
                 return response.status(500).json({ error: `Phản hồi từ AI không hợp lệ: ${genAIResponse.text}` });
             }
-        }
-
-
-        // --- Handle Chat Request (Streaming) ---
-        if (newChatMessage) {
-            let systemInstruction = null;
-            let userAndModelHistory = chatHistory;
-
-            const systemMessageIndex = chatHistory.findIndex(msg => msg.role === 'system');
-            if (systemMessageIndex !== -1) {
-                systemInstruction = chatHistory[systemMessageIndex]?.parts?.[0]?.text;
-                userAndModelHistory = chatHistory.filter(msg => msg.role !== 'system');
-            }
-            
-            const config = {};
-            if (systemInstruction) {
-                config.systemInstruction = systemInstruction;
-            }
-
-            // Set headers for streaming
-            response.writeHead(200, {
-                'Content-Type': 'text/plain; charset=utf-8',
-                'Transfer-Encoding': 'chunked',
-            });
-
-            const streamResult = await ai.models.generateContentStream({
-                model: 'gemini-2.5-flash',
-                contents: userAndModelHistory,
-                config: config
-            });
-
-            for await (const chunk of streamResult) {
-                response.write(chunk.text);
-            }
-            response.end();
-            return; // End the function after streaming is complete
         }
 
         // --- Handle Calculator Request (JSON with Schema) ---
@@ -242,7 +206,7 @@ Ví dụ phản hồi: {\"length\": 1200, \"height\": 750}`;
             }
         }
 
-        return response.status(400).json({ error: 'Yêu cầu không hợp lệ. Thiếu "prompt", "newChatMessage", "configureFromText" hoặc "analyzeDimensions".' });
+        return response.status(400).json({ error: 'Yêu cầu không hợp lệ. Thiếu "prompt", "configureFromText" hoặc "analyzeDimensions".' });
 
     } catch (error) {
         console.error("Error in serverless function:", error);

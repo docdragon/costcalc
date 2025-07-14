@@ -96,12 +96,6 @@ export const prevPageBtn = document.getElementById('prev-page-btn');
 export const nextPageBtn = document.getElementById('next-page-btn');
 export const cancelEditBtn = document.getElementById('cancel-edit-button');
 
-// --- AI Assistant Tab ---
-export const chatMessagesContainer = document.getElementById('chat-messages');
-export const chatForm = document.getElementById('chat-form');
-export const chatInput = document.getElementById('chat-input');
-export const sendChatBtn = document.getElementById('send-chat-btn');
-
 // --- Saved Projects Tab ---
 export const savedItemsTableBody = document.getElementById('saved-items-table-body');
 
