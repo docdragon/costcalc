@@ -148,6 +148,27 @@ body {
     margin: 2rem 0;
 }
 
+/* Form Section */
+.form-section {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-color);
+}
+.form-section:first-of-type {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
+.form-section-header {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin: 0 0 1.5rem 0;
+    display: flex;
+    align-items: center;
+}
+
+
 /* --- Accessory Adder --- */
 .accessory-adder { display: flex; align-items: center; gap: 0.5rem; }
 .accessory-qty { width: 4rem; text-align: center; }
@@ -176,15 +197,16 @@ body {
     width: 3rem;
     flex-shrink: 0;
 }
-.remove-acc-btn {
+.remove-acc-btn, .remove-component-btn {
     background: none; border: none; color: var(--danger-color); cursor: pointer;
-    font-size: 1.2rem; line-height: 1;
+    font-size: 1rem; line-height: 1;
     width: 2rem; height: 2rem; flex-shrink: 0;
     display: inline-flex; align-items: center; justify-content: center;
     border-radius: 50%;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s, color 0.2s;
 }
-.remove-acc-btn:hover { background-color: #fee2e2; }
+.remove-acc-btn:hover, .remove-component-btn:hover { background-color: #fee2e2; }
+
 
 /* --- Image Uploader --- */
 .image-uploader {
@@ -382,6 +404,15 @@ td button { transition: color 0.2s; }
 .text-green-500 { color: var(--success-color); }
 .hover\:text-green-700:hover { color: var(--success-hover); }
 
+/* --- Component Table --- */
+.component-table td {
+    padding: 0.5rem;
+}
+.component-table .input-style {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.875rem;
+}
+
 /* --- Material List Controls --- */
 .material-controls {
     display: flex;
@@ -426,28 +457,28 @@ td button { transition: color 0.2s; }
 
 /* --- Responsive Tables --- */
 @media (max-width: 768px) {
-    .data-table thead { display: none; }
-    .data-table, .data-table tbody, .data-table tr, .data-table td { display: block; width: 100%; }
-    .data-table tr {
+    .data-table:not(.component-table) thead { display: none; }
+    .data-table:not(.component-table), .data-table:not(.component-table) tbody, .data-table:not(.component-table) tr, .data-table:not(.component-table) td { display: block; width: 100%; }
+    .data-table:not(.component-table) tr {
         margin-bottom: 1rem;
         border: 1px solid var(--border-color);
         border-radius: 0.75rem;
         padding: 0.5rem;
     }
-    .data-table td {
+    .data-table:not(.component-table) td {
         display: flex; justify-content: space-between; align-items: center;
         padding: 0.75rem 0.5rem; text-align: right;
         border-bottom: 1px dashed var(--secondary-color);
     }
-    .data-table tr td:last-child { border-bottom: none; }
-    .data-table td::before {
+    .data-table:not(.component-table) tr td:last-child { border-bottom: none; }
+    .data-table:not(.component-table) td::before {
         content: attr(data-label);
         font-weight: 600;
         text-align: left;
         margin-right: 1rem;
         color: var(--text-dark);
     }
-    .data-table td.text-center { justify-content: flex-end; }
+    .data-table:not(.component-table) td.text-center { justify-content: flex-end; }
 }
 
 /* --- Result Display --- */
@@ -486,7 +517,7 @@ td button { transition: color 0.2s; }
     color: white;
     font-size: 0.8rem;
     font-weight: 700;
-    margin-right: 0.5rem;
+    margin-right: 0.75rem;
 }
 
 

@@ -25,6 +25,7 @@ let allLocalMaterials = []; // Flat array for filtering and sorting
 let localSavedItems = [];
 let lastGeminiResult = null;
 let addedAccessories = [];
+let productComponents = [];
 let uploadedImage = null;
 let calculationState = 'idle'; // idle, calculating, done
 let currentPage = 1;
@@ -125,48 +126,124 @@ function getSheetArea(material) {
 }
 
 
-function getPanelPieces() {
-    const length = parseFloat(DOM.itemLengthInput.value) || 0;
-    const width = parseFloat(DOM.itemWidthInput.value) || 0;
-    const height = parseFloat(DOM.itemHeightInput.value) || 0;
+// --- New: Component Management ---
+
+/**
+ * Generates the list of product components based on main form inputs.
+ */
+function generateProductComponents() {
+    const l = parseFloat(DOM.itemLengthInput.value) || 0;
+    const w = parseFloat(DOM.itemWidthInput.value) || 0;
+    const h = parseFloat(DOM.itemHeightInput.value) || 0;
     const compartments = parseInt(DOM.itemCompartmentsInput.value, 10) || 1;
     const type = DOM.itemTypeSelect.value;
-    const usesMainWoodForBack = !DOM.mainMaterialBackPanelCombobox.querySelector('.combobox-value').value;
-
-    const pieces = [];
-    if (!length || !width || !height) return [];
-
-    // Main box structure
-    pieces.push({ name: 'Hông Trái', width: width, height: height, type: 'body' });
-    pieces.push({ name: 'Hông Phải', width: width, height: height, type: 'body' });
-    pieces.push({ name: 'Đáy', width: length, height: width, type: 'body' });
     
-    if (type !== 'tu-bep-duoi') {
-        pieces.push({ name: 'Nóc', width: length, height: width, type: 'body' });
+    const newComponents = [];
+    if (!l || !w || !h) {
+        productComponents = [];
+        return;
+    }
+
+    // Common parts
+    newComponents.push({ id: `comp_${Date.now()}_1`, name: 'Hông Trái', length: w, width: h, qty: 1, isDefault: true });
+    newComponents.push({ id: `comp_${Date.now()}_2`, name: 'Hông Phải', length: w, width: h, qty: 1, isDefault: true });
+
+    // Type specific parts
+    switch(type) {
+        case 'tu-bep-duoi':
+            newComponents.push({ id: `comp_${Date.now()}_3`, name: 'Đáy', length: l, width: w, qty: 1, isDefault: true });
+            newComponents.push({ id: `comp_${Date.now()}_4`, name: 'Đợt ngang trên', length: l, width: 100, qty: 2, isDefault: true });
+            newComponents.push({ id: `comp_${Date.now()}_5`, name: 'Hậu', length: l, width: h, qty: 1, isDefault: true, materialType: 'back' });
+            break;
+        case 'tu-bep-tren':
+            newComponents.push({ id: `comp_${Date.now()}_3`, name: 'Đáy', length: l, width: w, qty: 1, isDefault: true });
+            newComponents.push({ id: `comp_${Date.now()}_4`, name: 'Nóc', length: l, width: w, qty: 1, isDefault: true });
+            newComponents.push({ id: `comp_${Date.now()}_5`, name: 'Hậu', length: l, width: h, qty: 1, isDefault: true, materialType: 'back' });
+            break;
+        case 'tu-ao':
+            newComponents.push({ id: `comp_${Date.now()}_3`, name: 'Đáy', length: l, width: w, qty: 1, isDefault: true });
+            newComponents.push({ id: `comp_${Date.now()}_4`, name: 'Nóc', length: l, width: w, qty: 1, isDefault: true });
+            // Wardrobes often don't have a back panel in this calculation, so it's omitted by default.
+            break;
+        case 'khac': // Box with 4 sides
+            newComponents.push({ id: `comp_${Date.now()}_3`, name: 'Đáy', length: l, width: w, qty: 1, isDefault: true });
+            newComponents.push({ id: `comp_${Date.now()}_4`, name: 'Nóc', length: l, width: w, qty: 1, isDefault: true });
+            break;
     }
 
     // Dividers and Doors based on compartments
+    if (type.includes('tu-') && compartments > 1) {
+        newComponents.push({ id: `comp_${Date.now()}_6`, name: 'Vách Ngăn', length: w, width: h, qty: compartments - 1, isDefault: true });
+    }
     if (type.includes('tu-') && compartments > 0) {
-        // Add internal dividers if more than one compartment
-        if (compartments > 1) {
-            const numDividers = compartments - 1;
-            for (let i = 0; i < numDividers; i++) {
-                pieces.push({ name: `Vách Ngăn ${i + 1}`, width: width, height: height, type: 'body' });
-            }
-        }
-        // Add doors, one for each compartment
-        const doorWidth = Math.round(length / compartments);
-        for (let i = 0; i < compartments; i++) {
-             pieces.push({ name: `Cánh ${i + 1}`, width: doorWidth, height: height, type: 'door' });
-        }
+        const doorWidth = Math.round(l / compartments);
+        newComponents.push({ id: `comp_${Date.now()}_7`, name: 'Cánh', length: doorWidth, width: h, qty: compartments, isDefault: true });
     }
     
-    // Back panel
-    if (usesMainWoodForBack && type !== 'tu-ao' && type !== 'khac') {
-        pieces.push({ name: 'Hậu', width: length, height: height, type: 'body' });
-    }
+    // Merge with existing custom components
+    const customComponents = productComponents.filter(p => !p.isDefault);
+    productComponents = [...newComponents, ...customComponents].map(p => ({...p, length: Math.round(p.length), width: Math.round(p.width)}));
+}
 
-    return pieces.filter(p => p.width > 0 && p.height > 0).map(p => ({...p, width: Math.round(p.width), height: Math.round(p.height)}));
+
+/**
+ * Renders the productComponents array into the components table.
+ */
+function renderProductComponents() {
+    DOM.componentsTableBody.innerHTML = '';
+    if (!productComponents || productComponents.length === 0) {
+        DOM.componentsTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 1rem; color: var(--text-light);">Nhập kích thước sản phẩm để xem chi tiết.</td></tr>';
+        return;
+    }
+    productComponents.forEach(comp => {
+        const tr = document.createElement('tr');
+        tr.dataset.id = comp.id;
+        tr.innerHTML = `
+            <td data-label="Tên Chi tiết"><input type="text" class="input-style component-input" data-field="name" value="${comp.name}"></td>
+            <td data-label="Dài (mm)"><input type="text" inputmode="decimal" class="input-style component-input" data-field="length" value="${comp.length}"></td>
+            <td data-label="Rộng (mm)"><input type="text" inputmode="decimal" class="input-style component-input" data-field="width" value="${comp.width}"></td>
+            <td data-label="SL"><input type="text" inputmode="decimal" class="input-style component-input" data-field="qty" value="${comp.qty}" style="max-width: 60px; text-align: center;"></td>
+            <td data-label="Xóa" class="text-center">
+                <button class="remove-component-btn" data-id="${comp.id}"><i class="fas fa-trash"></i></button>
+            </td>
+        `;
+        DOM.componentsTableBody.appendChild(tr);
+    });
+}
+
+/**
+ * Handles updates from the main form inputs to regenerate the component list.
+ */
+function handleFormUpdate() {
+    generateProductComponents();
+    renderProductComponents();
+}
+
+
+/**
+ * Reads the component table and returns a list of pieces for AI analysis.
+ * This function now replaces the old, static getPanelPieces.
+ */
+function getPanelPiecesForAI() {
+    const pieces = [];
+    const backPanelId = DOM.mainMaterialBackPanelCombobox.querySelector('.combobox-value').value;
+
+    productComponents.forEach(comp => {
+        // Exclude pieces that use the back panel material if it's specified separately.
+        // The AI's job is to optimize the MAIN wood. The back panel is calculated separately.
+        if (comp.materialType === 'back' && backPanelId) {
+            return; // Skip this component for the AI prompt
+        }
+
+        // Add a piece for each quantity
+        for (let i = 0; i < comp.qty; i++) {
+            // AI prompt needs width & height, which corresponds to our length & width
+            const pieceName = `${comp.name}${comp.qty > 1 ? ` (${i + 1})` : ''}`;
+            pieces.push({ name: pieceName, width: comp.length, height: comp.width });
+        }
+    });
+
+    return pieces.filter(p => p.width > 0 && p.height > 0);
 }
 
 
@@ -562,8 +639,13 @@ function clearInputs() {
     DOM.laborCostInput.value = '0';
     DOM.itemCompartmentsInput.value = '1';
     DOM.aiConfigPrompt.value = '';
+    
     addedAccessories = [];
     renderAccessories();
+    
+    productComponents = [];
+    renderProductComponents();
+
     lastGeminiResult = null;
     calculationState = 'idle';
     DOM.removeImageBtn.click();
@@ -609,12 +691,20 @@ async function runAICalculation() {
     DOM.aiResultsContent.classList.add('hidden');
     
     // The only thing we need from the AI is the optimized cutting layout for the main wood panels.
-    const allPieces = getPanelPieces();
-    const mainWoodPieces = allPieces.filter(p => p.type === 'body' || p.type === 'door');
+    const mainWoodPieces = getPanelPiecesForAI();
 
-    // If there is a separate door material specified in the accessories, we would handle it separately.
-    // For this version, AI will optimize the main wood panels, including doors if they use the same material.
-    // The prompt is simplified to only request this optimization.
+    // If there are no pieces to cut, don't call the AI.
+    if(mainWoodPieces.length === 0) {
+        showToast("Không có chi tiết ván chính để phân tích.", "info");
+        calculationState = 'done'; // Treat as "done" but with an empty result
+        lastGeminiResult = { cuttingLayout: null }; // Set an empty result
+        recalculateFinalPrice(); // Calculate price without AI cutting data
+        DOM.aiLoadingPlaceholder.classList.add('hidden');
+        DOM.aiResultsContent.classList.remove('hidden');
+        updateAnalyzeButton();
+        return;
+    }
+
 
     const prompt = `
     NHIỆM VỤ: Bạn là một trợ lý AI chuyên về tối ưu hóa cắt ván (2D bin packing) cho xưởng mộc.
@@ -685,13 +775,13 @@ async function runAICalculation() {
  * This is now the single source of truth for all pricing.
  */
 function recalculateFinalPrice() {
-    if (calculationState !== 'done' || !lastGeminiResult) return;
+    if (calculationState !== 'done') return;
 
     const costBreakdownItems = [];
     let baseMaterialCost = 0;
 
     // 1. Main Wood Cost (from AI's cutting layout)
-    const totalSheetsUsed = lastGeminiResult.cuttingLayout?.totalSheetsUsed || 0;
+    const totalSheetsUsed = lastGeminiResult?.cuttingLayout?.totalSheetsUsed || 0;
     const mainWoodId = DOM.mainMaterialWoodCombobox.querySelector('.combobox-value').value;
     const mainWoodMaterial = localMaterials['Ván'].find(m => m.id === mainWoodId);
 
@@ -701,22 +791,29 @@ function recalculateFinalPrice() {
         costBreakdownItems.push({
             name: `Ván chính: ${mainWoodMaterial.name}`,
             cost: cost,
-            reason: `${totalSheetsUsed} tấm x ${mainWoodMaterial.price.toLocaleString('vi-VN')}đ`
+            reason: `${totalSheetsUsed} tấm x ${mainWoodMaterial.price.toLocaleString('vi-VN')}đ (tối ưu bởi AI)`
         });
     }
 
-    // 2. Back Panel Cost (assumes 1 sheet if specified)
+    // 2. Back Panel Cost (calculated client-side)
     const backPanelId = DOM.mainMaterialBackPanelCombobox.querySelector('.combobox-value').value;
-    if (backPanelId && backPanelId !== '') {
+    const backPanelPieces = productComponents.filter(p => p.materialType === 'back');
+
+    if (backPanelId && backPanelPieces.length > 0) {
         const backPanelMaterial = localMaterials['Ván'].find(m => m.id === backPanelId);
         if (backPanelMaterial) {
-            const cost = backPanelMaterial.price; // Assume 1 sheet for back panel
-            baseMaterialCost += cost;
-            costBreakdownItems.push({
-                name: `Ván hậu: ${backPanelMaterial.name}`,
-                cost: cost,
-                reason: `1 tấm x ${backPanelMaterial.price.toLocaleString('vi-VN')}đ`
-            });
+            const totalBackPanelArea = backPanelPieces.reduce((sum, p) => sum + (p.length * p.width * p.qty), 0) / 1000000;
+            const sheetAreaM2 = getSheetArea(backPanelMaterial);
+            const sheetsNeeded = Math.ceil(totalBackPanelArea / sheetAreaM2);
+            if(sheetsNeeded > 0) {
+                const cost = sheetsNeeded * backPanelMaterial.price;
+                baseMaterialCost += cost;
+                costBreakdownItems.push({
+                    name: `Ván hậu: ${backPanelMaterial.name}`,
+                    cost: cost,
+                    reason: `Ước tính ${sheetsNeeded} tấm x ${backPanelMaterial.price.toLocaleString('vi-VN')}đ`
+                });
+            }
         }
     }
     
@@ -725,28 +822,8 @@ function recalculateFinalPrice() {
         const material = allLocalMaterials.find(m => m.id === acc.id);
         if (!material) return;
 
-        let cost = 0;
-        let reason = '';
-
-        if (material.type === 'Ván') {
-            // Estimate sheets needed for these panels (e.g., separate door panels)
-            // This is a simplified client-side estimation
-            const doorPieces = getPanelPieces().filter(p => p.type === 'door');
-            const totalDoorAreaM2 = doorPieces.reduce((sum, p) => sum + (p.width * p.height), 0) / 1000000;
-            const sheetAreaM2 = getSheetArea(material);
-            const sheetsNeeded = Math.ceil(totalDoorAreaM2 / sheetAreaM2);
-            
-            // The quantity from the user is ignored for Ván type in accessories, we use calculated sheets.
-            if(sheetsNeeded > 0) {
-                cost = sheetsNeeded * material.price;
-                reason = `Ước tính ${sheetsNeeded} tấm x ${material.price.toLocaleString('vi-VN')}đ`;
-            }
-
-        } else {
-            // For Cạnh, Phụ kiện, Gia Công, use the quantity directly
-            cost = acc.quantity * material.price;
-            reason = `${acc.quantity} ${material.unit} x ${material.price.toLocaleString('vi-VN')}đ`;
-        }
+        let cost = acc.quantity * material.price;
+        let reason = `${acc.quantity} ${material.unit} x ${material.price.toLocaleString('vi-VN')}đ`;
         
         if(cost > 0) {
             baseMaterialCost += cost;
@@ -775,6 +852,7 @@ function recalculateFinalPrice() {
     renderCostBreakdown(costBreakdownItems, DOM.costBreakdownContainer);
 
     // Update the lastGeminiResult object to store the calculated prices for saving
+    if(!lastGeminiResult) lastGeminiResult = {};
     lastGeminiResult.finalPrices = { totalCost, suggestedPrice, estimatedProfit, costBreakdown: costBreakdownItems };
 }
 
@@ -867,7 +945,8 @@ DOM.saveItemBtn.addEventListener('click', async () => {
             laborCost: DOM.laborCostInput.value,
             mainWoodId: DOM.mainMaterialWoodCombobox.querySelector('.combobox-value').value,
             backPanelId: DOM.mainMaterialBackPanelCombobox.querySelector('.combobox-value').value,
-            accessories: addedAccessories
+            accessories: addedAccessories,
+            components: productComponents // Save the components list
         },
         cuttingLayout: lastGeminiResult.cuttingLayout,
         finalPrices: lastGeminiResult.finalPrices, // Save the client-calculated prices and breakdown
@@ -945,6 +1024,16 @@ function loadItemIntoForm(item) {
         addedAccessories = JSON.parse(JSON.stringify(inputs.accessories));
         renderAccessories();
     }
+    
+    // Load components list
+    if (inputs.components && Array.isArray(inputs.components)) {
+        productComponents = JSON.parse(JSON.stringify(inputs.components));
+        renderProductComponents();
+    } else {
+        // If old save format, generate them
+        handleFormUpdate();
+    }
+
 
     // Reconstruct lastGeminiResult from saved data
     lastGeminiResult = {
@@ -1102,8 +1191,8 @@ async function handleImageAnalysis() {
 
         if (fieldsUpdated > 0) {
             showToast(`AI đã điền ${fieldsUpdated} thông số kích thước!`, 'success');
-             // Trigger 3D viewer update
-            const event = new Event('input');
+             // Trigger 3D viewer update and component generation
+            const event = new Event('input', { bubbles: true });
             DOM.itemLengthInput.dispatchEvent(event);
         } else {
             showToast('Không tìm thấy kích thước nào trong ảnh. Vui lòng thử ảnh khác rõ ràng hơn.', 'info');
@@ -1179,8 +1268,8 @@ async function handleAIConfig() {
         
         if (updatedFields > 0) {
             showToast(`AI đã điền ${updatedFields} thông tin sản phẩm!`, 'success');
-            // Trigger 3D viewer update
-            const event = new Event('input');
+            // Trigger 3D viewer update and component generation
+            const event = new Event('input', { bubbles: true });
             DOM.itemLengthInput.dispatchEvent(event);
         } else {
             showToast('AI không thể trích xuất thông tin từ mô tả của bạn.', 'info');
@@ -1307,4 +1396,46 @@ document.addEventListener('DOMContentLoaded', () => {
     );
 
     initializeQuickCalc(localMaterials, showToast);
+
+    // --- Component Table Listeners ---
+    const formUpdateInputs = [DOM.itemLengthInput, DOM.itemWidthInput, DOM.itemHeightInput, DOM.itemCompartmentsInput];
+    formUpdateInputs.forEach(input => input.addEventListener('input', handleFormUpdate));
+    DOM.itemTypeSelect.addEventListener('change', handleFormUpdate);
+
+    DOM.componentsTableBody.addEventListener('change', e => {
+        if (e.target.classList.contains('component-input')) {
+            const id = e.target.closest('tr').dataset.id;
+            const field = e.target.dataset.field;
+            const value = e.target.value;
+            const component = productComponents.find(p => p.id === id);
+            if (component) {
+                component[field] = (field === 'name') ? value : parseFloat(value) || 0;
+                component.isDefault = false; // Once edited, it's considered custom
+            }
+        }
+    });
+
+    DOM.componentsTableBody.addEventListener('click', e => {
+        const deleteBtn = e.target.closest('.remove-component-btn');
+        if (deleteBtn) {
+            const id = deleteBtn.dataset.id;
+            productComponents = productComponents.filter(p => p.id !== id);
+            renderProductComponents();
+        }
+    });
+
+    DOM.addCustomComponentBtn.addEventListener('click', () => {
+        productComponents.push({
+            id: `comp_${Date.now()}`,
+            name: 'Chi tiết Mới',
+            length: 0,
+            width: 0,
+            qty: 1,
+            isDefault: false
+        });
+        renderProductComponents();
+    });
+
+    // Initial population
+    handleFormUpdate();
 });

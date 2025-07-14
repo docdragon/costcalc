@@ -31,6 +31,11 @@ export const profitMarginInput = document.getElementById('profit-margin');
 export const mainMaterialWoodCombobox = document.getElementById('main-material-wood-combobox');
 export const mainMaterialBackPanelCombobox = document.getElementById('main-material-back-panel-combobox');
 
+// NEW: Components
+export const componentsTableBody = document.getElementById('components-table-body');
+export const addCustomComponentBtn = document.getElementById('add-custom-component-btn');
+
+
 // Accessories
 export const mainMaterialAccessoriesCombobox = document.getElementById('main-material-accessories-combobox');
 export const accessoryQuantityInput = document.getElementById('accessory-quantity');

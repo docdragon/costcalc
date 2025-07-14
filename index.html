@@ -66,7 +66,7 @@
             <div id="calculator-tab" class="tab-pane active">
                 <div class="grid-layout">
                     <div class="card main-card">
-                        <h2 class="card-header">Thông tin Sản phẩm</h2>
+                        <h2 class="card-header">Tạo Báo giá Mới</h2>
                         <div class="content-wrapper calculator-form-content">
                             <!-- AI Quick Config -->
                             <div class="ai-config-section">
@@ -77,19 +77,21 @@
                                 </button>
                             </div>
                             <hr class="form-divider">
-                            
-                            <div class="form-group">
-                                <label for="item-name" class="form-label">Tên sản phẩm / dự án</label>
-                                <input type="text" id="item-name" class="input-style" placeholder="Vd: Tủ bếp dưới chân sắt">
-                            </div>
-                            <div class="grid-4-col">
-                                <div><label for="item-length" class="form-label">Dài (mm)</label><input type="text" inputmode="decimal" id="item-length" class="input-style" placeholder="Vd: 2000"></div>
-                                <div><label for="item-width" class="form-label">Rộng (mm)</label><input type="text" inputmode="decimal" id="item-width" class="input-style" placeholder="Vd: 600"></div>
-                                <div><label for="item-height" class="form-label">Cao (mm)</label><input type="text" inputmode="decimal" id="item-height" class="input-style" placeholder="Vd: 850"></div>
-                                <div><label for="item-compartments" class="form-label">Số khoang/cánh</label><input type="text" inputmode="decimal" id="item-compartments" class="input-style" value="1" min="1" placeholder="Vd: 2"></div>
-                            </div>
-                            <div class="grid-3-col" style="margin-top: 1.25rem;">
-                                 <div class="form-group" style="margin-top: 0;">
+
+                            <!-- Step 1: Product Info -->
+                            <div class="form-section">
+                                <h3 class="form-section-header"><span class="step-circle">1</span>Thông tin & Kích thước Sản phẩm</h3>
+                                <div class="form-group">
+                                    <label for="item-name" class="form-label">Tên sản phẩm / dự án</label>
+                                    <input type="text" id="item-name" class="input-style" placeholder="Vd: Tủ bếp dưới chân sắt">
+                                </div>
+                                <div class="grid-4-col">
+                                    <div><label for="item-length" class="form-label">Dài (mm)</label><input type="text" inputmode="decimal" id="item-length" class="input-style" placeholder="Vd: 2000"></div>
+                                    <div><label for="item-width" class="form-label">Rộng (mm)</label><input type="text" inputmode="decimal" id="item-width" class="input-style" placeholder="Vd: 600"></div>
+                                    <div><label for="item-height" class="form-label">Cao (mm)</label><input type="text" inputmode="decimal" id="item-height" class="input-style" placeholder="Vd: 850"></div>
+                                    <div><label for="item-compartments" class="form-label">Số khoang</label><input type="text" inputmode="decimal" id="item-compartments" class="input-style" value="1" min="1" placeholder="Vd: 2"></div>
+                                </div>
+                                <div class="form-group" style="margin-top: 1.25rem;">
                                     <label for="item-type" class="form-label">Loại sản phẩm</label>
                                     <select id="item-type" class="input-style">
                                         <option value="tu-bep-duoi">Tủ bếp dưới</option>
@@ -98,82 +100,115 @@
                                         <option value="khac">Khác (Hộp 4 mặt, hở trước & sau)</option>
                                     </select>
                                 </div>
-                                <div class="form-group" style="margin-top: 0;">
-                                    <label for="labor-cost" class="form-label">Chi phí nhân công (VND)</label>
-                                    <input type="text" inputmode="decimal" id="labor-cost" class="input-style" value="0" placeholder="Vd: 500000">
+                            </div>
+
+                            <!-- Step 2: Components & Materials -->
+                            <div class="form-section">
+                                <h3 class="form-section-header"><span class="step-circle">2</span>Cấu thành & Vật liệu Ván</h3>
+                                <div class="form-group">
+                                    <label class="form-label">Vật liệu ván</label>
+                                    <div class="grid-2-col">
+                                        <div>
+                                            <label for="main-material-wood-input" class="sub-label">Ván chính (Thùng, cánh)</label>
+                                            <div id="main-material-wood-combobox" class="combobox-container">
+                                                <input type="text" id="main-material-wood-input" class="input-style combobox-input" placeholder="Tìm hoặc chọn loại ván...">
+                                                <input type="hidden" class="combobox-value">
+                                                <div class="combobox-options-wrapper">
+                                                    <ul class="combobox-options"></ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label for="main-material-back-panel-input" class="sub-label">Ván hậu tủ (nếu khác ván chính)</label>
+                                            <div id="main-material-back-panel-combobox" class="combobox-container">
+                                                <input type="text" id="main-material-back-panel-input" class="input-style combobox-input" placeholder="Tìm hoặc chọn loại ván...">
+                                                <input type="hidden" class="combobox-value">
+                                                <div class="combobox-options-wrapper">
+                                                    <ul class="combobox-options"></ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="form-group" style="margin-top: 0;">
-                                    <label for="profit-margin" class="form-label">Lợi nhuận mong muốn (%)</label>
-                                    <input type="text" inputmode="decimal" id="profit-margin" class="input-style" value="50">
+                                <div class="form-group">
+                                    <label class="form-label">Danh sách Chi tiết Cấu thành</label>
+                                    <p class="form-text" style="margin-top: -0.25rem; margin-bottom: 0.75rem;">AI sẽ dựa vào danh sách này để tính toán sơ đồ cắt. Bạn có thể chỉnh sửa hoặc thêm chi tiết tùy chỉnh.</p>
+                                    <div class="table-wrapper">
+                                        <table class="data-table component-table">
+                                            <thead>
+                                                <tr>
+                                                    <th class="th-style" style="width: 40%;">Tên Chi tiết</th>
+                                                    <th class="th-style">Dài (mm)</th>
+                                                    <th class="th-style">Rộng (mm)</th>
+                                                    <th class="th-style">SL</th>
+                                                    <th class="th-style text-center">Xóa</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="components-table-body">
+                                                <!-- JS will render component rows here -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <button id="add-custom-component-btn" class="btn btn-secondary btn-sm" style="margin-top: 1rem;"><i class="fas fa-plus"></i> Thêm Chi tiết</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Step 3: Accessories & Costs -->
+                             <div class="form-section">
+                                <h3 class="form-section-header"><span class="step-circle">3</span>Phụ kiện & Chi phí Hoàn thiện</h3>
+                                <div class="form-group">
+                                    <label for="material-accessories" class="form-label">Vật tư phụ & Phụ kiện</label>
+                                    <p class="form-text" style="margin-top: -0.25rem; margin-bottom: 0.75rem;">Thêm nẹp cạnh, bản lề, ray trượt, hoặc các chi phí gia công khác tại đây.</p>
+                                    <div class="accessory-adder">
+                                        <div id="main-material-accessories-combobox" class="combobox-container">
+                                            <input type="text" class="input-style combobox-input" placeholder="Tìm phụ kiện, nẹp...">
+                                            <input type="hidden" class="combobox-value">
+                                            <div class="combobox-options-wrapper">
+                                                <ul class="combobox-options"></ul>
+                                            </div>
+                                        </div>
+                                        <input type="text" inputmode="decimal" id="accessory-quantity" class="input-style accessory-qty" placeholder="SL / mét" value="1" min="1">
+                                        <button id="add-accessory-btn" class="btn btn-secondary accessory-add-btn"><i class="fas fa-plus"></i> Thêm</button>
+                                    </div>
+                                    <ul id="accessories-list" class="accessory-list"></ul>
+                                </div>
+                                <div class="grid-2-col" style="margin-top: 1.25rem;">
+                                    <div class="form-group" style="margin-top: 0;">
+                                        <label for="labor-cost" class="form-label">Chi phí nhân công (VND)</label>
+                                        <input type="text" inputmode="decimal" id="labor-cost" class="input-style" value="0" placeholder="Vd: 500000">
+                                    </div>
+                                    <div class="form-group" style="margin-top: 0;">
+                                        <label for="profit-margin" class="form-label">Lợi nhuận mong muốn (%)</label>
+                                        <input type="text" inputmode="decimal" id="profit-margin" class="input-style" value="50">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="product-description" class="form-label">Mô tả hoặc ghi chú thêm về sản phẩm</label>
+                                    <textarea id="product-description" class="input-style" rows="3" placeholder="Vd: Cánh tủ vát cạnh, không tay nắm. Có 2 ngăn kéo..."></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Hình ảnh tham khảo (Tùy chọn)</label>
+                                    <div id="image-uploader" class="image-uploader">
+                                        <input type="file" id="image-input" class="hidden" accept="image/*">
+                                        <div id="image-upload-prompt">
+                                            <i class="fas fa-cloud-upload-alt"></i>
+                                            <p>Nhấp hoặc kéo thả ảnh vào đây</p>
+                                            <span>AI sẽ phân tích ảnh để đưa ra gợi ý chính xác hơn</span>
+                                        </div>
+                                        <div id="image-preview-container" class="hidden">
+                                            <img id="image-preview" src="#" alt="Xem trước ảnh">
+                                            <button id="remove-image-btn" class="remove-image-btn">&times;</button>
+                                        </div>
+                                    </div>
+                                    <div id="image-analysis-container" class="hidden" style="margin-top: 0.75rem;">
+                                         <button id="analyze-image-btn" class="btn btn-secondary full-width">
+                                            <i class="fas fa-search-plus"></i>
+                                            <span>Phân tích Kích thước từ Ảnh</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                            
-                            <div class="form-group">
-                                <label class="form-label">Vật liệu ván chính</label>
-                                <div class="grid-2-col">
-                                    <div>
-                                        <label for="main-material-wood-input" class="sub-label">Ván chính (Thùng)</label>
-                                        <div id="main-material-wood-combobox" class="combobox-container">
-                                            <input type="text" id="main-material-wood-input" class="input-style combobox-input" placeholder="Tìm hoặc chọn loại ván...">
-                                            <input type="hidden" class="combobox-value">
-                                            <div class="combobox-options-wrapper">
-                                                <ul class="combobox-options"></ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label for="main-material-back-panel-input" class="sub-label">Ván hậu tủ (nếu khác ván chính)</label>
-                                        <div id="main-material-back-panel-combobox" class="combobox-container">
-                                            <input type="text" id="main-material-back-panel-input" class="input-style combobox-input" placeholder="Tìm hoặc chọn loại ván...">
-                                            <input type="hidden" class="combobox-value">
-                                            <div class="combobox-options-wrapper">
-                                                <ul class="combobox-options"></ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="material-accessories" class="form-label">Vật tư phụ & Phụ kiện</label>
-                                <p class="form-text" style="margin-top: -0.25rem; margin-bottom: 0.75rem;">Thêm ván làm cánh, nẹp cạnh, hoặc các phụ kiện khác tại đây.</p>
-                                <div class="accessory-adder">
-                                    <div id="main-material-accessories-combobox" class="combobox-container">
-                                        <input type="text" class="input-style combobox-input" placeholder="Tìm phụ kiện, nẹp...">
-                                        <input type="hidden" class="combobox-value">
-                                        <div class="combobox-options-wrapper">
-                                            <ul class="combobox-options"></ul>
-                                        </div>
-                                    </div>
-                                    <input type="text" inputmode="decimal" id="accessory-quantity" class="input-style accessory-qty" placeholder="SL / mét" value="1" min="1">
-                                    <button id="add-accessory-btn" class="btn btn-secondary accessory-add-btn"><i class="fas fa-plus"></i> Thêm</button>
-                                </div>
-                                <ul id="accessories-list" class="accessory-list"></ul>
-                            </div>
-                            <div class="form-group">
-                                <label for="product-description" class="form-label">Mô tả hoặc ghi chú thêm về sản phẩm</label>
-                                <textarea id="product-description" class="input-style" rows="3" placeholder="Vd: Cánh tủ vát cạnh, không tay nắm. Có 2 ngăn kéo..."></textarea>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Hình ảnh tham khảo (Tùy chọn)</label>
-                                <div id="image-uploader" class="image-uploader">
-                                    <input type="file" id="image-input" class="hidden" accept="image/*">
-                                    <div id="image-upload-prompt">
-                                        <i class="fas fa-cloud-upload-alt"></i>
-                                        <p>Nhấp hoặc kéo thả ảnh vào đây</p>
-                                        <span>AI sẽ phân tích ảnh để đưa ra gợi ý chính xác hơn</span>
-                                    </div>
-                                    <div id="image-preview-container" class="hidden">
-                                        <img id="image-preview" src="#" alt="Xem trước ảnh">
-                                        <button id="remove-image-btn" class="remove-image-btn">&times;</button>
-                                    </div>
-                                </div>
-                                <div id="image-analysis-container" class="hidden" style="margin-top: 0.75rem;">
-                                     <button id="analyze-image-btn" class="btn btn-secondary full-width">
-                                        <i class="fas fa-search-plus"></i>
-                                        <span>Phân tích Kích thước từ Ảnh</span>
-                                    </button>
-                                </div>
-                            </div>
                             <div class="main-actions-group">
                                 <button id="save-item-btn" class="btn btn-secondary full-width" disabled>
                                     <i class="fas fa-save"></i> Lưu Dự án
