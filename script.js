@@ -55,7 +55,7 @@ let materialsCollectionRef = null;
 let savedItemsCollectionRef = null;
 let unsubscribeMaterials = null; 
 let unsubscribeSavedItems = null;
-let localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [] };
+let localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [], 'Gia Công': [] };
 let allLocalMaterials = []; // Flat array for filtering and sorting
 let localSavedItems = [];
 let lastGeminiResult = null;
@@ -130,7 +130,7 @@ function listenForData() {
 }
 
 function clearLocalData() {
-    localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [] };
+    localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [], 'Gia Công': [] };
     allLocalMaterials = [];
     localSavedItems = [];
     chatHistory = [];
@@ -286,6 +286,7 @@ function listenForMaterials() {
         localMaterials['Ván'] = [];
         localMaterials['Cạnh'] = [];
         localMaterials['Phụ kiện'] = [];
+        localMaterials['Gia Công'] = [];
         
         snapshot.docs.forEach(doc => {
             const material = { id: doc.id, ...doc.data() };
