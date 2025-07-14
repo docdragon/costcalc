@@ -96,7 +96,7 @@ export function initializeQuickCalc(initialLocalMaterials, showToast) {
             li.dataset.id = acc.id;
             li.innerHTML = `
                 <span class="flex-grow">${acc.name}</span>
-                <input type="text" inputmode="decimal" value="${acc.quantity}" min="1" class="input-style accessory-list-qty" data-id="${acc.id}">
+                <input type="text" inputmode="decimal" value="${acc.quantity}" min="0" class="input-style accessory-list-qty" data-id="${acc.id}">
                 <span class="accessory-unit">${acc.unit}</span>
                 <button class="remove-acc-btn" data-id="${acc.id}">&times;</button>
             `;
@@ -238,7 +238,7 @@ export function initializeQuickCalc(initialLocalMaterials, showToast) {
                 const newQuantity = parseFloat(e.target.value) || 0;
                 const accessory = qcAddedAccessories.find(a => a.id === id);
                 
-                if (accessory && newQuantity > 0) {
+                if (accessory && newQuantity >= 0) {
                     accessory.quantity = newQuantity;
                     handleQuickCalculation();
                 } else if (accessory) {
