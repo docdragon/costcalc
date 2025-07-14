@@ -206,6 +206,17 @@ export function initializeCombobox(container, optionsData, onSelect, config = {}
             renderOptions(input.value);
         }
     };
+
+    // Attach a function to programmatically set the value
+    container.setValue = (id) => {
+        valueInput.value = id;
+        if (id) {
+            const item = currentOptionsData.find(o => o.id === id);
+            input.value = item ? item.name : '';
+        } else {
+            input.value = ''; // Clear the input, placeholder will show.
+        }
+    };
     
     input.addEventListener('focus', () => {
         renderOptions(input.value);

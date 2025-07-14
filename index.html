@@ -112,12 +112,24 @@
                                 <label class="form-label">Vật liệu ván chính</label>
                                 <div class="grid-2-col">
                                     <div>
-                                        <label for="material-wood" class="sub-label">Ván chính (Thùng)</label>
-                                        <select id="material-wood" class="input-style"></select>
+                                        <label for="main-material-wood-input" class="sub-label">Ván chính (Thùng)</label>
+                                        <div id="main-material-wood-combobox" class="combobox-container">
+                                            <input type="text" id="main-material-wood-input" class="input-style combobox-input" placeholder="Tìm hoặc chọn loại ván...">
+                                            <input type="hidden" class="combobox-value">
+                                            <div class="combobox-options-wrapper">
+                                                <ul class="combobox-options"></ul>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div>
-                                        <label for="material-back-panel" class="sub-label">Ván hậu tủ (nếu khác ván chính)</label>
-                                        <select id="material-back-panel" class="input-style"></select>
+                                        <label for="main-material-back-panel-input" class="sub-label">Ván hậu tủ (nếu khác ván chính)</label>
+                                        <div id="main-material-back-panel-combobox" class="combobox-container">
+                                            <input type="text" id="main-material-back-panel-input" class="input-style combobox-input" placeholder="Tìm hoặc chọn loại ván...">
+                                            <input type="hidden" class="combobox-value">
+                                            <div class="combobox-options-wrapper">
+                                                <ul class="combobox-options"></ul>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -125,7 +137,13 @@
                                 <label for="material-accessories" class="form-label">Vật tư phụ & Phụ kiện</label>
                                 <p class="form-text" style="margin-top: -0.25rem; margin-bottom: 0.75rem;">Thêm ván làm cánh, nẹp cạnh, hoặc các phụ kiện khác tại đây.</p>
                                 <div class="accessory-adder">
-                                    <select id="material-accessories" class="input-style"></select>
+                                    <div id="main-material-accessories-combobox" class="combobox-container">
+                                        <input type="text" class="input-style combobox-input" placeholder="Tìm phụ kiện, nẹp...">
+                                        <input type="hidden" class="combobox-value">
+                                        <div class="combobox-options-wrapper">
+                                            <ul class="combobox-options"></ul>
+                                        </div>
+                                    </div>
                                     <input type="text" inputmode="decimal" id="accessory-quantity" class="input-style accessory-qty" placeholder="SL / mét" value="1" min="1">
                                     <button id="add-accessory-btn" class="btn btn-secondary accessory-add-btn"><i class="fas fa-plus"></i> Thêm</button>
                                 </div>

@@ -28,11 +28,11 @@ export const laborCostInput = document.getElementById('labor-cost');
 export const profitMarginInput = document.getElementById('profit-margin');
 
 // Materials
-export const materialWoodSelect = document.getElementById('material-wood');
-export const materialBackPanelSelect = document.getElementById('material-back-panel');
+export const mainMaterialWoodCombobox = document.getElementById('main-material-wood-combobox');
+export const mainMaterialBackPanelCombobox = document.getElementById('main-material-back-panel-combobox');
 
 // Accessories
-export const materialAccessoriesSelect = document.getElementById('material-accessories');
+export const mainMaterialAccessoriesCombobox = document.getElementById('main-material-accessories-combobox');
 export const accessoryQuantityInput = document.getElementById('accessory-quantity');
 export const addAccessoryBtn = document.getElementById('add-accessory-btn');
 export const accessoriesList = document.getElementById('accessories-list');
