@@ -105,6 +105,26 @@ DOM.logoutBtn.addEventListener('click', () => signOut(auth));
 
 // --- Helper & Renderer Functions ---
 
+/**
+ * Parses sheet dimensions from material notes (e.g., "Khổ 1220x2440mm").
+ * @param {object} material The material object.
+ * @returns {number} The area of the sheet in square meters. Returns a standard area if not found.
+ */
+function getSheetArea(material) {
+    const STANDARD_SHEET_AREA_M2 = 1.22 * 2.44;
+    if (!material || !material.notes) return STANDARD_SHEET_AREA_M2;
+    // Regex to find dimensions like 1220x2440 or 1220 x 2440
+    const match = material.notes.match(/(\d+)\s*x\s*(\d+)/);
+    if (match && match[1] && match[2]) {
+        const widthMM = parseInt(match[1], 10);
+        const heightMM = parseInt(match[2], 10);
+        // Convert from mm^2 to m^2
+        return (widthMM * heightMM) / 1000000;
+    }
+    return STANDARD_SHEET_AREA_M2;
+}
+
+
 function getPanelPieces() {
     const length = parseFloat(DOM.itemLengthInput.value) || 0;
     const width = parseFloat(DOM.itemWidthInput.value) || 0;
@@ -218,24 +238,6 @@ function renderCostBreakdown(breakdown, container) {
     container.innerHTML = breakdownHtml;
     container.classList.remove('hidden');
 }
-
-function renderFormattedText(text) {
-    // This is a simplified version. For full markdown, a library would be better.
-    // It handles bold and newlines.
-    const sections = text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .split(/(\*\*.*?\*\*)/g); 
-        
-    return sections.map(part => {
-        if (part.startsWith('**') && part.endsWith('**')) {
-            return `<strong>${part.slice(2, -2)}</strong>`;
-        }
-        return part.replace(/\n/g, '<br>');
-    }).join('');
-}
-
 
 // --- Materials Management ---
 function listenForMaterials() {
@@ -623,78 +625,26 @@ async function runAICalculation() {
     DOM.aiLoadingPlaceholder.classList.remove('hidden');
     DOM.aiResultsContent.classList.add('hidden');
     
-    const inputs = {
-        name: DOM.itemNameInput.value,
-        length: DOM.itemLengthInput.value,
-        width: DOM.itemWidthInput.value,
-        height: DOM.itemHeightInput.value,
-        type: DOM.itemTypeSelect.value,
-        compartments: DOM.itemCompartmentsInput.value,
-        description: DOM.productDescriptionInput.value,
-    };
-
-    const mainWoodId = DOM.materialWoodSelect.value;
-    const backPanelId = DOM.materialBackPanelSelect.value;
-
-    const mainWood = localMaterials['Ván'].find(m => m.id === mainWoodId);
-    const backPanel = localMaterials['Ván'].find(m => m.id === backPanelId);
-    
-    // Find door wood and edge from the accessories list
-    const doorWoodAccessory = addedAccessories.find(a => a.type === 'Ván');
-    const edgeAccessory = addedAccessories.find(a => a.type === 'Cạnh');
-
-    const doorWood = doorWoodAccessory ? allLocalMaterials.find(m => m.id === doorWoodAccessory.id) : null;
-    const edge = edgeAccessory ? allLocalMaterials.find(m => m.id === edgeAccessory.id) : null;
-    
-    const otherAccessories = addedAccessories.filter(a => a.type !== 'Ván' && a.type !== 'Cạnh');
-
+    // The only thing we need from the AI is the optimized cutting layout for the main wood panels.
     const allPieces = getPanelPieces();
-    const useSeparateDoorWood = !!doorWood;
+    const mainWoodPieces = allPieces.filter(p => p.type === 'body' || p.type === 'door');
 
-    let mainWoodPieces = allPieces.filter(p => p.type === 'body');
-    let doorPiecesForPrompt = [];
-
-    if (useSeparateDoorWood) {
-        doorPiecesForPrompt = allPieces.filter(p => p.type === 'door');
-    } else {
-        mainWoodPieces.push(...allPieces.filter(p => p.type === 'door'));
-    }
+    // If there is a separate door material specified in the accessories, we would handle it separately.
+    // For this version, AI will optimize the main wood panels, including doors if they use the same material.
+    // The prompt is simplified to only request this optimization.
 
     const prompt = `
-    NHIỆM VỤ: Bạn là một trợ lý AI chuyên gia cho một xưởng gỗ ở Việt Nam. Mục tiêu của bạn là cung cấp một phân tích chi phí vật liệu chi tiết và một sơ đồ cắt ván chính xác (2D bin packing). TOÀN BỘ PHẢN HỒI PHẢI BẰNG TIẾNG VIỆT.
-
+    NHIỆM VỤ: Bạn là một trợ lý AI chuyên về tối ưu hóa cắt ván (2D bin packing) cho xưởng mộc.
     DỮ LIỆU ĐẦU VÀO:
-    - Tên sản phẩm: ${inputs.name}
-    - Kích thước (DxRxC): ${inputs.length} x ${inputs.width} x ${inputs.height} mm
-    - Loại sản phẩm: ${inputs.type}
-    - Số khoang / số cánh: ${inputs.compartments}
-    - Ghi chú của người dùng: ${inputs.description}
-    - Vật liệu VÁN CHÍNH (dùng cho Thùng): ${mainWood.name} (${mainWood.price} VND/${mainWood.unit})
-    - Vật liệu VÁN CÁNH: ${useSeparateDoorWood ? `${doorWood.name} (${doorWood.price} VND/${doorWood.unit})` : 'Sử dụng chung vật liệu Ván Chính.'}
-    - Vật liệu VÁN HẬU: ${backPanel ? `${backPanel.name} (${backPanel.price} VND/${backPanel.unit})` : 'Không có hoặc đã được gộp vào Ván Chính.'}
-    - Nẹp cạnh: ${edge ? `${edge.name} (${edge.price} VND/mét)` : 'Không sử dụng.'}
-    - Phụ kiện: ${otherAccessories.length > 0 ? otherAccessories.map(a => `${a.name} (SL: ${a.quantity}, Đơn giá: ${a.price})`).join(', ') : 'Không có.'}
-
-    DANH SÁCH CHI TIẾT VÀ VẬT LIỆU TƯƠNG ỨNG (Đây là bản bóc tách chi tiết đã được xử lý):
-    - Chi tiết cắt từ VÁN CHÍNH: ${JSON.stringify(mainWoodPieces.map(({type, ...rest}) => rest))}
-    - Chi tiết cắt từ VÁN CÁNH (chỉ áp dụng nếu có vật liệu riêng): ${JSON.stringify(doorPiecesForPrompt.map(({type, ...rest}) => rest))}
-
-    HƯỚNG DẪN CHI TIẾT:
-    1.  **Sơ đồ cắt ván (Bin Packing) cho VÁN CHÍNH:**
-        - Chỉ tạo sơ đồ cắt cho các chi tiết trong danh sách "Chi tiết cắt từ VÁN CHÍNH".
+    - Danh sách các miếng ván cần cắt (JSON): ${JSON.stringify(mainWoodPieces.map(({type, ...rest}) => rest))}
+    HƯỚNG DẪN:
+    1.  **Sơ đồ cắt ván (Bin Packing):**
         - Kích thước tấm ván tiêu chuẩn là 1220mm x 2440mm.
-        - Thực hiện thuật toán sắp xếp 2D để xếp các miếng này vào số lượng tấm ván tiêu chuẩn ít nhất có thể.
-        - Điền kết quả vào đối tượng "cuttingLayout". "totalSheetsUsed" phải là số tấm VÁN CHÍNH cần dùng.
-
-    2.  **Tính toán chi phí vật liệu:**
-        - Tạo danh sách chi phí và phân loại chúng vào: "woodCosts", "edgeCosts", "accessoryCosts".
-        - **woodCosts**:
-            - Tính chi phí Ván chính dựa trên "totalSheetsUsed" đã được tối ưu, nhân với giá VÁN CHÍNH.
-            - Nếu có "VÁN CÁNH" riêng, ước tính số tấm cần dùng (tổng diện tích các miếng cánh / diện tích tấm chuẩn, làm tròn lên) và tính chi phí.
-            - Nếu có "VÁN HẬU" riêng, tính chi phí cho 1 tấm (giả định cần 1 tấm).
-            - Thêm từng mục vào mảng "woodCosts".
-        - **edgeCosts**: Tính tổng chi phí nẹp cạnh dựa trên chu vi của TẤT CẢ các miếng (cả ván chính và ván cánh).
-        - **accessoryCosts**: Tính chi phí cho từng phụ kiện trong danh sách được cung cấp.
+        - Thực hiện thuật toán sắp xếp 2D để xếp các miếng ván đã cho vào số lượng tấm ván tiêu chuẩn ít nhất có thể.
+        - Trả về kết quả trong đối tượng JSON có tên "cuttingLayout".
+        - "totalSheetsUsed" phải là tổng số tấm ván cần thiết.
+        - "sheets" phải là một mảng, mỗi phần tử đại diện cho một tấm ván và chứa vị trí (x, y) của các miếng được xếp trên đó.
+    2.  **QUAN TRỌNG**: Chỉ trả về đối tượng JSON "cuttingLayout". Không thêm bất kỳ văn bản, giải thích hay chi phí nào khác.
     `;
     
     try {
@@ -715,7 +665,7 @@ async function runAICalculation() {
             return;
         }
 
-        lastGeminiResult = data;
+        lastGeminiResult = data; // Should contain only cuttingLayout
         calculationState = 'done';
         
         const { cuttingLayout } = data;
@@ -749,32 +699,82 @@ async function runAICalculation() {
 
 /**
  * Recalculates the final price based on the last AI analysis and current form inputs.
- * This function makes the pricing dynamic without needing another AI call.
+ * This is now the single source of truth for all pricing.
  */
 function recalculateFinalPrice() {
-    if (calculationState !== 'done' || !lastGeminiResult || !lastGeminiResult.costBreakdown) return;
+    if (calculationState !== 'done' || !lastGeminiResult) return;
 
-    const { woodCosts, edgeCosts } = lastGeminiResult.costBreakdown;
+    const costBreakdownItems = [];
+    let baseMaterialCost = 0;
 
-    // Calculate base cost of wood and edge from the AI's result
-    const woodAndEdgeBaseCost = [...(woodCosts || []), ...(edgeCosts || [])].reduce((sum, item) => sum + (item.cost || 0), 0);
-    
-    // Recalculate costs for "true" accessories (not door panels or edges) based on the current client-side list
-    const currentRealAccessoryCostItems = addedAccessories
-        .filter(acc => acc.type === 'Phụ kiện' || acc.type === 'Gia Công')
-        .map(acc => {
-            const material = allLocalMaterials.find(m => m.id === acc.id);
-            const cost = material ? material.price * acc.quantity : 0;
-            return {
-                name: `${acc.name} (SL: ${acc.quantity})`,
+    // 1. Main Wood Cost (from AI's cutting layout)
+    const totalSheetsUsed = lastGeminiResult.cuttingLayout?.totalSheetsUsed || 0;
+    const mainWoodId = DOM.materialWoodSelect.value;
+    const mainWoodMaterial = localMaterials['Ván'].find(m => m.id === mainWoodId);
+
+    if (mainWoodMaterial && totalSheetsUsed > 0) {
+        const cost = totalSheetsUsed * mainWoodMaterial.price;
+        baseMaterialCost += cost;
+        costBreakdownItems.push({
+            name: `Ván chính: ${mainWoodMaterial.name}`,
+            cost: cost,
+            reason: `${totalSheetsUsed} tấm x ${mainWoodMaterial.price.toLocaleString('vi-VN')}đ`
+        });
+    }
+
+    // 2. Back Panel Cost (assumes 1 sheet if specified)
+    const backPanelId = DOM.materialBackPanelSelect.value;
+    if (backPanelId && backPanelId !== '') {
+        const backPanelMaterial = localMaterials['Ván'].find(m => m.id === backPanelId);
+        if (backPanelMaterial) {
+            const cost = backPanelMaterial.price; // Assume 1 sheet for back panel
+            baseMaterialCost += cost;
+            costBreakdownItems.push({
+                name: `Ván hậu: ${backPanelMaterial.name}`,
                 cost: cost,
-                reason: `Đơn giá: ${material ? material.price.toLocaleString('vi-VN') : 0}đ`
-            };
-    });
-    const currentAccessoryTotalCost = currentRealAccessoryCostItems.reduce((sum, item) => sum + item.cost, 0);
-
-    const baseMaterialCost = woodAndEdgeBaseCost + currentAccessoryTotalCost;
+                reason: `1 tấm x ${backPanelMaterial.price.toLocaleString('vi-VN')}đ`
+            });
+        }
+    }
     
+    // 3. All other accessories from the list
+    addedAccessories.forEach(acc => {
+        const material = allLocalMaterials.find(m => m.id === acc.id);
+        if (!material) return;
+
+        let cost = 0;
+        let reason = '';
+
+        if (material.type === 'Ván') {
+            // Estimate sheets needed for these panels (e.g., separate door panels)
+            // This is a simplified client-side estimation
+            const doorPieces = getPanelPieces().filter(p => p.type === 'door');
+            const totalDoorAreaM2 = doorPieces.reduce((sum, p) => sum + (p.width * p.height), 0) / 1000000;
+            const sheetAreaM2 = getSheetArea(material);
+            const sheetsNeeded = Math.ceil(totalDoorAreaM2 / sheetAreaM2);
+            
+            // The quantity from the user is ignored for Ván type in accessories, we use calculated sheets.
+            if(sheetsNeeded > 0) {
+                cost = sheetsNeeded * material.price;
+                reason = `Ước tính ${sheetsNeeded} tấm x ${material.price.toLocaleString('vi-VN')}đ`;
+            }
+
+        } else {
+            // For Cạnh, Phụ kiện, Gia Công, use the quantity directly
+            cost = acc.quantity * material.price;
+            reason = `${acc.quantity} ${material.unit} x ${material.price.toLocaleString('vi-VN')}đ`;
+        }
+        
+        if(cost > 0) {
+            baseMaterialCost += cost;
+            costBreakdownItems.push({
+                name: `${material.name}`,
+                cost: cost,
+                reason: reason
+            });
+        }
+    });
+
     const laborCost = parseFloat(DOM.laborCostInput.value) || 0;
     const profitMargin = parseFloat(DOM.profitMarginInput.value) || 0;
     
@@ -788,14 +788,13 @@ function recalculateFinalPrice() {
     DOM.estimatedProfitValue.textContent = estimatedProfit.toLocaleString('vi-VN') + 'đ';
     DOM.priceSummaryContainer.classList.remove('hidden');
 
-    // Update the detailed cost breakdown view, combining AI results with client-side updates
-    const allCostsForDisplay = [...(woodCosts || []), ...(edgeCosts || []), ...currentRealAccessoryCostItems];
-    renderCostBreakdown(allCostsForDisplay, DOM.costBreakdownContainer);
+    // Update the detailed cost breakdown view
+    renderCostBreakdown(costBreakdownItems, DOM.costBreakdownContainer);
 
-    // Update the lastGeminiResult object to reflect the current state for saving
-    lastGeminiResult.costBreakdown.accessoryCosts = currentRealAccessoryCostItems; // Update with latest
-    lastGeminiResult.finalPrices = { totalCost, suggestedPrice, estimatedProfit };
+    // Update the lastGeminiResult object to store the calculated prices for saving
+    lastGeminiResult.finalPrices = { totalCost, suggestedPrice, estimatedProfit, costBreakdown: costBreakdownItems };
 }
+
 
 let dynamicListenersAdded = false;
 function addDynamicPricingListeners() {
@@ -866,7 +865,7 @@ function renderSavedItems(items) {
 
 
 DOM.saveItemBtn.addEventListener('click', async () => {
-    if (!currentUserId || !lastGeminiResult) {
+    if (!currentUserId || !lastGeminiResult || !lastGeminiResult.finalPrices) {
         showToast('Không có kết quả phân tích để lưu.', 'error');
         return;
     }
@@ -886,7 +885,8 @@ DOM.saveItemBtn.addEventListener('click', async () => {
             backPanelId: DOM.materialBackPanelSelect.value,
             accessories: addedAccessories
         },
-        ...lastGeminiResult,
+        cuttingLayout: lastGeminiResult.cuttingLayout,
+        finalPrices: lastGeminiResult.finalPrices, // Save the client-calculated prices and breakdown
         createdAt: serverTimestamp()
     };
     
@@ -958,8 +958,8 @@ function loadItemIntoForm(item) {
         renderAccessories();
     }
 
+    // Reconstruct lastGeminiResult from saved data
     lastGeminiResult = {
-        costBreakdown: item.costBreakdown,
         cuttingLayout: item.cuttingLayout,
         finalPrices: item.finalPrices, 
     };
@@ -972,10 +972,9 @@ function loadItemIntoForm(item) {
         DOM.aiAnalysisSection.classList.remove('hidden');
         DOM.aiResultsContent.classList.remove('hidden');
 
-        const { cuttingLayout } = lastGeminiResult;
-        
         recalculateFinalPrice(); // Recalculate and render prices and breakdown
         
+        const { cuttingLayout } = lastGeminiResult;
         if (cuttingLayout) {
             renderCuttingLayout(cuttingLayout, DOM.cuttingLayoutContainer, DOM.cuttingLayoutSummary);
             DOM.cuttingLayoutSection.classList.remove('hidden');
@@ -1009,42 +1008,26 @@ function renderItemDetailsToModal(itemId) {
     }
 
     const inputs = item.inputs || {};
-    const costBreakdown = item.costBreakdown || {};
-    const cuttingLayout = item.cuttingLayout || {};
     const finalPrices = item.finalPrices || {};
+    const costBreakdown = finalPrices.costBreakdown || item.costBreakdown?.woodCosts ? 
+        [...(item.costBreakdown.woodCosts || []), ...(item.costBreakdown.edgeCosts || []), ...(item.costBreakdown.accessoryCosts || [])] : []; // For backwards compatibility
+    const cuttingLayout = item.cuttingLayout || {};
     
     DOM.viewItemTitle.textContent = `Chi tiết dự án: ${inputs.name || 'Không tên'}`;
     
-    const mainWood = localMaterials['Ván'].find(m => m.id === inputs.mainWoodId)?.name || 'Không rõ';
-    const backPanel = localMaterials['Ván'].find(m => m.id === inputs.backPanelId)?.name || 'Dùng ván chính';
+    const mainWood = allLocalMaterials.find(m => m.id === inputs.mainWoodId)?.name || 'Không rõ';
+    const backPanel = allLocalMaterials.find(m => m.id === inputs.backPanelId)?.name || 'Dùng ván chính';
     
-    let doorWood = 'Dùng ván chính';
-    let edge = 'Không sử dụng';
     let accessoriesHtml = 'Không có';
 
     if (inputs.accessories && inputs.accessories.length > 0) {
-        const doorAcc = inputs.accessories.find(a => a.type === 'Ván');
-        if (doorAcc) doorWood = doorAcc.name;
-
-        const edgeAcc = inputs.accessories.find(a => a.type === 'Cạnh');
-        if (edgeAcc) edge = edgeAcc.name;
-
-        const otherAcc = inputs.accessories.filter(a => a.type !== 'Ván' && a.type !== 'Cạnh');
-        if (otherAcc.length > 0) {
-            accessoriesHtml = '<ul>' + otherAcc.map(a => `<li>${a.name} (SL: ${a.quantity})</li>`).join('') + '</ul>';
-        }
+        accessoriesHtml = '<ul>' + inputs.accessories.map(a => `<li>${a.name} (SL: ${a.quantity} ${a.unit})</li>`).join('') + '</ul>';
     }
 
-    const allCosts = [
-        ...(costBreakdown.woodCosts || []),
-        ...(costBreakdown.edgeCosts || []),
-        ...(costBreakdown.accessoryCosts || [])
-    ];
-
     let breakdownHtml = '<p>Không có phân tích chi phí.</p>';
-    if (allCosts.length > 0) {
+    if (costBreakdown.length > 0) {
         const tempContainer = document.createElement('div');
-        renderCostBreakdown(allCosts, tempContainer);
+        renderCostBreakdown(costBreakdown, tempContainer);
         breakdownHtml = tempContainer.innerHTML;
     }
     
@@ -1077,10 +1060,8 @@ function renderItemDetailsToModal(itemId) {
         <h4><i class="fas fa-boxes"></i>Vật tư Sử dụng</h4>
         <ul>
             <li><strong>Ván chính:</strong> ${mainWood}</li>
-            <li><strong>Ván cánh:</strong> ${doorWood}</li>
             <li><strong>Ván hậu:</strong> ${backPanel}</li>
-            <li><strong>Nẹp cạnh:</strong> ${edge}</li>
-            <li><strong>Phụ kiện:</strong> ${accessoriesHtml}</li>
+            <li><strong>Vật tư khác:</strong> ${accessoriesHtml}</li>
         </ul>
         
         ${breakdownHtml}

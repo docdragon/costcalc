@@ -123,39 +123,10 @@ Ví dụ phản hồi: {\"length\": 1200, \"height\": 750}`;
             }
             promptParts.push({ text: prompt });
             
-            const costItemSchema = {
-                type: Type.OBJECT,
-                properties: { 
-                    name: { type: Type.STRING, description: "Tên chi phí, ví dụ: 'Ván MDF An Cường (2 tấm)'" }, 
-                    cost: { type: Type.NUMBER, description: "Tổng chi phí cho mục này" }, 
-                    reason: { type: Type.STRING, description: "Giải thích ngắn gọn cách tính, ví dụ: '2 tấm x 550,000đ'" }
-                }
-            };
-            
             // Define the strict schema for the JSON response
             const responseSchema = {
                 type: Type.OBJECT,
                 properties: {
-                    costBreakdown: {
-                        type: Type.OBJECT,
-                        properties: {
-                            woodCosts: {
-                                type: Type.ARRAY,
-                                items: costItemSchema,
-                                description: "Danh sách chi phí cho tất cả các loại ván (ván chính, cánh, hậu)."
-                            },
-                            edgeCosts: {
-                                type: Type.ARRAY,
-                                items: costItemSchema,
-                                description: "Chi phí cho nẹp cạnh."
-                            },
-                             accessoryCosts: {
-                                type: Type.ARRAY,
-                                items: costItemSchema,
-                                description: "Danh sách chi phí cho từng loại phụ kiện được cung cấp."
-                            }
-                        }
-                    },
                     cuttingLayout: {
                         type: Type.OBJECT,
                         properties: {
