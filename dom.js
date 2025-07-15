@@ -64,9 +64,9 @@ export const cuttingLayoutSummary = document.getElementById('cutting-layout-summ
 export const cuttingLayoutContainer = document.getElementById('cutting-layout-container');
 
 // Product Preview
-export const productPreviewContainer = document.getElementById('product-preview-container');
-export const interactive3dViewer = document.getElementById('interactive-3d-viewer');
-export const viewer3dInstructions = document.getElementById('viewer-3d-instructions');
+export const sidebarImagePreviewWrapper = document.getElementById('sidebar-image-preview-wrapper');
+export const sidebarImagePreview = document.getElementById('sidebar-image-preview');
+export const sidebarImagePlaceholder = document.getElementById('sidebar-image-placeholder');
 
 // --- Quick Calculator Tab ---
 export const qcAreaInput = document.getElementById('qc-area');

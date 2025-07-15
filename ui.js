@@ -84,11 +84,12 @@ function handleImageFile(file) {
     if (!file.type.startsWith('image/')) { showToast('Vui lòng chọn một file ảnh.', 'error'); return; }
     const reader = new FileReader();
     reader.onloadend = () => {
-        const imageData = { mimeType: file.type, data: reader.result.split(',')[1] };
-        if(onImageUploadedCallback) {
-            onImageUploadedCallback(imageData);
+        const imageSrc = reader.result;
+        const imageData = { mimeType: file.type, data: imageSrc.split(',')[1] };
+        if (onImageUploadedCallback) {
+            onImageUploadedCallback(imageData, imageSrc); // Pass imageSrc
         }
-        DOM.imagePreview.src = reader.result;
+        DOM.imagePreview.src = imageSrc;
         DOM.imageUploadPrompt.classList.add('hidden');
         DOM.imagePreviewContainer.classList.remove('hidden');
     };

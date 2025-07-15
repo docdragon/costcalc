@@ -191,14 +191,14 @@ function getBoardThickness(material) {
 // --- Component Management (Refactored) ---
 
 const componentDimensionFormulas = {
-    'hông trái': (l, w, h, t, comp) => ({ length: h, width: w, x: -l/2 + t/2, y: 0, z: 0, rx: 0, ry: 90, rz: 0 }),
-    'hông phải': (l, w, h, t, comp) => ({ length: h, width: w, x: l/2 - t/2, y: 0, z: 0, rx: 0, ry: 90, rz: 0 }),
-    'đáy': (l, w, h, t, comp) => ({ length: l - 2 * t, width: w, x: 0, y: -h/2 + t/2, z: 0, rx: 90, ry: 0, rz: 0 }),
-    'nóc': (l, w, h, t, comp) => ({ length: l - 2 * t, width: w, x: 0, y: h/2 - t/2, z: 0, rx: 90, ry: 0, rz: 0 }),
-    'hậu': (l, w, h, t, comp) => ({ length: l, width: h, x: 0, y: 0, z: -w/2 + t/2, rx: 0, ry: 0, rz: 0 }),
-    'vách ngăn': (l, w, h, t, comp) => ({ length: h, width: w, x: 0, y: 0, z: 0, rx: 0, ry: 90, rz: 0 }),
-    'đợt cố định': (l, w, h, t, comp) => ({ length: l - 2*t, width: w, x: 0, y: 0, z: 0, rx: 90, ry: 0, rz: 0 }),
-    'cánh mở': (l, w, h, t, comp) => ({ length: h - 10, width: (l / comp.qty) - 4, x: 0, y: 0, z: w/2 - t/2, rx: 0, ry: 0, rz: 0 }),
+    'hông trái': (l, w, h, t, comp) => ({ length: h, width: w }),
+    'hông phải': (l, w, h, t, comp) => ({ length: h, width: w }),
+    'đáy': (l, w, h, t, comp) => ({ length: l - 2 * t, width: w }),
+    'nóc': (l, w, h, t, comp) => ({ length: l - 2 * t, width: w }),
+    'hậu': (l, w, h, t, comp) => ({ length: l, width: h }),
+    'vách ngăn': (l, w, h, t, comp) => ({ length: h, width: w }),
+    'đợt cố định': (l, w, h, t, comp) => ({ length: l - 2*t, width: w }),
+    'cánh mở': (l, w, h, t, comp) => ({ length: h - 10, width: (l / comp.qty) - 4 }),
 };
 
 function updateComponentCalculationsAndRender() {
@@ -216,21 +216,14 @@ function updateComponentCalculationsAndRender() {
             const compNameLower = comp.name.toLowerCase().trim();
             if (componentDimensionFormulas[compNameLower]) {
                 const formula = componentDimensionFormulas[compNameLower];
-                const { length, width, x, y, z, rx, ry, rz } = formula(l, w, h, t, comp);
+                const { length, width } = formula(l, w, h, t, comp);
                 comp.length = Math.round(length);
                 comp.width = Math.round(width);
-                comp.x = Math.round(x);
-                comp.y = Math.round(y);
-                comp.z = Math.round(z);
-                comp.rx = rx;
-                comp.ry = ry;
-                comp.rz = rz;
             }
         });
     }
 
     renderProductComponents();
-    updateProductPreview();
     runFullCalculation();
 }
 
@@ -249,7 +242,6 @@ function loadComponentsByProductType(productTypeId) {
                     qty: compTemplate.qty,
                     componentNameId: compTemplate.componentNameId,
                     isDefault: true,
-                    x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0,
                 });
             }
         });
@@ -978,7 +970,6 @@ function clearInputs() {
     DOM.resultsSection.classList.add('hidden');
     DOM.cuttingLayoutSection.classList.add('hidden');
     DOM.saveItemBtn.disabled = true;
-    updateProductPreview();
 }
 
 // --- Calculation Logic ---
@@ -1264,7 +1255,8 @@ DOM.saveItemBtn.addEventListener('click', async () => {
             backPanelId: DOM.mainMaterialBackPanelCombobox.querySelector('.combobox-value').value,
             edgeMaterialId: DOM.edgeMaterialCombobox.querySelector('.combobox-value').value,
             accessories: addedAccessories,
-            components: productComponents
+            components: productComponents,
+            uploadedImage: uploadedImage
         },
         cuttingLayout: lastGeminiResult.cuttingLayout,
         finalPrices: lastGeminiResult.finalPrices,
@@ -1317,6 +1309,24 @@ function loadItemIntoForm(item) {
     if (DOM.mainMaterialWoodCombobox.setValue) DOM.mainMaterialWoodCombobox.setValue(inputs.mainWoodId || '');
     if (DOM.mainMaterialBackPanelCombobox.setValue) DOM.mainMaterialBackPanelCombobox.setValue(inputs.backPanelId || '');
     if (DOM.edgeMaterialCombobox.setValue) DOM.edgeMaterialCombobox.setValue(inputs.edgeMaterialId || '');
+
+    if (inputs.uploadedImage) {
+        uploadedImage = inputs.uploadedImage;
+        const imageSrc = `data:${uploadedImage.mimeType};base64,${uploadedImage.data}`;
+
+        // Update main uploader preview
+        DOM.imagePreview.src = imageSrc;
+        DOM.imagePreviewContainer.classList.remove('hidden');
+        DOM.imageUploadPrompt.classList.add('hidden');
+        DOM.imageAnalysisContainer.classList.remove('hidden');
+
+        // Update sidebar preview
+        if (DOM.sidebarImagePreview && DOM.sidebarImagePlaceholder) {
+            DOM.sidebarImagePreview.src = imageSrc;
+            DOM.sidebarImagePreview.classList.remove('hidden');
+            DOM.sidebarImagePlaceholder.classList.add('hidden');
+        }
+    }
     
     addedAccessories = inputs.accessories ? JSON.parse(JSON.stringify(inputs.accessories)) : [];
     renderAccessories();
@@ -1344,7 +1354,6 @@ function loadItemIntoForm(item) {
 
     document.querySelector('button[data-tab="calculator"]')?.click();
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    updateProductPreview();
     showToast('Đã tải dữ liệu dự án. Bạn có thể chỉnh sửa và tính toán lại.', 'info');
 }
 
@@ -1453,7 +1462,6 @@ async function handleImageStructureAnalysis() {
         if (Array.isArray(data) && data.length > 0) {
             productComponents = data.map((comp, i) => ({ ...comp, id: `comp_${Date.now()}_${i}`, isDefault: false }));
             renderProductComponents();
-            updateProductPreview();
             runFullCalculation();
             showToast(`AI đã phân tích và tạo ra ${data.length} chi tiết cấu thành!`, 'success');
         } else {
@@ -1470,109 +1478,31 @@ async function handleImageStructureAnalysis() {
 DOM.analyzeStructureBtn.addEventListener('click', handleImageStructureAnalysis);
 
 
-// --- Product Preview ---
-function updateProductPreview() {
-    const l = Number(DOM.itemLengthInput.value) || 0;
-    const w = Number(DOM.itemWidthInput.value) || 0;
-    const h = Number(DOM.itemHeightInput.value) || 0;
-    const mainWoodId = DOM.mainMaterialWoodCombobox.querySelector('.combobox-value').value;
-    const mainWoodMaterial = localMaterials['Ván'].find(m => m.id === mainWoodId);
-    const t = getBoardThickness(mainWoodMaterial); 
-    
-    if (!DOM.interactive3dViewer) return;
-    const sceneContainer = DOM.interactive3dViewer.querySelector('.scene-container');
-    if (!sceneContainer) return;
-    
-    sceneContainer.innerHTML = ''; // Clear previous geometry
-    
-    if (l === 0 || w === 0 || h === 0 || productComponents.length === 0) return;
-        
-    const productContainer = document.createElement('div');
-    productContainer.className = 'product-3d-container';
-    
-    const maxDim = Math.max(l, w, h);
-    const scale = 180 / maxDim; // Adjusted scale for viewer size
-
-    productComponents.forEach(comp => {
-        if (comp.length <= 0 || comp.width <= 0 || comp.qty <= 0) return;
-        for (let i = 0; i < comp.qty; i++) {
-            // This logic might need adjustment based on how doors/multiple components are handled
-            let x = comp.x, y = comp.y, z = comp.z;
-
-            const panel = document.createElement('div');
-            panel.className = 'component-3d-panel';
-            panel.dataset.label = `${comp.name}${comp.qty > 1 ? ` ${i + 1}` : ''}`;
-            panel.style.width = `${comp.length * scale}px`;
-            panel.style.height = `${comp.width * scale}px`;
-            panel.style.transform = `translateX(${x*scale}px) translateY(${y*scale}px) translateZ(${z*scale}px) rotateX(${comp.rx||0}deg) rotateY(${comp.ry||0}deg) rotateZ(${comp.rz||0}deg)`;
-            panel.style.setProperty('--thickness', `${t * scale}px`);
-            productContainer.appendChild(panel);
-        }
-    });
-    sceneContainer.appendChild(productContainer);
-}
-
-
-function initialize3DViewer() {
-    if (!DOM.interactive3dViewer) return;
-    const scene = DOM.interactive3dViewer.querySelector('.scene-container');
-    let isDragging = false;
-    let previousX, previousY;
-    let rotateX = -20;
-    let rotateY = -30;
-
-    const startDrag = (clientX, clientY) => {
-        isDragging = true;
-        previousX = clientX;
-        previousY = clientY;
-        DOM.interactive3dViewer.style.cursor = 'grabbing';
-    };
-
-    const drag = (clientX, clientY) => {
-        if (!isDragging) return;
-        const dx = clientX - previousX;
-        const dy = clientY - previousY;
-        
-        rotateY += dx * 0.5;
-        rotateX -= dy * 0.5;
-        rotateX = Math.max(-90, Math.min(90, rotateX)); // Clamp vertical rotation
-
-        scene.style.transition = 'none'; // Disable transition while dragging
-        scene.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-
-        previousX = clientX;
-        previousY = clientY;
-    };
-
-    const endDrag = () => {
-        if (!isDragging) return;
-        isDragging = false;
-        DOM.interactive3dViewer.style.cursor = 'grab';
-        scene.style.transition = 'transform 0.1s linear'; // Re-enable smooth transition
-    };
-
-    DOM.interactive3dViewer.addEventListener('mousedown', (e) => startDrag(e.clientX, e.clientY));
-    document.addEventListener('mousemove', (e) => drag(e.clientX, e.clientY));
-    document.addEventListener('mouseup', endDrag);
-    
-    DOM.interactive3dViewer.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        startDrag(e.touches[0].clientX, e.touches[0].clientY);
-    }, { passive: false });
-    document.addEventListener('touchmove', (e) => {
-        if (e.touches.length > 0) drag(e.touches[0].clientX, e.touches[0].clientY);
-    });
-    document.addEventListener('touchend', endDrag);
-}
-
-
 // --- App Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
     initializeTabs();
     initializeModals();
-    initializeImageUploader( (d) => { uploadedImage = d; DOM.imageAnalysisContainer.classList.remove('hidden'); }, () => { uploadedImage = null; DOM.imageAnalysisContainer.classList.add('hidden'); });
+    initializeImageUploader(
+        (imageData, imageSrc) => {
+            uploadedImage = imageData;
+            DOM.imageAnalysisContainer.classList.remove('hidden');
+            if (DOM.sidebarImagePreview && DOM.sidebarImagePlaceholder) {
+                DOM.sidebarImagePreview.src = imageSrc;
+                DOM.sidebarImagePreview.classList.remove('hidden');
+                DOM.sidebarImagePlaceholder.classList.add('hidden');
+            }
+        },
+        () => {
+            uploadedImage = null;
+            DOM.imageAnalysisContainer.classList.add('hidden');
+            if (DOM.sidebarImagePreview && DOM.sidebarImagePlaceholder) {
+                DOM.sidebarImagePreview.src = '';
+                DOM.sidebarImagePreview.classList.add('hidden');
+                DOM.sidebarImagePlaceholder.classList.remove('hidden');
+            }
+        }
+    );
     initializeMathInput('.input-style[type="text"][inputmode="decimal"]');
-    initialize3DViewer();
     
     // Main form Comboboxes
     initializeCombobox(DOM.mainMaterialWoodCombobox, [], () => { updateComponentCalculationsAndRender(); runFullCalculation(); }, { placeholder: "Tìm hoặc chọn ván chính..." });
@@ -1601,7 +1531,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (component) {
                 component[field] = (field === 'name') ? value : parseFloat(value) || 0;
                 component.isDefault = false; // Manual edit overrides auto-calculation
-                updateProductPreview();
                 runFullCalculation();
             }
         }
@@ -1612,15 +1541,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (deleteBtn) {
             productComponents = productComponents.filter(p => p.id !== deleteBtn.dataset.id);
             renderProductComponents();
-            updateProductPreview();
             runFullCalculation();
         }
     });
 
     DOM.addCustomComponentBtn.addEventListener('click', () => {
-        productComponents.push({ id: `comp_${Date.now()}`, name: 'Chi tiết Mới', length: 0, width: 0, qty: 1, isDefault: false, x:0,y:0,z:0,rx:0,ry:0,rz:0 });
+        productComponents.push({ id: `comp_${Date.now()}`, name: 'Chi tiết Mới', length: 0, width: 0, qty: 1, isDefault: false });
         renderProductComponents();
-        updateProductPreview();
         runFullCalculation();
     });
 });
