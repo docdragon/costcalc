@@ -89,10 +89,7 @@ export default async function handler(request, response) {
                 console.error("Original text from Gemini:", genAIResponse.text);
                 return response.status(500).json({ error: `Phản hồi từ AI không hợp lệ: ${genAIResponse.text}` });
             }
-        }
-
-        // --- Handle Form Configuration from Text Request ---
-        if (configureFromText) {
+        } else if (configureFromText) {
             if (!text) {
                 return response.status(400).json({ error: 'Yêu cầu cấu hình từ văn bản thiếu nội dung.' });
             }
@@ -134,10 +131,7 @@ export default async function handler(request, response) {
                 console.error("Original text from Gemini:", genAIResponse.text);
                 return response.status(500).json({ error: `Phản hồi từ AI không hợp lệ: ${genAIResponse.text}` });
             }
-        }
-
-        // --- Handle Image Dimension Analysis Request ---
-        if (analyzeDimensions) {
+        } else if (analyzeDimensions) {
             if (!image || !image.data || !image.mimeType) {
                 return response.status(400).json({ error: 'Yêu cầu phân tích kích thước thiếu hình ảnh.' });
             }
@@ -182,10 +176,7 @@ Ví dụ phản hồi: {\"length\": 1200, \"height\": 750}`;
                 console.error("Original text from Gemini:", genAIResponse.text);
                 return response.status(500).json({ error: `Phản hồi từ AI không hợp lệ: ${genAIResponse.text}` });
             }
-        }
-
-        // --- Handle Calculator Request (JSON with Schema for Cutting Layout) ---
-        if (prompt) {
+        } else if (prompt) {
             const promptParts = [{ text: prompt }];
             
             const responseSchema = {
@@ -240,9 +231,9 @@ Ví dụ phản hồi: {\"length\": 1200, \"height\": 750}`;
                 console.error("Original text from Gemini:", genAIResponse.text);
                 return response.status(500).json({ error: `Phản hồi từ AI không phải là JSON hợp lệ. Nội dung: ${genAIResponse.text}`});
             }
+        } else {
+             return response.status(400).json({ error: 'Yêu cầu không hợp lệ. Thiếu "prompt", "configureFromText", "analyzeDimensions", hoặc "analyzeStructure".' });
         }
-
-        return response.status(400).json({ error: 'Yêu cầu không hợp lệ. Thiếu "prompt", "configureFromText", "analyzeDimensions", hoặc "analyzeStructure".' });
 
     } catch (error) {
         console.error("Error in serverless function:", error);

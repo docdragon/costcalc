@@ -516,7 +516,14 @@ td button { transition: color 0.2s; }
     transition: all 0.3s ease-in-out;
 }
 .price-label { font-size: 0.875rem; font-weight: 600; }
-.price-value { font-size: 2.25rem; font-weight: 700; line-height: 1; margin: 0.5rem 0; }
+.price-value {
+    font-size: clamp(1.75rem, 4vw, 2.25rem);
+    font-weight: 700;
+    line-height: 1.1;
+    margin: 0.5rem 0;
+    overflow-wrap: break-word;
+    word-break: break-word; /* For wider compatibility */
+}
 .price-sublabel { font-size: 0.8rem; color: var(--text-light); }
 .bg-indigo { background-color: #eef2ff; border-color: #c7d2fe; }
 .bg-indigo .price-label { color: #3730a3; }

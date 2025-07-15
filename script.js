@@ -8,7 +8,7 @@ import {
 import { 
     openModal, closeModal, showConfirm, showToast, updateUIVisibility, 
     initializeImageUploader, initializeTabs, initializeModals, initializeMathInput,
-    initializeCombobox
+    initializeCombobox, debounce
 } from './ui.js';
 import { initializeQuickCalc, updateQuickCalcMaterials } from './quick-calc.js';
 import * as DOM from './dom.js';
@@ -477,7 +477,7 @@ function updatePaginationControls(totalPages) {
     DOM.nextPageBtn.disabled = currentPage === totalPages;
 }
 
-DOM.materialFilterInput.addEventListener('input', () => { currentPage = 1; displayMaterials(); });
+DOM.materialFilterInput.addEventListener('input', debounce(() => { currentPage = 1; displayMaterials(); }, 300));
 DOM.materialSortSelect.addEventListener('change', () => { currentPage = 1; displayMaterials(); });
 DOM.prevPageBtn.addEventListener('click', () => { if (currentPage > 1) { currentPage--; displayMaterials(); } });
 DOM.nextPageBtn.addEventListener('click', () => {
@@ -1192,8 +1192,9 @@ function recalculateFinalPrice() {
 let dynamicListenersAdded = false;
 function addDynamicPricingListeners() {
     if (dynamicListenersAdded) return;
-    DOM.laborCostInput.addEventListener('input', recalculateFinalPrice);
-    DOM.profitMarginInput.addEventListener('input', recalculateFinalPrice);
+    const debouncedRecalculate = debounce(recalculateFinalPrice, 300);
+    DOM.laborCostInput.addEventListener('input', debouncedRecalculate);
+    DOM.profitMarginInput.addEventListener('input', debouncedRecalculate);
     dynamicListenersAdded = true;
 }
 
@@ -1539,7 +1540,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Event Listeners for main calculator
     DOM.itemTypeSelect.addEventListener('change', (e) => loadComponentsByProductType(e.target.value));
-    [DOM.itemLengthInput, DOM.itemWidthInput, DOM.itemHeightInput].forEach(input => input.addEventListener('input', updateComponentCalculationsAndRender));
+    
+    const debouncedUpdateComponents = debounce(updateComponentCalculationsAndRender, 300);
+    [DOM.itemLengthInput, DOM.itemWidthInput, DOM.itemHeightInput].forEach(input => input.addEventListener('input', debouncedUpdateComponents));
+    
     DOM.mainMaterialWoodCombobox.addEventListener('change', updateComponentCalculationsAndRender); // For thickness change
 
     DOM.componentsTableBody.addEventListener('change', e => {

@@ -1,5 +1,5 @@
 // quick-calc.js
-import { initializeCombobox } from './ui.js';
+import { initializeCombobox, debounce } from './ui.js';
 import * as DOM from './dom.js';
 
 // --- Module-level state and initialization flag ---
@@ -159,12 +159,14 @@ export function initializeQuickCalc(initialLocalMaterials, showToast) {
     
     // Call the updater to populate with any initial data that might exist
     updateQuickCalcMaterials(localMaterialsStore);
+    
+    const debouncedCalculation = debounce(handleQuickCalculation, 300);
 
     // Listeners for standard inputs
     const inputsToTrack = [ DOM.qcAreaInput, DOM.qcArea2Input, DOM.qcInstallCostInput, DOM.qcProfitMarginInput ];
     inputsToTrack.forEach(input => {
         if (input) {
-            input.addEventListener('input', handleQuickCalculation);
+            input.addEventListener('input', debouncedCalculation);
         }
     });
 
