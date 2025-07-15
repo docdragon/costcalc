@@ -667,7 +667,7 @@ export function getCalculatorStateForSave() {
             components: productComponents,
             uploadedImage: uploadedImage
         },
-        cuttingLayout: lastGeminiResult.cuttingLayout,
+        cuttingLayout: lastGeminiResult?.cuttingLayout || null,
         finalPrices: lastGeminiResult.finalPrices,
     };
 }
