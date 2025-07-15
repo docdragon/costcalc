@@ -185,10 +185,6 @@
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label for="product-description" class="form-label">Mô tả hoặc ghi chú thêm về sản phẩm</label>
-                                    <textarea id="product-description" class="input-style" rows="3" placeholder="Vd: Cánh tủ vát cạnh, không tay nắm. Có 2 ngăn kéo..."></textarea>
-                                </div>
-                                <div class="form-group">
                                     <label class="form-label">Hình ảnh tham khảo (Tùy chọn)</label>
                                     <div id="image-uploader" class="image-uploader">
                                         <input type="file" id="image-input" class="hidden" accept="image/*">
@@ -220,17 +216,17 @@
                                     <i class="fas fa-save"></i> Lưu Dự án
                                 </button>
                                 <button id="analyze-btn" class="btn btn-primary full-width">
-                                    <i class="fas fa-microchip"></i> Phân tích & Báo giá với AI
+                                    <i class="fas fa-th-large"></i> Tối ưu Cắt ván với AI
                                 </button>
                             </div>
 
-                            <!-- AI Full Analysis Result -->
-                            <div id="ai-analysis-section" class="hidden">
+                            <!-- Results Section -->
+                            <div id="results-section" class="hidden">
                                 <div id="ai-loading-placeholder" class="hidden">
                                     <div class="spinner"></div>
-                                    <p>AI đang phân tích, vui lòng đợi trong giây lát...</p>
+                                    <p>AI đang tối ưu sơ đồ cắt, vui lòng đợi...</p>
                                 </div>
-                                <div id="ai-results-content" class="hidden">
+                                <div id="results-content">
                                     <div id="price-summary-container" class="result-box">
                                         <div class="grid-3-col">
                                             <div class="price-card bg-indigo">
@@ -252,7 +248,7 @@
                                     </div>
                                     <div id="cost-breakdown-container" class="result-box"></div>
                                     
-                                    <div id="cutting-layout-section" class="result-box">
+                                    <div id="cutting-layout-section" class="result-box hidden">
                                         <h3 class="result-box-header"><i class="fas fa-th-large"></i> Sơ đồ Cắt ván Gợi ý từ AI</h3>
                                         <div id="cutting-layout-summary"></div>
                                         <div id="cutting-layout-container" class="cutting-layout-container">
@@ -272,28 +268,12 @@
                         <h2 class="card-header">Công cụ & Hướng dẫn</h2>
                         <div class="content-wrapper calculator-form-content">
                             <!-- Product Preview -->
-                            <div id="product-preview-section">
-                                <h4><i class="fas fa-cube"></i> Xem trước Sản phẩm</h4>
+                             <div id="product-preview-section">
+                                <h4><i class="fas fa-cube"></i> Xem trước Sản phẩm 3D</h4>
                                 <div id="product-preview-container" class="product-preview-container">
-                                    <div class="product-preview-grid">
-                                        <div class="preview-box">
-                                            <h5 class="preview-box-title">Mặt Trước</h5>
-                                            <div class="preview-canvas" id="preview-front">
-                                                <div class="scene-container"></div>
-                                            </div>
-                                        </div>
-                                        <div class="preview-box">
-                                            <h5 class="preview-box-title">Mặt Trên</h5>
-                                            <div class="preview-canvas" id="preview-top">
-                                                <div class="scene-container"></div>
-                                            </div>
-                                        </div>
-                                        <div class="preview-box">
-                                            <h5 class="preview-box-title">Mặt Bên</h5>
-                                            <div class="preview-canvas" id="preview-left">
-                                                <div class="scene-container"></div>
-                                            </div>
-                                        </div>
+                                    <div id="interactive-3d-viewer" class="preview-canvas">
+                                        <div class="scene-container"></div>
+                                        <div id="viewer-3d-instructions" class="viewer-3d-instructions">Kéo để xoay</div>
                                     </div>
                                 </div>
                             </div>
@@ -305,8 +285,8 @@
                                 </summary>
                                 <ul>
                                     <li><strong>Chọn Loại Sản phẩm:</strong> Chọn một loại sản phẩm từ danh sách để tải cấu trúc chi tiết mặc định. Bạn có thể tùy chỉnh các loại sản phẩm này trong tab 'Cấu hình'.</li>
-                                    <li><strong>Điền thông tin:</strong> Hoàn thiện các thông tin chi tiết về kích thước, vật liệu, và phụ kiện cho sản phẩm của bạn.</li>
-                                    <li><strong>Phân tích AI:</strong> Nhấn nút "Phân tích & Báo giá với AI" để nhận báo giá chi tiết, phân tích chi phí và sơ đồ cắt ván.</li>
+                                    <li><strong>Điền thông tin:</strong> Hoàn thiện các thông tin chi tiết về kích thước, vật liệu, và phụ kiện. Kết quả báo giá sẽ tự động cập nhật.</li>
+                                    <li><strong>Tối ưu AI:</strong> Nhấn nút "Tối ưu Cắt ván với AI" để nhận sơ đồ cắt ván hiệu quả, giúp giảm thiểu vật tư thừa.</li>
                                     <li><strong>Lưu & Tải lại:</strong> Đăng nhập và lưu các dự án quan trọng để xem lại hoặc chỉnh sửa sau này.</li>
                                 </ul>
                            </details>
@@ -716,7 +696,7 @@
     <div id="toast-container"></div>
     
     <footer class="footer">
-        <p>&copy; 2025 CostCraft AI - Ver 1.0.0.99.</p>
+        <p>&copy; 2025 CostCraft AI - Ver 1.0.0.98.</p>
     </footer>
 
     <script src="script.js" type="module"></script>

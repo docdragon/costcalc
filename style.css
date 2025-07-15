@@ -398,7 +398,7 @@ tbody tr:nth-child(even) { background-color: #fdfdff; }
 }
 
 .text-center { text-align: center; }
-.text-right { text-align: right; }
+.text-right { text-right; }
 .font-semibold { font-weight: 600; }
 td button { transition: color 0.2s; }
 .text-blue-500 { color: var(--primary-color); }
@@ -789,7 +789,7 @@ td button { transition: color 0.2s; }
     margin-top: 1rem;
     font-weight: 500;
 }
-#ai-results-content.hidden { display: none; }
+#results-content.hidden, #cutting-layout-section.hidden { display: none; }
 
 
 @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -897,34 +897,16 @@ td button { transition: color 0.2s; }
 
 /* --- Product Preview --- */
 #product-preview-section { margin-bottom: 1.5rem; }
-.product-preview-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-}
-.preview-box {
-    border: 1px solid var(--border-color);
-    border-radius: 0.5rem;
-    background: var(--background-color);
-    overflow: hidden;
-}
-.preview-box-title {
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-align: center;
-    padding: 0.4rem;
-    border-bottom: 1px solid var(--border-color);
-    margin: 0;
-    background-color: #fdfdff;
-    color: var(--text-light);
-}
 .preview-canvas {
     width: 100%;
-    height: 140px;
+    height: 300px;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    background-color: var(--background-color);
     background-image:
         linear-gradient(rgba(100, 116, 139, 0.1) 1px, transparent 1px),
         linear-gradient(90deg, rgba(100, 116, 139, 0.1) 1px, transparent 1px);
-    background-size: 15px 15px;
+    background-size: 20px 20px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -932,20 +914,30 @@ td button { transition: color 0.2s; }
     overflow: hidden;
     position: relative;
 }
-#interactive-3d-viewer { cursor: grab; }
+#interactive-3d-viewer { 
+    cursor: grab; 
+    touch-action: none;
+}
+#interactive-3d-viewer:active { cursor: grabbing; }
+
 .viewer-3d-instructions {
     position: absolute;
-    bottom: 5px;
+    bottom: 8px;
     left: 50%;
     transform: translateX(-50%);
     background-color: rgba(0,0,0,0.5);
     color: white;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 0.65rem;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
     pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+#interactive-3d-viewer:hover .viewer-3d-instructions {
     opacity: 0.8;
 }
+
 .scene-container {
     transform-style: preserve-3d;
     transition: transform 0.1s linear;
@@ -954,6 +946,7 @@ td button { transition: color 0.2s; }
     display: flex;
     align-items: center;
     justify-content: center;
+    transform: rotateX(-20deg) rotateY(-30deg); /* Default angle */
 }
 .product-3d-container {
     position: relative;

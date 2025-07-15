@@ -38,7 +38,6 @@ export const addAccessoryBtn = document.getElementById('add-accessory-btn');
 export const accessoriesList = document.getElementById('accessories-list');
 
 // Description & Image
-export const productDescriptionInput = document.getElementById('product-description');
 export const imageUploader = document.getElementById('image-uploader');
 export const imageInput = document.getElementById('image-input');
 export const imageUploadPrompt = document.getElementById('image-upload-prompt');
@@ -52,9 +51,9 @@ export const analyzeStructureBtn = document.getElementById('analyze-structure-bt
 // Actions & Results
 export const saveItemBtn = document.getElementById('save-item-btn');
 export const analyzeBtn = document.getElementById('analyze-btn');
-export const aiAnalysisSection = document.getElementById('ai-analysis-section');
+export const resultsSection = document.getElementById('results-section');
 export const aiLoadingPlaceholder = document.getElementById('ai-loading-placeholder');
-export const aiResultsContent = document.getElementById('ai-results-content');
+export const resultsContent = document.getElementById('results-content');
 export const priceSummaryContainer = document.getElementById('price-summary-container');
 export const totalCostValue = document.getElementById('total-cost-value');
 export const suggestedPriceValue = document.getElementById('suggested-price-value');
@@ -66,9 +65,8 @@ export const cuttingLayoutContainer = document.getElementById('cutting-layout-co
 
 // Product Preview
 export const productPreviewContainer = document.getElementById('product-preview-container');
-export const previewFront = document.getElementById('preview-front');
-export const previewTop = document.getElementById('preview-top');
-export const previewLeft = document.getElementById('preview-left');
+export const interactive3dViewer = document.getElementById('interactive-3d-viewer');
+export const viewer3dInstructions = document.getElementById('viewer-3d-instructions');
 
 // --- Quick Calculator Tab ---
 export const qcAreaInput = document.getElementById('qc-area');
