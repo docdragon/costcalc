@@ -669,6 +669,12 @@
                         </form>
                         <div class="table-container">
                             <h3 class="table-header">Danh sách Tên Chi tiết</h3>
+                            <div class="material-controls">
+                               <div class="filter-wrapper">
+                                   <i class="fas fa-search"></i>
+                                   <input type="text" id="cn-filter-input" class="input-style" placeholder="Lọc theo tên hoặc ghi chú...">
+                               </div>
+                            </div>
                             <div class="table-wrapper">
                                 <table class="data-table">
                                     <thead>
@@ -730,8 +736,8 @@
                     </div>
                     <div class="login-prompt-view">
                         <div class="icon-prompt"><i class="fas fa-folder-open"></i></div>
-                        <h3>Lưu trữ các dự án của bạn</h3>
-                        <p>Vui lòng đăng nhập để xem lại các dự án đã tính toán.</p>
+                        <h3>Xem lại dự án</h3>
+                        <p>Vui lòng đăng nhập để xem các dự án đã lưu của bạn.</p>
                     </div>
                 </div>
             </div>
@@ -743,46 +749,49 @@
     <div id="login-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="modal-close-btn">&times;</button>
-            <h3 class="modal-title">Chào mừng bạn!</h3>
-            <p style="text-align: center; color: var(--text-light); margin-bottom: 1.5rem;">Đăng nhập để lưu vật tư, dự án và sử dụng Trợ lý AI.</p>
-            <div id="login-form-container">
-                <div class="remember-me-container">
-                    <input type="checkbox" id="remember-me-checkbox" checked>
-                    <label for="remember-me-checkbox">Duy trì đăng nhập</label>
-                </div>
-                <button id="google-login-btn" class="google-btn full-width"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google logo" width="18" height="18"> Đăng nhập với Google</button>
-                <p id="login-error" class="error-message"></p>
+            <h3 class="modal-title">Đăng nhập</h3>
+            <p class="form-text" style="text-align: center; margin-top: -1.25rem; margin-bottom: 1.5rem;">Lưu trữ và quản lý mọi dự án của bạn ở một nơi.</p>
+            <div id="login-error" class="error-message"></div>
+            <div class="remember-me-container">
+                <input type="checkbox" id="remember-me-checkbox" checked>
+                <label for="remember-me-checkbox">Duy trì đăng nhập</label>
             </div>
-        </div>
-    </div>
-
-    <div id="view-item-modal" class="modal-overlay hidden">
-        <div class="modal-content modal-lg">
-            <button class="modal-close-btn">&times;</button>
-            <h3 id="view-item-title" class="modal-title">Chi tiết Dự án</h3>
-            <div id="view-item-content" class="modal-body">
-                <!-- JS will render content here -->
-            </div>
+            <button id="google-login-btn" class="google-btn">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" height="18">
+                Đăng nhập với Google
+            </button>
         </div>
     </div>
     
+    <div id="view-item-modal" class="modal-overlay hidden">
+        <div class="modal-content modal-lg">
+            <button class="modal-close-btn">&times;</button>
+            <h3 id="view-item-title" class="modal-title" style="text-align: left;"></h3>
+            <div id="view-item-content" class="modal-body"></div>
+        </div>
+    </div>
+
     <div id="confirm-modal" class="modal-overlay hidden">
-        <div class="modal-content" style="max-width: 400px;">
-            <h3 class="modal-title-sm" style="text-align: center;">Xác nhận</h3>
-            <p id="confirm-message" class="confirm-text" style="text-align: center;">Bạn có chắc chắn muốn thực hiện hành động này?</p>
+        <div class="modal-content">
+            <h3 class="modal-title-sm">Xác nhận</h3>
+            <p id="confirm-message" class="confirm-text"></p>
             <div class="confirm-actions">
                 <button id="confirm-cancel-btn" class="btn btn-secondary">Hủy</button>
                 <button id="confirm-ok-btn" class="btn btn-danger">Đồng ý</button>
             </div>
         </div>
     </div>
-    
+
+    <!-- Toast Container -->
     <div id="toast-container"></div>
     
+    <!-- Footer -->
     <footer class="footer">
-        <p>&copy; 2025 CostCraft AI - Ver 1.0.0.98.</p>
+        <p>&copy; 2024 CostCraft AI. Hỗ trợ bởi Trí tuệ Nhân tạo.</p>
     </footer>
 
-    <script src="script.js" type="module"></script>
+    <!-- Scripts -->
+    <script type="module" src="script.js"></script>
+
 </body>
 </html>

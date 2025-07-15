@@ -489,6 +489,8 @@ function displayMaterials() {
 }
 
 function updatePaginationControls(totalPages) {
+    if (!DOM.paginationControls) return;
+    DOM.paginationControls.dataset.totalPages = totalPages;
     if (totalPages <= 1) {
         DOM.paginationControls.classList.add('hidden');
         return;
@@ -503,8 +505,11 @@ DOM.materialFilterInput.addEventListener('input', debounce(() => { currentPage =
 DOM.materialSortSelect.addEventListener('change', () => { currentPage = 1; displayMaterials(); });
 DOM.prevPageBtn.addEventListener('click', () => { if (currentPage > 1) { currentPage--; displayMaterials(); } });
 DOM.nextPageBtn.addEventListener('click', () => {
-    const totalPages = Math.ceil(allLocalMaterials.length / itemsPerPage) || 1;
-    if (currentPage < totalPages) { currentPage++; displayMaterials(); }
+    const totalPages = parseInt(DOM.paginationControls.dataset.totalPages, 10) || 1;
+    if (currentPage < totalPages) { 
+        currentPage++; 
+        displayMaterials(); 
+    }
 });
 
 function renderMaterials(materials) {
@@ -615,7 +620,16 @@ function listenForComponentNames() {
 }
 
 function displayComponentNames() {
-    let namesToProcess = [...localComponentNames]; 
+    let namesToProcess = [...localComponentNames];
+    const filterText = DOM.cnFilterInput ? DOM.cnFilterInput.value.toLowerCase().trim() : '';
+
+    if (filterText) {
+        namesToProcess = namesToProcess.filter(cn => 
+            cn.name.toLowerCase().includes(filterText) || 
+            (cn.notes && cn.notes.toLowerCase().includes(filterText))
+        );
+    }
+     
     const totalItems = namesToProcess.length;
     const totalPages = Math.ceil(totalItems / cnItemsPerPage) || 1;
     if (cnCurrentPage > totalPages) cnCurrentPage = totalPages;
@@ -628,8 +642,10 @@ function displayComponentNames() {
 }
 
 function updateCnPaginationControls(totalPages) {
+    if (!DOM.cnPaginationControls) return;
+    DOM.cnPaginationControls.dataset.totalPages = totalPages;
     if (totalPages <= 1) {
-        if(DOM.cnPaginationControls) DOM.cnPaginationControls.classList.add('hidden');
+        DOM.cnPaginationControls.classList.add('hidden');
         return;
     }
     DOM.cnPaginationControls.classList.remove('hidden');
@@ -641,7 +657,7 @@ function updateCnPaginationControls(totalPages) {
 function renderComponentNames(names) {
     DOM.componentNamesTableBody.innerHTML = '';
     if (names.length === 0) {
-        DOM.componentNamesTableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 1rem; color: var(--text-light);">Chưa có tên chi tiết nào được tạo.</td></tr>`;
+        DOM.componentNamesTableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 1rem; color: var(--text-light);">Không tìm thấy tên chi tiết nào.</td></tr>`;
         return;
     }
     names.forEach(cn => {
@@ -1803,14 +1819,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Component Name pagination listeners
+    // Component Name pagination and filter listeners
+    if (DOM.cnFilterInput) {
+        DOM.cnFilterInput.addEventListener('input', debounce(() => {
+            cnCurrentPage = 1;
+            displayComponentNames();
+        }, 300));
+    }
     if(DOM.cnPrevPageBtn) {
         DOM.cnPrevPageBtn.addEventListener('click', () => { if (cnCurrentPage > 1) { cnCurrentPage--; displayComponentNames(); } });
     }
     if(DOM.cnNextPageBtn) {
         DOM.cnNextPageBtn.addEventListener('click', () => {
-            const totalPages = Math.ceil(localComponentNames.length / cnItemsPerPage) || 1;
-            if (cnCurrentPage < totalPages) { cnCurrentPage++; displayComponentNames(); }
+            const totalPages = parseInt(DOM.cnPaginationControls.dataset.totalPages, 10) || 1;
+            if (cnCurrentPage < totalPages) { 
+                cnCurrentPage++; 
+                displayComponentNames(); 
+            }
         });
     }
 });
