@@ -191,13 +191,14 @@ function getBoardThickness(material) {
 // --- Component Management (Refactored) ---
 
 const componentDimensionFormulas = {
-    'hông trái': (l, w, h, t) => ({ length: h, width: w, x: -l/2 + t/2, y: 0, z: 0, rx: 0, ry: 90, rz: 0 }),
-    'hông phải': (l, w, h, t) => ({ length: h, width: w, x: l/2 - t/2, y: 0, z: 0, rx: 0, ry: 90, rz: 0 }),
-    'đáy': (l, w, h, t) => ({ length: l - 2 * t, width: w, x: 0, y: -h/2 + t/2, z: 0, rx: 90, ry: 0, rz: 0 }),
-    'nóc': (l, w, h, t) => ({ length: l - 2 * t, width: w, x: 0, y: h/2 - t/2, z: 0, rx: 90, ry: 0, rz: 0 }),
-    'hậu': (l, w, h, t) => ({ length: l, width: h, x: 0, y: 0, z: -w/2 + t/2, rx: 0, ry: 0, rz: 0 }),
-    'vách ngăn': (l, w, h, t) => ({ length: h, width: w, x: 0, y: 0, z: 0, rx: 0, ry: 90, rz: 0 }),
-    'đợt cố định': (l, w, h, t) => ({ length: l - 2*t, width: w, x: 0, y: 0, z: 0, rx: 90, ry: 0, rz: 0 }),
+    'hông trái': (l, w, h, t, comp) => ({ length: h, width: w, x: -l/2 + t/2, y: 0, z: 0, rx: 0, ry: 90, rz: 0 }),
+    'hông phải': (l, w, h, t, comp) => ({ length: h, width: w, x: l/2 - t/2, y: 0, z: 0, rx: 0, ry: 90, rz: 0 }),
+    'đáy': (l, w, h, t, comp) => ({ length: l - 2 * t, width: w, x: 0, y: -h/2 + t/2, z: 0, rx: 90, ry: 0, rz: 0 }),
+    'nóc': (l, w, h, t, comp) => ({ length: l - 2 * t, width: w, x: 0, y: h/2 - t/2, z: 0, rx: 90, ry: 0, rz: 0 }),
+    'hậu': (l, w, h, t, comp) => ({ length: l, width: h, x: 0, y: 0, z: -w/2 + t/2, rx: 0, ry: 0, rz: 0 }),
+    'vách ngăn': (l, w, h, t, comp) => ({ length: h, width: w, x: 0, y: 0, z: 0, rx: 0, ry: 90, rz: 0 }),
+    'đợt cố định': (l, w, h, t, comp) => ({ length: l - 2*t, width: w, x: 0, y: 0, z: 0, rx: 90, ry: 0, rz: 0 }),
+    'cánh mở': (l, w, h, t, comp) => ({ length: h - 10, width: (l / comp.qty) - 4, x: 0, y: 0, z: w/2 - t/2, rx: 0, ry: 0, rz: 0 }),
 };
 
 function recalculateComponentDimensions() {
@@ -217,7 +218,7 @@ function recalculateComponentDimensions() {
         const compNameLower = comp.name.toLowerCase().trim();
         if (componentDimensionFormulas[compNameLower]) {
             const formula = componentDimensionFormulas[compNameLower];
-            const { length, width, x, y, z, rx, ry, rz } = formula(l, w, h, t);
+            const { length, width, x, y, z, rx, ry, rz } = formula(l, w, h, t, comp);
             comp.length = Math.round(length);
             comp.width = Math.round(width);
             comp.x = Math.round(x);
@@ -676,6 +677,9 @@ function listenForProductTypes() {
         localProductTypes.sort((a,b) => a.name.localeCompare(b.name, 'vi'));
         renderProductTypes(localProductTypes);
         populateProductTypeDropdown();
+        if (currentEditingProductTypeId) {
+            renderProductTypeEditor();
+        }
     }, console.error);
 }
 
@@ -1457,9 +1461,9 @@ function updateProductPreview() {
     const t = getBoardThickness(mainWoodMaterial); 
     
     const views = [
-        { container: DOM.previewFront, rotation: 'rotateY(0deg) rotateX(0deg)' },
-        { container: DOM.previewTop, rotation: 'rotateY(0deg) rotateX(-90deg)' },
-        { container: DOM.previewLeft, rotation: 'rotateY(90deg) rotateX(0deg)' }
+        { container: DOM.previewFront, rotation: 'rotateX(0deg) rotateY(0deg)' },
+        { container: DOM.previewTop, rotation: 'rotateX(-90deg) rotateY(0deg)' },
+        { container: DOM.previewLeft, rotation: 'rotateX(0deg) rotateY(90deg)' }
     ];
 
     views.forEach(view => {
@@ -1495,8 +1499,7 @@ function updateProductPreview() {
 
         // Apply static rotation for 2D views
         if (view.rotation) {
-            const initial3DRot = 'rotateX(-20deg) rotateY(-30deg)';
-            sceneContainer.style.transform = `${initial3DRot} ${view.rotation}`;
+            sceneContainer.style.transform = view.rotation;
         }
     });
 }
