@@ -547,7 +547,7 @@ td button { transition: color 0.2s; }
 
 
 /* --- Structured Analysis & Modal Content Styling --- */
-.modal-body h4, .guide-details h4, #viewer-3d-section h4 {
+.modal-body h4, .guide-details h4, #product-preview-section h4 {
     font-size: 1rem;
     font-weight: 600;
     color: var(--primary-color);
@@ -557,7 +557,7 @@ td button { transition: color 0.2s; }
     align-items: center;
 }
 .modal-body h4:first-child { margin-top: 0; }
-.modal-body h4 i, .guide-details h4 i, #viewer-3d-section h4 i { margin-right: 0.5rem; }
+.modal-body h4 i, .guide-details h4 i, #product-preview-section h4 i { margin-right: 0.5rem; }
 .modal-body ul, .guide-details ul { list-style-type: none; padding-left: 1.5rem; margin: 0 0 1rem 0; }
 .modal-body li, .guide-details li { position: relative; padding-bottom: 0.5rem; color: var(--text-dark); line-height: 1.6; }
 .modal-body li::before, .guide-details li::before {
@@ -888,41 +888,59 @@ td button { transition: color 0.2s; }
 .guide-details summary:focus-visible { outline: none; }
 .guide-details summary h4 { margin: 0; }
 
-/* --- 3D Viewer --- */
-#viewer-3d-section { margin-bottom: 1.5rem; }
-.viewer-3d-container {
+/* --- Product Preview --- */
+#product-preview-section { margin-bottom: 1.5rem; }
+.product-preview-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+.preview-box {
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    background: var(--background-color);
+    overflow: hidden;
+}
+.preview-box-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
+    padding: 0.4rem;
+    border-bottom: 1px solid var(--border-color);
+    margin: 0;
+    background-color: #fdfdff;
+    color: var(--text-light);
+}
+.preview-canvas {
     width: 100%;
-    height: 220px;
+    height: 140px;
     perspective: 1200px;
-    background-color: var(--background-color);
     background-image:
         linear-gradient(rgba(100, 116, 139, 0.1) 1px, transparent 1px),
         linear-gradient(90deg, rgba(100, 116, 139, 0.1) 1px, transparent 1px);
-    background-size: 20px 20px;
-    border: 1px solid var(--border-color);
-    border-radius: 0.75rem;
+    background-size: 15px 15px;
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: grab;
-    position: relative;
     user-select: none;
     overflow: hidden;
+    position: relative;
 }
+#interactive-3d-viewer { cursor: grab; }
 .viewer-3d-instructions {
     position: absolute;
-    bottom: 8px;
+    bottom: 5px;
     left: 50%;
     transform: translateX(-50%);
     background-color: rgba(0,0,0,0.5);
     color: white;
     padding: 2px 8px;
     border-radius: 10px;
-    font-size: 0.75rem;
+    font-size: 0.65rem;
     pointer-events: none;
     opacity: 0.8;
 }
-.scene-3d {
+.scene-container {
     transform-style: preserve-3d;
     transition: transform 0.1s linear;
     width: 100%;
@@ -956,6 +974,7 @@ td button { transition: color 0.2s; }
     padding: 1px 4px;
     background: rgba(255, 255, 255, 0.7);
     border-radius: 3px;
+    font-size: 8px;
 }
 
 /* --- Pagination Controls --- */

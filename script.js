@@ -191,13 +191,13 @@ function getBoardThickness(material) {
 // --- Component Management (Refactored) ---
 
 const componentDimensionFormulas = {
-    'hông': (l, w, h, t) => ({ length: w, width: h }),
-    'vách': (l, w, h, t) => ({ length: w, width: h }),
-    'đáy': (l, w, h, t) => ({ length: l - 2 * t, width: w }),
-    'nóc': (l, w, h, t) => ({ length: l - 2 * t, width: w }),
-    'hậu': (l, w, h, t) => ({ length: l, width: h }),
-    'đợt ngang trước': (l, w, h, t) => ({ length: l - 2*t, width: 100 }),
-    'đợt ngang sau': (l, w, h, t) => ({ length: l - 2*t, width: 100 }),
+    'hông trái': (l, w, h, t) => ({ length: h, width: w, x: -l/2 + t/2, y: 0, z: 0, rx: 0, ry: 90, rz: 0 }),
+    'hông phải': (l, w, h, t) => ({ length: h, width: w, x: l/2 - t/2, y: 0, z: 0, rx: 0, ry: 90, rz: 0 }),
+    'đáy': (l, w, h, t) => ({ length: l - 2 * t, width: w, x: 0, y: -h/2 + t/2, z: 0, rx: 90, ry: 0, rz: 0 }),
+    'nóc': (l, w, h, t) => ({ length: l - 2 * t, width: w, x: 0, y: h/2 - t/2, z: 0, rx: 90, ry: 0, rz: 0 }),
+    'hậu': (l, w, h, t) => ({ length: l, width: h, x: 0, y: 0, z: -w/2 + t/2, rx: 0, ry: 0, rz: 0 }),
+    'vách ngăn': (l, w, h, t) => ({ length: h, width: w, x: 0, y: 0, z: 0, rx: 0, ry: 90, rz: 0 }),
+    'đợt cố định': (l, w, h, t) => ({ length: l - 2*t, width: w, x: 0, y: 0, z: 0, rx: 90, ry: 0, rz: 0 }),
 };
 
 function recalculateComponentDimensions() {
@@ -211,23 +211,26 @@ function recalculateComponentDimensions() {
     if (!l || !w || !h) return;
 
     productComponents.forEach(comp => {
-        const compNameLower = comp.name.toLowerCase();
-        let calculated = false;
-        for (const key in componentDimensionFormulas) {
-            if (compNameLower.includes(key)) {
-                const { length, width } = componentDimensionFormulas[key](l, w, h, t);
-                comp.length = Math.round(length);
-                comp.width = Math.round(width);
-                calculated = true;
-                break;
-            }
+        // Only auto-calculate for default components that haven't been manually edited.
+        if (!comp.isDefault) return;
+
+        const compNameLower = comp.name.toLowerCase().trim();
+        if (componentDimensionFormulas[compNameLower]) {
+            const formula = componentDimensionFormulas[compNameLower];
+            const { length, width, x, y, z, rx, ry, rz } = formula(l, w, h, t);
+            comp.length = Math.round(length);
+            comp.width = Math.round(width);
+            comp.x = Math.round(x);
+            comp.y = Math.round(y);
+            comp.z = Math.round(z);
+            comp.rx = rx;
+            comp.ry = ry;
+            comp.rz = rz;
         }
-        // For components like doors ('cánh') or shelves ('đợt'), we might not have a universal formula,
-        // so we don't auto-update them if they already have dimensions. This allows for manual override.
     });
 
     renderProductComponents();
-    update3DPreview();
+    updateProductPreview();
 }
 
 function loadComponentsByProductType(productTypeId) {
@@ -235,6 +238,7 @@ function loadComponentsByProductType(productTypeId) {
     productComponents = [];
     if (!productType || !productType.components) {
         renderProductComponents();
+        updateProductPreview();
         return;
     }
     
@@ -248,7 +252,7 @@ function loadComponentsByProductType(productTypeId) {
                 width: 0,  // Will be calculated
                 qty: compTemplate.qty,
                 componentNameId: compTemplate.componentNameId,
-                isDefault: true,
+                isDefault: true, // Mark as default to allow auto-calculation
                 x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0,
             });
         }
@@ -295,6 +299,7 @@ function renderProductComponents() {
                     if (component && selectedName) {
                         component.name = selectedName;
                         component.componentNameId = selectedId;
+                        component.isDefault = true; // Re-enable auto-calculation when a known type is selected
                         recalculateComponentDimensions();
                     }
                 },
@@ -952,7 +957,7 @@ function clearInputs() {
     updateAnalyzeButton();
     DOM.aiAnalysisSection.classList.add('hidden');
     DOM.saveItemBtn.disabled = true;
-    update3DPreview();
+    updateProductPreview();
 }
 
 // --- Calculation Logic ---
@@ -1319,7 +1324,7 @@ function loadItemIntoForm(item) {
 
     document.querySelector('button[data-tab="calculator"]')?.click();
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    update3DPreview();
+    updateProductPreview();
     showToast('Đã tải dữ liệu dự án. Bạn có thể chỉnh sửa và phân tích lại.', 'info');
 }
 
@@ -1428,7 +1433,7 @@ async function handleImageStructureAnalysis() {
         if (Array.isArray(data) && data.length > 0) {
             productComponents = data.map((comp, i) => ({ ...comp, id: `comp_${Date.now()}_${i}`, isDefault: false }));
             renderProductComponents();
-            update3DPreview();
+            updateProductPreview();
             showToast(`AI đã phân tích và tạo ra ${data.length} chi tiết cấu thành!`, 'success');
         } else {
             showToast('AI không thể xác định cấu trúc từ hình ảnh.', 'info');
@@ -1444,52 +1449,79 @@ async function handleImageStructureAnalysis() {
 DOM.analyzeStructureBtn.addEventListener('click', handleImageStructureAnalysis);
 
 
-// --- 3D Preview ---
-function update3DPreview() {
-    const scene = DOM.viewer3dContainer.querySelector('.scene-3d');
-    if (!scene) return;
-    scene.innerHTML = '';
-
+// --- Product Preview ---
+function updateProductPreview() {
     const l = Number(DOM.itemLengthInput.value) || 0, w = Number(DOM.itemWidthInput.value) || 0, h = Number(DOM.itemHeightInput.value) || 0;
-    if (l === 0 || w === 0 || h === 0 || productComponents.length === 0) return;
-    
     const mainWoodId = DOM.mainMaterialWoodCombobox.querySelector('.combobox-value').value;
     const mainWoodMaterial = localMaterials['Ván'].find(m => m.id === mainWoodId);
     const t = getBoardThickness(mainWoodMaterial); 
+    
+    const views = [
+        { container: DOM.previewFront, rotation: 'rotateY(0deg) rotateX(0deg)' },
+        { container: DOM.previewTop, rotation: 'rotateY(0deg) rotateX(-90deg)' },
+        { container: DOM.previewLeft, rotation: 'rotateY(90deg) rotateX(0deg)' },
+        { container: DOM.interactive3dViewer, rotation: null } // Interactive, handled separately
+    ];
 
-    const productContainer = document.createElement('div');
-    productContainer.className = 'product-3d-container';
+    views.forEach(view => {
+        if (!view.container) return;
+        const sceneContainer = view.container.querySelector('.scene-container');
+        if (!sceneContainer) return;
+        sceneContainer.innerHTML = '';
+        if (l === 0 || w === 0 || h === 0 || productComponents.length === 0) return;
+        
+        const productContainer = document.createElement('div');
+        productContainer.className = 'product-3d-container';
+        
+        const maxDim = Math.max(l, w, h);
+        const scale = 120 / maxDim; // Adjusted scale for smaller viewports
 
-    const maxDim = Math.max(l, w, h);
-    const scale = 180 / maxDim;
+        productComponents.forEach(comp => {
+            if (comp.length <= 0 || comp.width <= 0 || comp.qty <= 0) return;
+            for (let i = 0; i < comp.qty; i++) {
+                // This logic might need adjustment based on how doors/multiple components are handled
+                let x = comp.x, y = comp.y, z = comp.z;
 
-    productComponents.forEach(comp => {
-        if (comp.length <= 0 || comp.width <= 0 || comp.qty <= 0) return;
-        for (let i = 0; i < comp.qty; i++) {
-            const panel = document.createElement('div');
-            panel.className = 'component-3d-panel';
-            panel.dataset.label = `${comp.name}${comp.qty > 1 ? ` ${i + 1}` : ''}`;
-            panel.style.width = `${comp.length * scale}px`;
-            panel.style.height = `${comp.width * scale}px`;
-            panel.style.transform = `translateX(${comp.x*scale}px) translateY(${comp.y*scale}px) translateZ(${comp.z*scale}px) rotateX(${comp.rx||0}deg) rotateY(${comp.ry||0}deg) rotateZ(${comp.rz||0}deg)`;
-            panel.style.setProperty('--thickness', `${t * scale}px`);
-            productContainer.appendChild(panel);
+                const panel = document.createElement('div');
+                panel.className = 'component-3d-panel';
+                panel.dataset.label = `${comp.name}${comp.qty > 1 ? ` ${i + 1}` : ''}`;
+                panel.style.width = `${comp.length * scale}px`;
+                panel.style.height = `${comp.width * scale}px`;
+                panel.style.transform = `translateX(${x*scale}px) translateY(${y*scale}px) translateZ(${z*scale}px) rotateX(${comp.rx||0}deg) rotateY(${comp.ry||0}deg) rotateZ(${comp.rz||0}deg)`;
+                panel.style.setProperty('--thickness', `${t * scale}px`);
+                productContainer.appendChild(panel);
+            }
+        });
+        sceneContainer.appendChild(productContainer);
+
+        // Apply static rotation for 2D views
+        if (view.rotation && sceneContainer.parentElement.id !== 'interactive-3d-viewer') {
+            const initial3DRot = 'rotateX(-20deg) rotateY(-30deg)';
+            sceneContainer.style.transform = `${initial3DRot} ${view.rotation}`;
         }
     });
-    scene.appendChild(productContainer);
+
+    // Ensure the interactive one keeps its rotation if it has one
+    if (DOM.interactive3dScene && !DOM.interactive3dScene.style.transform) {
+        DOM.interactive3dScene.style.transform = 'rotateX(-20deg) rotateY(-30deg)';
+    }
 }
 
-function initialize3DPreview() {
-    const scene = DOM.viewer3dContainer.querySelector('.scene-3d');
+function initializePreviews() {
+    const scene = DOM.interactive3dScene;
+    const viewer = DOM.interactive3dViewer;
+
+    if (!scene || !viewer) return;
+
     let mouseX = 0, mouseY = 0, rotX = -20, rotY = -30, isDragging = false;
     scene.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
 
-    DOM.viewer3dContainer.addEventListener('mousedown', e => {
+    viewer.addEventListener('mousedown', e => {
         isDragging = true; mouseX = e.clientX; mouseY = e.clientY;
-        DOM.viewer3dContainer.style.cursor = 'grabbing';
+        viewer.style.cursor = 'grabbing';
     });
     document.addEventListener('mouseup', () => {
-        if (isDragging) { isDragging = false; DOM.viewer3dContainer.style.cursor = 'grab'; }
+        if (isDragging) { isDragging = false; viewer.style.cursor = 'grab'; }
     });
     document.addEventListener('mousemove', e => {
         if (!isDragging) return;
@@ -1500,7 +1532,7 @@ function initialize3DPreview() {
         scene.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
         mouseX = e.clientX; mouseY = e.clientY;
     });
-    update3DPreview();
+    updateProductPreview();
 }
 
 // --- App Initialization ---
@@ -1508,7 +1540,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeTabs();
     initializeModals();
     initializeImageUploader( (d) => { uploadedImage = d; DOM.imageAnalysisContainer.classList.remove('hidden'); }, () => { uploadedImage = null; DOM.imageAnalysisContainer.classList.add('hidden'); });
-    initialize3DPreview();
+    initializePreviews();
     initializeMathInput('.input-style[type="text"][inputmode="decimal"]');
     
     // Main form Comboboxes
@@ -1535,8 +1567,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const component = productComponents.find(p => p.id === id);
             if (component) {
                 component[field] = (field === 'name') ? value : parseFloat(value) || 0;
-                component.isDefault = false;
-                update3DPreview();
+                component.isDefault = false; // Manual edit overrides auto-calculation
+                updateProductPreview();
             }
         }
     });
@@ -1546,13 +1578,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (deleteBtn) {
             productComponents = productComponents.filter(p => p.id !== deleteBtn.dataset.id);
             renderProductComponents();
-            update3DPreview();
+            updateProductPreview();
         }
     });
 
     DOM.addCustomComponentBtn.addEventListener('click', () => {
         productComponents.push({ id: `comp_${Date.now()}`, name: 'Chi tiết Mới', length: 0, width: 0, qty: 1, isDefault: false, x:0,y:0,z:0,rx:0,ry:0,rz:0 });
         renderProductComponents();
-        update3DPreview();
+        updateProductPreview();
     });
 });

@@ -271,14 +271,37 @@
                     <div class="sidebar-card card">
                         <h2 class="card-header">Công cụ & Hướng dẫn</h2>
                         <div class="content-wrapper calculator-form-content">
-                            <!-- 3D Viewer -->
-                            <div id="viewer-3d-section">
-                                <h4><i class="fas fa-cube"></i> Xem trước Sản phẩm 3D</h4>
-                                <div id="viewer-3d-container" class="viewer-3d-container">
-                                    <div class="scene-3d">
-                                        <!-- JS will generate product components here -->
+                            <!-- Product Preview -->
+                            <div id="product-preview-section">
+                                <h4><i class="fas fa-cube"></i> Xem trước Sản phẩm</h4>
+                                <div id="product-preview-container" class="product-preview-container">
+                                    <div class="product-preview-grid">
+                                        <div class="preview-box">
+                                            <h5 class="preview-box-title">Mặt Trước</h5>
+                                            <div class="preview-canvas" id="preview-front">
+                                                <div class="scene-container"></div>
+                                            </div>
+                                        </div>
+                                        <div class="preview-box">
+                                            <h5 class="preview-box-title">Mặt Trên</h5>
+                                            <div class="preview-canvas" id="preview-top">
+                                                <div class="scene-container"></div>
+                                            </div>
+                                        </div>
+                                        <div class="preview-box">
+                                            <h5 class="preview-box-title">Mặt Bên</h5>
+                                            <div class="preview-canvas" id="preview-left">
+                                                <div class="scene-container"></div>
+                                            </div>
+                                        </div>
+                                        <div class="preview-box">
+                                            <h5 class="preview-box-title">Phối cảnh 3D</h5>
+                                            <div class="preview-canvas" id="interactive-3d-viewer">
+                                                 <div class="scene-container" id="interactive-3d-scene"></div>
+                                                 <div class="viewer-3d-instructions">Nhấn và kéo để xoay</div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="viewer-3d-instructions">Nhấn và kéo để xoay</div>
                                 </div>
                             </div>
                             
@@ -700,7 +723,7 @@
     <div id="toast-container"></div>
     
     <footer class="footer">
-        <p>&copy; 2025 CostCraft AI.</p>
+        <p>&copy; 2025 CostCraft AI - Ver 1.0.0.97.</p>
     </footer>
 
     <script src="script.js" type="module"></script>
