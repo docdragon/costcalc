@@ -19,19 +19,23 @@ let currentUserId = null;
 let materialsCollectionRef = null;
 let savedItemsCollectionRef = null;
 let componentNamesCollectionRef = null;
-let productTypesCollectionRef = null; // New collection for product types
+let productTypesCollectionRef = null;
+let componentGroupsCollectionRef = null; // For component groups/assemblies
 
 let unsubscribeMaterials = null; 
 let unsubscribeSavedItems = null;
 let unsubscribeComponentNames = null;
-let unsubscribeProductTypes = null; // New listener
+let unsubscribeProductTypes = null;
+let unsubscribeComponentGroups = null; // New listener for groups
 
 let localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [], 'Gia Công': [] };
 let allLocalMaterials = []; // Flat array for filtering and sorting
 let localSavedItems = [];
 let localComponentNames = [];
-let localProductTypes = []; // For the new product type manager
-let currentEditingProductTypeId = null; // To track which product type is being edited
+let localProductTypes = [];
+let localComponentGroups = []; // For new component groups
+let currentEditingProductTypeId = null;
+let currentEditingComponentGroupId = null; // To track which group is being edited
 
 let lastGeminiResult = null;
 let addedAccessories = [];
@@ -55,14 +59,14 @@ const sampleMaterials = [
 ];
 
 const sampleComponentNames = [
-    { name: 'Hông Trái', notes: 'Vách bên trái tủ', edge1: true, edge2: false, edge3: true, edge4: false },
-    { name: 'Hông Phải', notes: 'Vách bên phải tủ', edge1: true, edge2: false, edge3: true, edge4: false },
-    { name: 'Đáy', notes: 'Tấm ván dưới cùng', edge1: true, edge2: false, edge3: false, edge4: false },
-    { name: 'Nóc', notes: 'Tấm ván trên cùng', edge1: true, edge2: false, edge3: false, edge4: false },
-    { name: 'Hậu', notes: 'Tấm ván phía sau', edge1: false, edge2: false, edge3: false, edge4: false },
-    { name: 'Cánh Mở', notes: '', edge1: true, edge2: true, edge3: true, edge4: true },
-    { name: 'Đợt Cố Định', notes: '', edge1: true, edge2: false, edge3: false, edge4: false },
-    { name: 'Vách Ngăn', notes: 'Vách chia khoang', edge1: true, edge2: false, edge3: false, edge4: false },
+    { name: 'Hông Trái', notes: 'Vách bên trái tủ', lengthFormula: 'H', widthFormula: 'W', edge1: true, edge2: false, edge3: true, edge4: false },
+    { name: 'Hông Phải', notes: 'Vách bên phải tủ', lengthFormula: 'H', widthFormula: 'W', edge1: true, edge2: false, edge3: true, edge4: false },
+    { name: 'Đáy', notes: 'Tấm ván dưới cùng', lengthFormula: 'L - 2*t', widthFormula: 'W', edge1: true, edge2: false, edge3: false, edge4: false },
+    { name: 'Nóc', notes: 'Tấm ván trên cùng', lengthFormula: 'L - 2*t', widthFormula: 'W', edge1: true, edge2: false, edge3: false, edge4: false },
+    { name: 'Hậu', notes: 'Tấm ván phía sau', lengthFormula: 'L', widthFormula: 'H', edge1: false, edge2: false, edge3: false, edge4: false },
+    { name: 'Cánh Mở', notes: '', lengthFormula: 'H - 4', widthFormula: '(L / 2) - 4', edge1: true, edge2: true, edge3: true, edge4: true },
+    { name: 'Đợt Cố Định', notes: '', lengthFormula: 'L - 2*t', widthFormula: 'W', edge1: true, edge2: false, edge3: false, edge4: false },
+    { name: 'Vách Ngăn', notes: 'Vách chia khoang', lengthFormula: 'H - 2*t', widthFormula: 'W', edge1: true, edge2: false, edge3: false, edge4: false },
 ];
 
 const sampleProductTypes = [
@@ -128,6 +132,7 @@ onAuthStateChanged(auth, async (user) => {
         savedItemsCollectionRef = collection(db, `users/${currentUserId}/savedItems`);
         componentNamesCollectionRef = collection(db, `users/${currentUserId}/componentNames`);
         productTypesCollectionRef = collection(db, `users/${currentUserId}/productTypes`);
+        componentGroupsCollectionRef = collection(db, `users/${currentUserId}/componentGroups`);
         await checkAndAddSampleData(currentUserId);
         listenForData();
     } else {
@@ -136,6 +141,7 @@ onAuthStateChanged(auth, async (user) => {
         if (unsubscribeSavedItems) unsubscribeSavedItems();
         if (unsubscribeComponentNames) unsubscribeComponentNames();
         if (unsubscribeProductTypes) unsubscribeProductTypes();
+        if (unsubscribeComponentGroups) unsubscribeComponentGroups();
         clearLocalData();
     }
     updateUIVisibility(loggedIn, user);
@@ -148,6 +154,7 @@ function listenForData() {
     listenForSavedItems();
     listenForComponentNames();
     listenForProductTypes();
+    listenForComponentGroups();
 }
 
 function clearLocalData() {
@@ -156,10 +163,12 @@ function clearLocalData() {
     localSavedItems = [];
     localComponentNames = [];
     localProductTypes = [];
+    localComponentGroups = [];
     renderMaterials([]);
     renderSavedItems([]);
     renderComponentNames([]);
     renderProductTypes([]);
+    renderComponentGroups([]);
     populateComboboxes();
     populateProductTypeDropdown();
     updateQuickCalcMaterials(localMaterials);
@@ -190,35 +199,50 @@ function getBoardThickness(material) {
 
 // --- Component Management (Refactored) ---
 
-const componentDimensionFormulas = {
-    'hông trái': (l, w, h, t, comp) => ({ length: h, width: w }),
-    'hông phải': (l, w, h, t, comp) => ({ length: h, width: w }),
-    'đáy': (l, w, h, t, comp) => ({ length: l - 2 * t, width: w }),
-    'nóc': (l, w, h, t, comp) => ({ length: l - 2 * t, width: w }),
-    'hậu': (l, w, h, t, comp) => ({ length: l, width: h }),
-    'vách ngăn': (l, w, h, t, comp) => ({ length: h, width: w }),
-    'đợt cố định': (l, w, h, t, comp) => ({ length: l - 2*t, width: w }),
-    'cánh mở': (l, w, h, t, comp) => ({ length: h - 10, width: (l / comp.qty) - 4 }),
-};
+function evaluateFormula(formula, context) {
+    if (!formula || typeof formula !== 'string') return 0;
+    
+    // Sanitize to prevent malicious code injection
+    const allowedChars = /^[LWHt\d\s\.\+\-\*\/\(\)]+$/;
+    if (!allowedChars.test(formula)) {
+        console.warn(`Invalid characters in formula: "${formula}"`);
+        return 0;
+    }
+
+    const { L, W, H, t } = context;
+    try {
+        // Using Function constructor is safer than eval
+        const func = new Function('L', 'W', 'H', 't', `return ${formula}`);
+        const result = func(L, W, H, t);
+        return typeof result === 'number' && isFinite(result) ? result : 0;
+    } catch (e) {
+        console.error(`Error evaluating formula "${formula}":`, e);
+        return 0;
+    }
+}
 
 function updateComponentCalculationsAndRender() {
-    const l = parseFloat(DOM.itemLengthInput.value) || 0;
-    const w = parseFloat(DOM.itemWidthInput.value) || 0;
-    const h = parseFloat(DOM.itemHeightInput.value) || 0;
+    const L = parseFloat(DOM.itemLengthInput.value) || 0;
+    const W = parseFloat(DOM.itemWidthInput.value) || 0;
+    const H = parseFloat(DOM.itemHeightInput.value) || 0;
     const mainWoodId = DOM.mainMaterialWoodCombobox.querySelector('.combobox-value').value;
     const mainWoodMaterial = localMaterials['Ván'].find(m => m.id === mainWoodId);
     const t = getBoardThickness(mainWoodMaterial);
 
-    if (l > 0 && w > 0 && h > 0) {
+    if (L > 0 || W > 0 || H > 0) {
         productComponents.forEach(comp => {
+            // Only apply formulas if the component is marked as default (not manually edited)
             if (!comp.isDefault) return;
 
-            const compNameLower = comp.name.toLowerCase().trim();
-            if (componentDimensionFormulas[compNameLower]) {
-                const formula = componentDimensionFormulas[compNameLower];
-                const { length, width } = formula(l, w, h, t, comp);
-                comp.length = Math.round(length);
-                comp.width = Math.round(width);
+            const componentNameData = localComponentNames.find(cn => cn.id === comp.componentNameId);
+            if (componentNameData) {
+                const context = { L, W, H, t };
+                if (componentNameData.lengthFormula) {
+                    comp.length = Math.round(evaluateFormula(componentNameData.lengthFormula, context));
+                }
+                if (componentNameData.widthFormula) {
+                     comp.width = Math.round(evaluateFormula(componentNameData.widthFormula, context));
+                }
             }
         });
     }
@@ -575,9 +599,13 @@ function listenForComponentNames() {
         localComponentNames = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         localComponentNames.sort((a,b) => a.name.localeCompare(b.name, 'vi'));
         renderComponentNames(localComponentNames);
-        // Also update the combobox in the product type editor
+        // Also update the comboboxes that use component names
+        const componentNameOptions = localComponentNames.map(c => ({ id: c.id, name: c.name }));
         if (DOM.ptComponentAddCombobox?.updateComboboxData) {
-            DOM.ptComponentAddCombobox.updateComboboxData(localComponentNames.map(c => ({ id: c.id, name: c.name })));
+            DOM.ptComponentAddCombobox.updateComboboxData(componentNameOptions);
+        }
+        if (DOM.cgComponentAddCombobox?.updateComboboxData) {
+            DOM.cgComponentAddCombobox.updateComboboxData(componentNameOptions);
         }
     }, console.error);
 }
@@ -585,14 +613,15 @@ function listenForComponentNames() {
 function renderComponentNames(names) {
     DOM.componentNamesTableBody.innerHTML = '';
     if (names.length === 0) {
-        DOM.componentNamesTableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 1rem; color: var(--text-light);">Chưa có tên chi tiết nào được tạo.</td></tr>`;
+        DOM.componentNamesTableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 1rem; color: var(--text-light);">Chưa có tên chi tiết nào được tạo.</td></tr>`;
         return;
     }
     names.forEach(cn => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td data-label="Tên">${cn.name}</td>
-            <td data-label="Ghi chú">${cn.notes || ''}</td>
+            <td data-label="CT Dài">${cn.lengthFormula || '-'}</td>
+            <td data-label="CT Rộng">${cn.widthFormula || '-'}</td>
             <td data-label="D1" class="text-center"><div class="edge-banding-icon ${cn.edge1 ? 'on' : 'off'}"><i class="fas fa-check"></i></div></td>
             <td data-label="D2" class="text-center"><div class="edge-banding-icon ${cn.edge2 ? 'on' : 'off'}"><i class="fas fa-check"></i></div></td>
             <td data-label="R1" class="text-center"><div class="edge-banding-icon ${cn.edge3 ? 'on' : 'off'}"><i class="fas fa-check"></i></div></td>
@@ -612,6 +641,8 @@ DOM.componentNameForm.addEventListener('submit', async (e) => {
     const nameData = {
         name: DOM.componentNameForm['component-name-input'].value,
         notes: DOM.componentNameForm['component-name-notes'].value,
+        lengthFormula: DOM.componentLengthFormulaInput.value.trim(),
+        widthFormula: DOM.componentWidthFormulaInput.value.trim(),
         edge1: DOM.componentNameForm['component-edge-1'].checked,
         edge2: DOM.componentNameForm['component-edge-2'].checked,
         edge3: DOM.componentNameForm['component-edge-3'].checked,
@@ -643,6 +674,8 @@ DOM.componentNamesTableBody.addEventListener('click', async (e) => {
             DOM.componentNameForm['component-name-id'].value = id;
             DOM.componentNameForm['component-name-input'].value = cn.name;
             DOM.componentNameForm['component-name-notes'].value = cn.notes || '';
+            DOM.componentLengthFormulaInput.value = cn.lengthFormula || '';
+            DOM.componentWidthFormulaInput.value = cn.widthFormula || '';
             DOM.componentNameForm['component-edge-1'].checked = !!cn.edge1;
             DOM.componentNameForm['component-edge-2'].checked = !!cn.edge2;
             DOM.componentNameForm['component-edge-3'].checked = !!cn.edge3;
@@ -669,6 +702,8 @@ DOM.cancelComponentNameEditBtn.addEventListener('click', resetComponentNameForm)
 function resetComponentNameForm() {
     DOM.componentNameForm.reset();
     DOM.componentNameForm['component-name-id'].value = '';
+    DOM.componentLengthFormulaInput.value = '';
+    DOM.componentWidthFormulaInput.value = '';
     DOM.componentNameForm.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-plus mr-2"></i> Thêm Tên';
     DOM.cancelComponentNameEditBtn.classList.add('hidden');
 }
@@ -829,22 +864,17 @@ DOM.ptComponentAddBtn.addEventListener('click', async () => {
         return;
     }
     
-    // Create a deep copy to avoid state mutation issues that can confuse onSnapshot
     const newComponents = JSON.parse(JSON.stringify(productType.components || []));
     const existing = newComponents.find(c => c.componentNameId === componentNameId);
 
     if (existing) {
-        existing.qty = qty; // Update quantity if already exists
+        existing.qty = qty; 
     } else {
         newComponents.push({ componentNameId, qty });
     }
     
     await updateDoc(doc(db, `users/${currentUserId}/productTypes`, productType.id), { components: newComponents });
-    // The onSnapshot listener will handle the UI update automatically.
-    
     showToast('Đã thêm/cập nhật chi tiết.', 'success');
-
-    // Reset inputs
     DOM.ptComponentAddQtyInput.value = '1';
     if(DOM.ptComponentAddCombobox.setValue) DOM.ptComponentAddCombobox.setValue('');
 });
@@ -860,6 +890,194 @@ DOM.ptComponentsList.addEventListener('click', async e => {
         showToast('Đã xóa chi tiết.', 'success');
     }
 });
+
+
+// --- Component Group Management ---
+function listenForComponentGroups() {
+    if (unsubscribeComponentGroups) unsubscribeComponentGroups();
+    unsubscribeComponentGroups = onSnapshot(componentGroupsCollectionRef, snapshot => {
+        localComponentGroups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        localComponentGroups.sort((a,b) => a.name.localeCompare(b.name, 'vi'));
+        renderComponentGroups(localComponentGroups);
+        if (DOM.addGroupCombobox?.updateComboboxData) {
+            DOM.addGroupCombobox.updateComboboxData(localComponentGroups);
+        }
+        if (currentEditingComponentGroupId) {
+            renderComponentGroupEditor();
+        }
+    }, console.error);
+}
+
+function renderComponentGroups(groups) {
+    DOM.componentGroupsList.innerHTML = '';
+    if (groups.length === 0) {
+        DOM.componentGroupsList.innerHTML = `<p class="form-text">Chưa có nhóm chi tiết nào.</p>`;
+        return;
+    }
+    groups.forEach(group => {
+        const item = document.createElement('div');
+        item.className = 'config-list-item';
+        item.dataset.id = group.id;
+        if (group.id === currentEditingComponentGroupId) {
+            item.classList.add('active');
+        }
+        item.innerHTML = `
+            <span>${group.name}</span>
+            <div class="config-list-item-actions">
+                 <button class="delete-cg-btn" data-id="${group.id}" title="Xóa nhóm chi tiết"><i class="fas fa-trash"></i></button>
+            </div>
+        `;
+        DOM.componentGroupsList.appendChild(item);
+    });
+}
+
+function renderComponentGroupEditor() {
+    const group = localComponentGroups.find(g => g.id === currentEditingComponentGroupId);
+    if (!group) {
+        DOM.componentGroupEditor.classList.add('hidden');
+        return;
+    }
+
+    DOM.componentGroupEditor.classList.remove('hidden');
+    DOM.componentGroupEditorTitle.textContent = `Chỉnh sửa chi tiết cho: ${group.name}`;
+    
+    DOM.cgComponentsList.innerHTML = '';
+    const components = group.components || [];
+    if (components.length > 0) {
+        components.forEach(c => {
+            const componentName = localComponentNames.find(cn => cn.id === c.componentNameId)?.name || 'Không rõ';
+            const tr = document.createElement('tr');
+            tr.dataset.cnid = c.componentNameId;
+            tr.innerHTML = `
+                <td data-label="Tên">${componentName}</td>
+                <td data-label="Số lượng" class="text-center">${c.qty}</td>
+                <td data-label="Xóa" class="text-center">
+                    <button class="remove-cg-component-btn" data-cnid="${c.componentNameId}"><i class="fas fa-trash"></i></button>
+                </td>
+            `;
+            DOM.cgComponentsList.appendChild(tr);
+        });
+    } else {
+        DOM.cgComponentsList.innerHTML = `<tr><td colspan="3" class="text-center" style="padding: 1rem; color: var(--text-light)">Chưa có chi tiết nào được thêm.</td></tr>`;
+    }
+}
+
+DOM.componentGroupForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentUserId) return;
+    const name = DOM.componentGroupNameInput.value.trim();
+    if (!name) return;
+
+    const data = { name };
+    const id = DOM.componentGroupIdInput.value;
+
+    try {
+        if (id) {
+            await updateDoc(doc(db, `users/${currentUserId}/componentGroups`, id), data);
+            showToast('Cập nhật nhóm thành công!', 'success');
+        } else {
+            const docRef = await addDoc(componentGroupsCollectionRef, { ...data, components: [] });
+            showToast('Thêm nhóm thành công!', 'success');
+            currentEditingComponentGroupId = docRef.id;
+        }
+        resetComponentGroupForm();
+        renderComponentGroups(localComponentGroups);
+        renderComponentGroupEditor();
+    } catch (error) {
+        showToast('Đã có lỗi xảy ra.', 'error');
+        console.error("Error adding/updating component group:", error);
+    }
+});
+
+DOM.componentGroupsList.addEventListener('click', async e => {
+    const item = e.target.closest('.config-list-item');
+    const deleteBtn = e.target.closest('.delete-cg-btn');
+
+    if (deleteBtn) {
+        e.stopPropagation();
+        const id = deleteBtn.dataset.id;
+        const group = localComponentGroups.find(p => p.id === id);
+        const confirmed = await showConfirm(`Bạn có chắc muốn xóa nhóm "${group.name}"?`);
+        if (confirmed) {
+            await deleteDoc(doc(db, `users/${currentUserId}/componentGroups`, id));
+            if (currentEditingComponentGroupId === id) {
+                currentEditingComponentGroupId = null;
+                DOM.componentGroupEditor.classList.add('hidden');
+            }
+            showToast("Xóa nhóm thành công", "success");
+        }
+        return;
+    }
+    
+    if (item) {
+        currentEditingComponentGroupId = item.dataset.id;
+        const group = localComponentGroups.find(p => p.id === currentEditingComponentGroupId);
+        if (group) {
+            DOM.componentGroupIdInput.value = group.id;
+            DOM.componentGroupNameInput.value = group.name;
+            DOM.componentGroupForm.querySelector('button[type="submit"]').textContent = 'Cập nhật';
+            DOM.cancelComponentGroupEditBtn.classList.remove('hidden');
+        }
+        renderComponentGroups(localComponentGroups);
+        renderComponentGroupEditor();
+    }
+});
+
+DOM.cancelComponentGroupEditBtn.addEventListener('click', () => {
+    resetComponentGroupForm();
+    currentEditingComponentGroupId = null;
+    renderComponentGroups(localComponentGroups);
+    DOM.componentGroupEditor.classList.add('hidden');
+});
+
+function resetComponentGroupForm() {
+    DOM.componentGroupForm.reset();
+    DOM.componentGroupIdInput.value = '';
+    DOM.componentGroupForm.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-plus mr-2"></i> Thêm Mới';
+    DOM.cancelComponentGroupEditBtn.classList.add('hidden');
+}
+
+DOM.cgComponentAddBtn.addEventListener('click', async () => {
+    const group = localComponentGroups.find(g => g.id === currentEditingComponentGroupId);
+    if (!group) return;
+    
+    const componentNameId = DOM.cgComponentAddCombobox.querySelector('.combobox-value').value;
+    const qty = parseInt(DOM.cgComponentAddQtyInput.value);
+    
+    if (!componentNameId || !qty || qty < 1) {
+        showToast('Vui lòng chọn chi tiết và nhập số lượng hợp lệ.', 'error');
+        return;
+    }
+    
+    const newComponents = JSON.parse(JSON.stringify(group.components || []));
+    const existing = newComponents.find(c => c.componentNameId === componentNameId);
+
+    if (existing) {
+        existing.qty = qty; 
+    } else {
+        newComponents.push({ componentNameId, qty });
+    }
+    
+    await updateDoc(doc(db, `users/${currentUserId}/componentGroups`, group.id), { components: newComponents });
+    showToast('Đã thêm/cập nhật chi tiết vào nhóm.', 'success');
+
+    DOM.cgComponentAddQtyInput.value = '1';
+    if(DOM.cgComponentAddCombobox.setValue) DOM.cgComponentAddCombobox.setValue('');
+});
+
+DOM.cgComponentsList.addEventListener('click', async e => {
+    const deleteBtn = e.target.closest('.remove-cg-component-btn');
+    if (deleteBtn) {
+        const group = localComponentGroups.find(g => g.id === currentEditingComponentGroupId);
+        if (!group) return;
+        const componentNameIdToRemove = deleteBtn.dataset.cnid;
+        const newComponents = (group.components || []).filter(c => c.componentNameId !== componentNameIdToRemove);
+        await updateDoc(doc(db, `users/${currentUserId}/componentGroups`, group.id), { components: newComponents });
+        showToast('Đã xóa chi tiết khỏi nhóm.', 'success');
+    }
+});
+
+
 
 // --- Populate Dropdowns ---
 function populateProductTypeDropdown() {
@@ -879,6 +1097,7 @@ function populateComboboxes() {
     if (DOM.mainMaterialBackPanelCombobox?.updateComboboxData) DOM.mainMaterialBackPanelCombobox.updateComboboxData(localMaterials['Ván']);
     if (DOM.mainMaterialAccessoriesCombobox?.updateComboboxData) DOM.mainMaterialAccessoriesCombobox.updateComboboxData(allAccessoryMaterials);
     if (DOM.edgeMaterialCombobox?.updateComboboxData) DOM.edgeMaterialCombobox.updateComboboxData(localMaterials['Cạnh']);
+    if (DOM.addGroupCombobox?.updateComboboxData) DOM.addGroupCombobox.updateComboboxData(localComponentGroups);
 }
 
 
@@ -1008,7 +1227,6 @@ async function runAICuttingOptimization() {
     aiCalculationState = 'calculating';
     updateAnalyzeButton();
     
-    // Show the layout section and its loader
     DOM.cuttingLayoutSection.classList.remove('hidden');
     DOM.cuttingLayoutLoader.classList.remove('hidden');
     DOM.cuttingLayoutSummary.innerHTML = '';
@@ -1445,16 +1663,18 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeCombobox(DOM.mainMaterialBackPanelCombobox, [], runFullCalculation, { placeholder: "Tìm ván hậu...", allowEmpty: true, emptyOptionText: 'Dùng chung ván chính' });
     initializeCombobox(DOM.edgeMaterialCombobox, [], runFullCalculation, { placeholder: "Tìm hoặc chọn loại nẹp..." });
     initializeCombobox(DOM.mainMaterialAccessoriesCombobox, [], null, { placeholder: "Tìm phụ kiện, gia công..." });
-    
-    // Config tab Combobox
+    initializeCombobox(DOM.addGroupCombobox, [], null, { placeholder: "Tìm một cụm chi tiết..." });
+
+    // Config tab Comboboxes
     initializeCombobox(DOM.ptComponentAddCombobox, [], null, { placeholder: "Tìm chi tiết để thêm..." });
+    initializeCombobox(DOM.cgComponentAddCombobox, [], null, { placeholder: "Tìm chi tiết để thêm..." });
 
     initializeQuickCalc(localMaterials, showToast);
 
     // Event Listeners for main calculator
     DOM.itemTypeSelect.addEventListener('change', (e) => loadComponentsByProductType(e.target.value));
     
-    [DOM.itemLengthInput, DOM.itemWidthInput, DOM.itemHeightInput].forEach(input => input.addEventListener('input', updateComponentCalculationsAndRender));
+    [DOM.itemLengthInput, DOM.itemWidthInput, DOM.itemHeightInput].forEach(input => input.addEventListener('input', debounce(updateComponentCalculationsAndRender, 300)));
     [DOM.laborCostInput, DOM.profitMarginInput].forEach(input => input.addEventListener('input', runFullCalculation));
     
     DOM.mainMaterialWoodCombobox.addEventListener('change', updateComponentCalculationsAndRender);
@@ -1467,7 +1687,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const component = productComponents.find(p => p.id === id);
             if (component) {
                 component[field] = (field === 'name') ? value : parseFloat(value) || 0;
-                component.isDefault = false; // Manual edit overrides auto-calculation
+                // Any manual edit to dimensions overrides the formula
+                if (field === 'length' || field === 'width') {
+                    component.isDefault = false; 
+                }
                 runFullCalculation();
             }
         }
@@ -1483,8 +1706,37 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     DOM.addCustomComponentBtn.addEventListener('click', () => {
-        productComponents.push({ id: `comp_${Date.now()}`, name: 'Chi tiết Mới', length: 0, width: 0, qty: 1, isDefault: false });
+        productComponents.push({ id: `comp_${Date.now()}`, name: '', length: 0, width: 0, qty: 1, isDefault: false });
         renderProductComponents();
-        runFullCalculation();
+    });
+
+    DOM.addGroupBtn.addEventListener('click', () => {
+        const groupId = DOM.addGroupCombobox.querySelector('.combobox-value').value;
+        if (!groupId) {
+            showToast('Vui lòng chọn một cụm để thêm.', 'error');
+            return;
+        }
+
+        const group = localComponentGroups.find(g => g.id === groupId);
+        if (group && group.components) {
+            group.components.forEach(template => {
+                const nameData = localComponentNames.find(cn => cn.id === template.componentNameId);
+                if (nameData) {
+                    const newComponent = {
+                        id: `comp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                        name: nameData.name,
+                        length: 0,
+                        width: 0,
+                        qty: template.qty,
+                        componentNameId: template.componentNameId,
+                        isDefault: true // Mark as default to allow formula calculation
+                    };
+                    productComponents.push(newComponent);
+                }
+            });
+            updateComponentCalculationsAndRender();
+            showToast(`Đã thêm các chi tiết từ cụm "${group.name}".`, 'success');
+            if (DOM.addGroupCombobox.setValue) DOM.addGroupCombobox.setValue('');
+        }
     });
 });

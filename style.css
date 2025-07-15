@@ -399,6 +399,20 @@ td button { transition: color 0.2s; }
     font-size: 0.8rem;
 }
 
+/* Component Group Adder */
+.component-group-adder {
+    background-color: #f8fafc;
+    padding: 1rem 1.25rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--border-color);
+}
+.component-group-adder .form-label {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+}
+
+
 /* --- Material List Controls --- */
 .material-controls {
     display: flex;
@@ -1053,7 +1067,8 @@ td button { transition: color 0.2s; }
     background-color: #e2e8f0;
     color: var(--text-dark);
 }
-.config-list-item-actions .delete-pt-btn:hover {
+.config-list-item-actions .delete-pt-btn:hover,
+.config-list-item-actions .delete-cg-btn:hover {
     background-color: #fee2e2;
     color: var(--danger-color);
 }
@@ -1063,10 +1078,12 @@ td button { transition: color 0.2s; }
     margin-top: 1.5rem;
     margin-bottom: 0.75rem;
 }
-#pt-components-list .remove-component-btn {
+#pt-components-list .remove-component-btn,
+#cg-components-list .remove-cg-component-btn {
     color: var(--text-light);
 }
-#pt-components-list .remove-component-btn:hover {
+#pt-components-list .remove-component-btn:hover,
+#cg-components-list .remove-cg-component-btn:hover {
     color: var(--danger-color);
     background-color: #fee2e2;
 }

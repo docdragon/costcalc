@@ -121,7 +121,18 @@
                                     <div class="component-header">
                                         <div>
                                             <label class="form-label">Danh sách Chi tiết Cấu thành</label>
-                                            <p class="form-text" style="margin-top: -0.25rem; margin-bottom: 0.75rem;">Danh sách được tải từ "Loại sản phẩm". Bạn có thể chỉnh sửa hoặc thêm chi tiết tùy chỉnh.</p>
+                                            <p class="form-text" style="margin-top: -0.25rem; margin-bottom: 0.75rem;">Kích thước được tính tự động từ công thức trong 'Cấu hình' khi chọn Loại sản phẩm.</p>
+                                        </div>
+                                    </div>
+                                    <div class="component-group-adder">
+                                        <label class="form-label">Thêm Nhanh Cụm Chi tiết</label>
+                                        <div class="accessory-adder">
+                                            <div id="add-group-combobox" class="combobox-container">
+                                                <input type="text" class="input-style combobox-input" placeholder="Tìm một cụm chi tiết...">
+                                                <input type="hidden" class="combobox-value">
+                                                <div class="combobox-options-wrapper"><ul class="combobox-options"></ul></div>
+                                            </div>
+                                            <button id="add-group-btn" class="btn btn-secondary accessory-add-btn"><i class="fas fa-plus-circle"></i> Thêm Cụm</button>
                                         </div>
                                     </div>
                                     <div class="table-wrapper">
@@ -543,7 +554,7 @@
                 </div>
 
                 <div class="card" style="margin-top: 2rem;">
-                    <h2 class="card-header">Quản lý Tên Chi tiết Cấu thành</h2>
+                    <h2 class="card-header">Quản lý Tên Chi tiết & Công thức</h2>
                     <div class="content-wrapper component-names-content">
                         <form id="component-name-form" class="material-form">
                             <input type="hidden" id="component-name-id">
@@ -555,6 +566,17 @@
                                 <div>
                                      <label for="component-name-notes" class="form-label">Ghi chú</label>
                                      <input type="text" id="component-name-notes" class="input-style" placeholder="Tùy chọn">
+                                </div>
+                            </div>
+                             <div class="grid-2-col" style="margin-top: 1rem;">
+                                <div>
+                                    <label for="component-length-formula" class="form-label">Công thức tính Chiều Dài</label>
+                                    <input type="text" id="component-length-formula" class="input-style" placeholder="Vd: L - 2*t">
+                                    <p class="form-text">Biến: L, W, H, t (Dài, Rộng, Cao, Dày ván)</p>
+                                </div>
+                                <div>
+                                    <label for="component-width-formula" class="form-label">Công thức tính Chiều Rộng</label>
+                                    <input type="text" id="component-width-formula" class="input-style" placeholder="Vd: W">
                                 </div>
                             </div>
                             <div class="form-group" style="margin-top: 1rem;">
@@ -578,8 +600,9 @@
                                 <table class="data-table">
                                     <thead>
                                         <tr>
-                                            <th class="th-style" style="width: 40%;">Tên</th>
-                                            <th class="th-style">Ghi chú</th>
+                                            <th class="th-style" style="width: 25%;">Tên</th>
+                                            <th class="th-style">CT Dài</th>
+                                            <th class="th-style">CT Rộng</th>
                                             <th class="th-style text-center" colspan="4">Dán cạnh (D1-D2-R1-R2)</th>
                                             <th class="th-style text-center" style="width: 15%;">Thao tác</th>
                                         </tr>
@@ -595,6 +618,72 @@
                         <div class="icon-prompt"><i class="fas fa-list-alt"></i></div>
                         <h3>Tùy chỉnh danh sách chi tiết</h3>
                         <p>Vui lòng đăng nhập để quản lý danh sách tên chi tiết của bạn.</p>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 2rem;">
+                    <h2 class="card-header">Quản lý Nhóm Chi tiết (Cụm)</h2>
+                    <div class="content-wrapper config-form-content">
+                        <p class="settings-intro">Tạo các cụm chi tiết có thể tái sử dụng, ví dụ như "Cụm hộc kéo" hoặc "Bộ cánh cửa", để thêm nhanh vào các dự án trong Trình Báo Giá.</p>
+                        <div class="config-layout">
+                            <!-- Left: List of Component Groups -->
+                            <div class="config-list-panel">
+                                <form id="component-group-form">
+                                    <input type="hidden" id="component-group-id">
+                                    <div class="form-group" style="margin-top: 0;">
+                                        <label for="component-group-name" class="form-label">Tên Nhóm / Cụm</label>
+                                        <input type="text" id="component-group-name" class="input-style" placeholder="Vd: Cụm Hộc Kéo" required>
+                                    </div>
+                                    <div class="button-group" style="justify-content: flex-start; margin-top: 0.75rem;">
+                                        <button type="submit" class="btn btn-primary"><i class="fas fa-plus mr-2"></i> Thêm Mới</button>
+                                        <button type="button" id="cancel-component-group-edit-btn" class="btn btn-secondary hidden">Hủy</button>
+                                    </div>
+                                </form>
+                                <hr class="form-divider">
+                                <div id="component-groups-list" class="config-list">
+                                    <!-- JS renders list here -->
+                                </div>
+                            </div>
+
+                            <!-- Right: Editor for the selected Component Group -->
+                            <div id="component-group-editor" class="config-editor-panel hidden">
+                                <h3 id="component-group-editor-title" class="table-header">Chỉnh sửa: Cụm Hộc Kéo</h3>
+                                <div class="form-group" style="margin-top: 0;">
+                                    <label class="form-label">Thêm chi tiết vào nhóm</label>
+                                    <div class="accessory-adder">
+                                        <div id="cg-component-add-combobox" class="combobox-container">
+                                            <input type="text" class="input-style combobox-input" placeholder="Tìm tên chi tiết...">
+                                            <input type="hidden" class="combobox-value">
+                                            <div class="combobox-options-wrapper"><ul class="combobox-options"></ul></div>
+                                        </div>
+                                        <input type="text" inputmode="decimal" id="cg-component-add-qty" class="input-style accessory-qty" placeholder="SL" value="1" min="1">
+                                        <button id="cg-component-add-btn" class="btn btn-secondary accessory-add-btn"><i class="fas fa-plus"></i> Thêm</button>
+                                    </div>
+                                </div>
+                                <div class="table-container">
+                                    <h4 class="config-sub-header">Danh sách chi tiết hiện tại trong nhóm</h4>
+                                    <div class="table-wrapper">
+                                        <table class="data-table">
+                                            <thead>
+                                                <tr>
+                                                    <th class="th-style">Tên Chi tiết</th>
+                                                    <th class="th-style text-center">Số lượng</th>
+                                                    <th class="th-style text-center">Xóa</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="cg-components-list">
+                                                <!-- JS renders components for selected group here -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="login-prompt-view">
+                        <div class="icon-prompt"><i class="fas fa-cubes"></i></div>
+                        <h3>Tạo cụm chi tiết</h3>
+                        <p>Vui lòng đăng nhập để quản lý các nhóm chi tiết có thể tái sử dụng.</p>
                     </div>
                 </div>
             </div>

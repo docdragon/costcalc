@@ -28,6 +28,8 @@ export const mainMaterialBackPanelCombobox = document.getElementById('main-mater
 export const edgeMaterialCombobox = document.getElementById('edge-material-combobox');
 
 // Components
+export const addGroupCombobox = document.getElementById('add-group-combobox');
+export const addGroupBtn = document.getElementById('add-group-btn');
 export const componentsTableBody = document.getElementById('components-table-body');
 export const addCustomComponentBtn = document.getElementById('add-custom-component-btn');
 
@@ -106,6 +108,23 @@ export const ptComponentsList = document.getElementById('pt-components-list');
 export const componentNameForm = document.getElementById('component-name-form');
 export const componentNamesTableBody = document.getElementById('component-names-table-body');
 export const cancelComponentNameEditBtn = document.getElementById('cancel-component-name-edit-btn');
+export const componentLengthFormulaInput = document.getElementById('component-length-formula');
+export const componentWidthFormulaInput = document.getElementById('component-width-formula');
+
+
+// Component Group Manager
+export const componentGroupForm = document.getElementById('component-group-form');
+export const componentGroupIdInput = document.getElementById('component-group-id');
+export const componentGroupNameInput = document.getElementById('component-group-name');
+export const cancelComponentGroupEditBtn = document.getElementById('cancel-component-group-edit-btn');
+export const componentGroupsList = document.getElementById('component-groups-list');
+export const componentGroupEditor = document.getElementById('component-group-editor');
+export const componentGroupEditorTitle = document.getElementById('component-group-editor-title');
+export const cgComponentAddCombobox = document.getElementById('cg-component-add-combobox');
+export const cgComponentAddQtyInput = document.getElementById('cg-component-add-qty');
+export const cgComponentAddBtn = document.getElementById('cg-component-add-btn');
+export const cgComponentsList = document.getElementById('cg-components-list');
+
 
 // --- Saved Projects Tab ---
 export const savedItemsTableBody = document.getElementById('saved-items-table-body');
