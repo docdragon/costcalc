@@ -101,6 +101,7 @@ function loadComponentsByProductType(productTypeId) {
                     qty: compTemplate.qty,
                     componentNameId: compTemplate.componentNameId,
                     isDefault: true,
+                    materialId: null, // Default to main material
                 });
             }
         });
@@ -110,11 +111,12 @@ function loadComponentsByProductType(productTypeId) {
 
 function renderProductComponents() {
     const rows = DOM.componentsTableBody.children;
+    const needsFullReRender = rows.length !== productComponents.length || (rows.length === 0 && productComponents.length > 0);
 
-    if (rows.length !== productComponents.length || (rows.length === 0 && productComponents.length > 0)) {
-        DOM.componentsTableBody.innerHTML = ''; 
+    if (needsFullReRender) {
+        DOM.componentsTableBody.innerHTML = '';
         if (productComponents.length === 0) {
-            DOM.componentsTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 1rem; color: var(--text-light);">Chọn "Loại sản phẩm" hoặc thêm chi tiết tùy chỉnh.</td></tr>';
+            DOM.componentsTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 1rem; color: var(--text-light);">Chọn "Loại sản phẩm" hoặc thêm chi tiết tùy chỉnh.</td></tr>';
             return;
         }
 
@@ -129,6 +131,13 @@ function renderProductComponents() {
                         <div class="combobox-options-wrapper"><ul class="combobox-options"></ul></div>
                     </div>
                 </td>
+                <td data-label="Vật liệu">
+                    <div id="comp-material-combobox-${comp.id}" class="combobox-container component-combobox">
+                        <input type="text" class="input-style combobox-input" placeholder="Dùng ván chính...">
+                        <input type="hidden" class="combobox-value">
+                        <div class="combobox-options-wrapper"><ul class="combobox-options"></ul></div>
+                    </div>
+                </td>
                 <td data-label="Dài"><input type="text" inputmode="decimal" class="input-style component-input" data-field="length" value="${comp.length}"></td>
                 <td data-label="Rộng"><input type="text" inputmode="decimal" class="input-style component-input" data-field="width" value="${comp.width}"></td>
                 <td data-label="SL"><input type="text" inputmode="decimal" class="input-style component-input" data-field="qty" value="${comp.qty}" style="max-width: 60px; text-align: center;"></td>
@@ -138,11 +147,12 @@ function renderProductComponents() {
             `;
             DOM.componentsTableBody.appendChild(tr);
 
-            const comboboxContainer = tr.querySelector(`#comp-name-combobox-${comp.id}`);
-            if(comboboxContainer) {
+            // Initialize Name Combobox
+            const nameComboboxContainer = tr.querySelector(`#comp-name-combobox-${comp.id}`);
+            if (nameComboboxContainer) {
                 initializeCombobox(
-                    comboboxContainer, 
-                    localComponentNames.map(c => ({ id: c.id, name: c.name, price: '', unit: ''})), 
+                    nameComboboxContainer,
+                    localComponentNames.map(c => ({ id: c.id, name: c.name, price: '', unit: '' })),
                     (selectedId) => {
                         const selectedName = localComponentNames.find(c => c.id === selectedId)?.name;
                         const component = productComponents.find(p => p.id === comp.id);
@@ -156,20 +166,46 @@ function renderProductComponents() {
                     { placeholder: 'Chọn tên...', allowCustom: true }
                 );
             }
+
+            // Initialize Material Combobox
+            const materialComboboxContainer = tr.querySelector(`#comp-material-combobox-${comp.id}`);
+            if (materialComboboxContainer) {
+                initializeCombobox(
+                    materialComboboxContainer,
+                    localMaterials['Ván'],
+                    (selectedId) => {
+                        const component = productComponents.find(p => p.id === comp.id);
+                        if (component) {
+                            component.materialId = selectedId || null;
+                            runFullCalculation();
+                        }
+                    },
+                    {
+                        placeholder: 'Dùng ván chính',
+                        allowEmpty: true,
+                        emptyOptionText: '--- Dùng ván chính ---'
+                    }
+                );
+                if (comp.materialId && materialComboboxContainer.setValue) {
+                    materialComboboxContainer.setValue(comp.materialId);
+                }
+            }
         });
     } else {
+        // Just update values if the structure is the same
         productComponents.forEach((comp, index) => {
             const row = rows[index];
             if (row) {
                 const lengthInput = row.querySelector('input[data-field="length"]');
                 if (lengthInput) lengthInput.value = comp.length;
-                
+
                 const widthInput = row.querySelector('input[data-field="width"]');
                 if (widthInput) widthInput.value = comp.width;
             }
         });
     }
 }
+
 
 // --- Accessory Management ---
 function renderAccessories() {
@@ -191,20 +227,30 @@ function renderAccessories() {
 
 function getPanelPiecesForAI() {
     const pieces = [];
+    const mainWoodId = DOM.mainMaterialWoodCombobox.querySelector('.combobox-value').value;
     const backPanelId = DOM.mainMaterialBackPanelCombobox.querySelector('.combobox-value').value;
 
     productComponents.forEach(comp => {
-        const isBackPanel = comp.name.toLowerCase().includes('hậu');
-        if (isBackPanel && backPanelId) {
-            return; // Skip back panels if a specific material is chosen for them
+        let effectiveMaterialId = comp.materialId;
+        if (!effectiveMaterialId) {
+            const isBackPanel = comp.name.toLowerCase().includes('hậu');
+            if (isBackPanel && backPanelId) {
+                effectiveMaterialId = backPanelId;
+            } else {
+                effectiveMaterialId = mainWoodId;
+            }
         }
-        for (let i = 0; i < comp.qty; i++) {
-            const pieceName = `${comp.name}${comp.qty > 1 ? ` (${i + 1})` : ''}`;
-            pieces.push({ name: pieceName, width: comp.length, height: comp.width });
+        
+        if (effectiveMaterialId === mainWoodId) {
+            for (let i = 0; i < comp.qty; i++) {
+                const pieceName = `${comp.name}${comp.qty > 1 ? ` (${i + 1})` : ''}`;
+                pieces.push({ name: pieceName, width: comp.length, height: comp.width });
+            }
         }
     });
     return pieces.filter(p => p.width > 0 && p.height > 0);
 }
+
 
 function renderCuttingLayout(layoutData, containerEl, summaryEl) {
     if (!layoutData || !layoutData.sheets || layoutData.totalSheetsUsed === 0) {
@@ -399,48 +445,66 @@ function calculateAndDisplayFinalPrice() {
     let baseMaterialCost = 0;
     const productQuantity = parseInt(DOM.itemQuantityInput.value) || 1;
 
-    // 1. Main Wood Cost
+    // --- NEW: Calculate wood panel costs based on material groups ---
+    const materialUsage = new Map();
     const mainWoodId = DOM.mainMaterialWoodCombobox.querySelector('.combobox-value').value;
-    const mainWoodMaterial = localMaterials['Ván'].find(m => m.id === mainWoodId);
-    let totalSheetsUsed = 0;
-    
-    if(lastGeminiResult?.cuttingLayout?.totalSheetsUsed > 0) {
-        totalSheetsUsed = lastGeminiResult.cuttingLayout.totalSheetsUsed;
-    } else {
-        const mainWoodPieces = getPanelPiecesForAI();
-        if (mainWoodPieces.length > 0 && mainWoodMaterial) {
-            const totalAreaM2 = mainWoodPieces.reduce((sum, p) => sum + (p.width * p.height), 0) / 1000000;
-            const sheetAreaM2 = getSheetArea(mainWoodMaterial);
-            totalSheetsUsed = Math.ceil(totalAreaM2 / sheetAreaM2);
-        }
-    }
-
-    if (mainWoodMaterial && totalSheetsUsed > 0) {
-        const cost = totalSheetsUsed * mainWoodMaterial.price;
-        baseMaterialCost += cost;
-        const reason = lastGeminiResult?.cuttingLayout 
-            ? `${totalSheetsUsed} tấm (tối ưu AI) x ${mainWoodMaterial.price.toLocaleString('vi-VN')}đ`
-            : `${totalSheetsUsed} tấm (ước tính) x ${mainWoodMaterial.price.toLocaleString('vi-VN')}đ`;
-        costBreakdownItems.push({ name: `Ván chính: ${mainWoodMaterial.name}`, cost: cost, reason: reason });
-    }
-
-    // 2. Back Panel Cost
     const backPanelId = DOM.mainMaterialBackPanelCombobox.querySelector('.combobox-value').value;
-    const backPanelPieces = productComponents.filter(p => p.name.toLowerCase().includes('hậu'));
-    if (backPanelId && backPanelPieces.length > 0) {
-        const backPanelMaterial = localMaterials['Ván'].find(m => m.id === backPanelId);
-        if (backPanelMaterial) {
-            const totalBackPanelArea = backPanelPieces.reduce((sum, p) => sum + (p.length * p.width * p.qty), 0) / 1000000;
-            const sheetAreaM2 = getSheetArea(backPanelMaterial);
-            const sheetsNeeded = Math.ceil(totalBackPanelArea / sheetAreaM2);
-            if(sheetsNeeded > 0) {
-                const cost = sheetsNeeded * backPanelMaterial.price;
-                baseMaterialCost += cost;
-                costBreakdownItems.push({ name: `Ván hậu: ${backPanelMaterial.name}`, cost: cost, reason: `Ước tính ${sheetsNeeded} tấm` });
+    
+    // 1. Group components by their effective material
+    productComponents.forEach(comp => {
+        if (!comp.name || comp.length <= 0 || comp.width <= 0 || comp.qty <= 0) return;
+
+        let effectiveMaterialId = comp.materialId; // Custom material takes precedence
+        if (!effectiveMaterialId) {
+            const isBackPanel = comp.name.toLowerCase().includes('hậu');
+            if (isBackPanel && backPanelId) {
+                effectiveMaterialId = backPanelId; // Use specific back panel material
+            } else {
+                effectiveMaterialId = mainWoodId; // Default to main material
             }
         }
-    }
-    
+
+        if (!effectiveMaterialId) return; // No material assigned, skip
+
+        if (!materialUsage.has(effectiveMaterialId)) {
+            const material = localMaterials['Ván'].find(m => m.id === effectiveMaterialId);
+            if (material) {
+                materialUsage.set(effectiveMaterialId, { material, totalArea: 0 });
+            } else {
+                return; // Material not found, skip
+            }
+        }
+        
+        const usage = materialUsage.get(effectiveMaterialId);
+        const componentArea = (comp.length * comp.width * comp.qty) / 1000000; // in m^2
+        usage.totalArea += componentArea;
+    });
+
+    // 2. Calculate cost for each material group
+    materialUsage.forEach((usage, materialId) => {
+        const { material, totalArea } = usage;
+        let sheetsNeeded = 0;
+
+        // Use AI-optimized sheet count for main material if available
+        if (materialId === mainWoodId && lastGeminiResult?.cuttingLayout?.totalSheetsUsed > 0) {
+            sheetsNeeded = lastGeminiResult.cuttingLayout.totalSheetsUsed;
+        } else {
+            const sheetAreaM2 = getSheetArea(material);
+            if (sheetAreaM2 > 0) {
+                sheetsNeeded = Math.ceil(totalArea / sheetAreaM2);
+            }
+        }
+
+        if (sheetsNeeded > 0) {
+            const cost = sheetsNeeded * material.price;
+            baseMaterialCost += cost;
+            const reason = (materialId === mainWoodId && lastGeminiResult?.cuttingLayout?.totalSheetsUsed > 0)
+                ? `${sheetsNeeded} tấm (tối ưu AI) x ${material.price.toLocaleString('vi-VN')}đ`
+                : `${sheetsNeeded} tấm (ước tính từ ${totalArea.toFixed(2)}m²) x ${material.price.toLocaleString('vi-VN')}đ`;
+            costBreakdownItems.push({ name: `Ván: ${material.name}`, cost, reason });
+        }
+    });
+
     // 3. Edge Banding Cost
     const totalEdgeLengthMM = calculateEdgeBanding();
     const edgeMaterialId = DOM.edgeMaterialCombobox.querySelector('.combobox-value').value;
@@ -450,7 +514,7 @@ function calculateAndDisplayFinalPrice() {
         const lengthInMeters = totalEdgeLengthMM / 1000;
         const cost = lengthInMeters * edgeMaterial.price;
         baseMaterialCost += cost;
-        costBreakdownItems.push({ name: `Nẹp cạnh: ${edgeMaterial.name}`, cost: cost, reason: `${lengthInMeters.toFixed(2)}m x ${edgeMaterial.price.toLocaleString('vi-VN')}đ/m` });
+        costBreakdownItems.push({ name: `Nẹp cạnh: ${edgeMaterial.name}`, cost, reason: `${lengthInMeters.toFixed(2)}m x ${edgeMaterial.price.toLocaleString('vi-VN')}đ/m` });
     }
 
     // 4. All other accessories
@@ -488,6 +552,7 @@ function calculateAndDisplayFinalPrice() {
         lastGeminiResult.finalPrices = { totalCost, suggestedPrice, estimatedProfit, costBreakdown: costBreakdownItems };
     }
 }
+
 
 // --- Form Management ---
 
@@ -645,7 +710,7 @@ export function initializeCalculator() {
     });
 
     DOM.addCustomComponentBtn.addEventListener('click', () => {
-        productComponents.push({ id: `comp_${Date.now()}`, name: '', length: 0, width: 0, qty: 1, isDefault: false });
+        productComponents.push({ id: `comp_${Date.now()}`, name: '', length: 0, width: 0, qty: 1, isDefault: false, materialId: null });
         renderProductComponents();
     });
 
@@ -665,7 +730,8 @@ export function initializeCalculator() {
                         length: 0, width: 0,
                         qty: template.qty * groupInstanceQty,
                         componentNameId: template.componentNameId,
-                        isDefault: true
+                        isDefault: true,
+                        materialId: null
                     });
                 }
             });

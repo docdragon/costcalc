@@ -380,7 +380,6 @@ td button { transition: color 0.2s; }
 .component-table {
     white-space: nowrap;
 }
-.component-table .th-name { width: 40%; }
 .component-table .th-delete { width: 5%; }
 
 .component-table td {
