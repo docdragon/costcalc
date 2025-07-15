@@ -34,8 +34,6 @@ export const edgeMaterialCombobox = document.getElementById('edge-material-combo
 // NEW: Components
 export const componentsTableBody = document.getElementById('components-table-body');
 export const addCustomComponentBtn = document.getElementById('add-custom-component-btn');
-export const advancedPositioningToggle = document.getElementById('advanced-positioning-toggle');
-
 
 // Accessories
 export const mainMaterialAccessoriesCombobox = document.getElementById('main-material-accessories-combobox');
@@ -53,6 +51,7 @@ export const imagePreview = document.getElementById('image-preview');
 export const removeImageBtn = document.getElementById('remove-image-btn');
 export const imageAnalysisContainer = document.getElementById('image-analysis-container');
 export const analyzeImageBtn = document.getElementById('analyze-image-btn');
+export const analyzeStructureBtn = document.getElementById('analyze-structure-btn');
 
 // Actions & Results
 export const saveItemBtn = document.getElementById('save-item-btn');

@@ -250,6 +250,13 @@ body {
 }
 .remove-image-btn:hover { background-color: white; transform: scale(1.1); }
 
+#image-analysis-container {
+    margin-top: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
 
 /* --- Buttons --- */
 .btn {
@@ -409,65 +416,11 @@ td button { transition: color 0.2s; }
     flex-wrap: wrap;
     gap: 1rem;
 }
-.toggle-switch-container {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding-top: 0.25rem;
-    flex-shrink: 0;
-}
-.toggle-switch {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-.toggle-label {
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: var(--text-light);
-    cursor: pointer;
-    user-select: none;
-    position: relative;
-    padding-left: 42px;
-    line-height: 22px;
-}
-.toggle-label::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 38px;
-    height: 22px;
-    border-radius: 11px;
-    background-color: var(--secondary-color);
-    transition: background-color 0.2s ease-in-out;
-}
-.toggle-label::after {
-    content: '';
-    position: absolute;
-    left: 2px;
-    top: 2px;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background-color: white;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
-    transition: transform 0.2s ease-in-out;
-}
-.toggle-switch:checked + .toggle-label::before {
-    background-color: var(--primary-color);
-}
-.toggle-switch:checked + .toggle-label::after {
-    transform: translateX(16px);
-}
-
 .component-table {
     white-space: nowrap;
 }
-.component-table .th-name { width: 25%; }
+.component-table .th-name { width: 40%; }
 .component-table .th-delete { width: 5%; }
-.component-table.advanced-view .th-name { width: 15%; }
 
 .component-table td {
     padding: 0.25rem 0.5rem;
@@ -483,15 +436,6 @@ td button { transition: color 0.2s; }
 .component-table .combobox-option {
     padding: 0.4rem 0.6rem;
     font-size: 0.8rem;
-}
-.component-table .advanced-input {
-    max-width: 65px;
-}
-.col-advanced {
-    display: none;
-}
-.component-table.advanced-view .col-advanced {
-    display: table-cell;
 }
 
 /* --- Material List Controls --- */

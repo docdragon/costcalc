@@ -135,10 +135,6 @@
                                             <label class="form-label">Danh sách Chi tiết Cấu thành</label>
                                             <p class="form-text" style="margin-top: -0.25rem; margin-bottom: 0.75rem;">AI sẽ dựa vào danh sách này để tính toán sơ đồ cắt. Bạn có thể chỉnh sửa hoặc thêm chi tiết tùy chỉnh.</p>
                                         </div>
-                                        <div class="toggle-switch-container">
-                                            <input type="checkbox" id="advanced-positioning-toggle" class="toggle-switch">
-                                            <label for="advanced-positioning-toggle" class="toggle-label">Hiển thị vị trí 3D</label>
-                                        </div>
                                     </div>
                                     <div class="table-wrapper">
                                         <table id="component-table" class="data-table component-table">
@@ -148,12 +144,6 @@
                                                     <th class="th-style">Dài</th>
                                                     <th class="th-style">Rộng</th>
                                                     <th class="th-style">SL</th>
-                                                    <th class="th-style col-advanced">X (mm)</th>
-                                                    <th class="th-style col-advanced">Y (mm)</th>
-                                                    <th class="th-style col-advanced">Z (mm)</th>
-                                                    <th class="th-style col-advanced">Xoay X (°)</th>
-                                                    <th class="th-style col-advanced">Xoay Y (°)</th>
-                                                    <th class="th-style col-advanced">Xoay Z (°)</th>
                                                     <th class="th-style text-center th-delete">Xóa</th>
                                                 </tr>
                                             </thead>
@@ -224,10 +214,14 @@
                                             <button id="remove-image-btn" class="remove-image-btn">&times;</button>
                                         </div>
                                     </div>
-                                    <div id="image-analysis-container" class="hidden" style="margin-top: 0.75rem;">
-                                         <button id="analyze-image-btn" class="btn btn-secondary full-width">
-                                            <i class="fas fa-search-plus"></i>
-                                            <span>Phân tích Kích thước từ Ảnh</span>
+                                    <div id="image-analysis-container" class="hidden">
+                                        <button id="analyze-image-btn" class="btn btn-secondary full-width">
+                                            <i class="fas fa-ruler-combined"></i>
+                                            <span>Phân tích Kích thước</span>
+                                        </button>
+                                        <button id="analyze-structure-btn" class="btn btn-secondary full-width">
+                                            <i class="fas fa-sitemap"></i>
+                                            <span>Phân tích Cấu trúc & Vị trí</span>
                                         </button>
                                     </div>
                                 </div>

@@ -15,9 +15,83 @@ export default async function handler(request, response) {
     const ai = new GoogleGenAI({ apiKey });
     
     try {
-        const { prompt, image, analyzeDimensions, configureFromText, text } = request.body;
+        const { prompt, image, analyzeDimensions, configureFromText, text, analyzeStructure, dimensions } = request.body;
         
-        // --- New: Handle Form Configuration from Text Request ---
+        // --- Handle Image Structure Analysis ---
+        if (analyzeStructure) {
+            if (!image || !image.data || !image.mimeType) {
+                return response.status(400).json({ error: 'Yêu cầu phân tích cấu trúc thiếu hình ảnh.' });
+            }
+            if (!dimensions || !dimensions.l || !dimensions.w || !dimensions.h) {
+                return response.status(400).json({ error: 'Yêu cầu phân tích cấu trúc thiếu kích thước tổng thể.' });
+            }
+
+            const structurePrompt = `
+            BẠN LÀ AI: Một chuyên gia thiết kế nội thất và kỹ sư sản xuất đồ gỗ, chuyên phân tích bản vẽ và hình ảnh để bóc tách chi tiết.
+            NHIỆM VỤ: Phân tích hình ảnh của một sản phẩm nội thất (ví dụ: tủ bếp, tủ áo) và tạo ra một danh sách chi tiết cấu thành dưới dạng JSON.
+            BỐI CẢNH: Người dùng đã cung cấp một hình ảnh và kích thước tổng thể của sản phẩm (Dài, Rộng, Cao).
+            KÍCH THƯỚC TỔNG THỂ: Dài=${dimensions.l}mm, Rộng=${dimensions.w}mm, Cao=${dimensions.h}mm.
+    
+            HƯỚNG DẪN CHI TIẾT:
+            1.  **Xác định các chi tiết:** Dựa vào hình ảnh, xác định tất cả các chi tiết chính như: Hông Trái, Hông Phải, Đáy, Nóc, Hậu, Vách Ngăn, Cánh Mở, Đợt Cố Định, v.v.
+            2.  **Ước tính Kích thước Chi tiết:** Dựa vào hình ảnh và kích thước tổng thể, ước tính 'length' (chiều dài) và 'width' (chiều rộng) cho mỗi chi tiết. Giả sử độ dày ván tiêu chuẩn là 17mm. Ví dụ, nếu tủ dài 1000mm, thì tấm đáy sẽ là 1000 - 17*2 = 966mm.
+            3.  **Xác định Vị trí & Góc Xoay:**
+                *   Hệ tọa độ có gốc (0,0,0) tại TÂM của khối hộp tổng thể.
+                *   Trục X: Dọc theo chiều Dài.
+                *   Trục Y: Dọc theo chiều Cao.
+                *   Trục Z: Dọc theo chiều Rộng.
+                *   Tính toán vị trí tâm ('x', 'y', 'z') và góc xoay ('rx', 'ry', 'rz') cho từng chi tiết để dựng lại mô hình 3D.
+                *   Ví dụ:
+                    *   Hông Trái: x = -Dài/2 + dày/2, y=0, z=0. ry=90.
+                    *   Đáy: x=0, y=Cao/2 - dày/2, z=0. rx=90.
+            4.  **Định dạng Đầu ra:** Trả về một MẢNG JSON. Mỗi phần tử trong mảng là một đối tượng đại diện cho một chi tiết. KHÔNG trả về bất cứ thứ gì khác ngoài mảng JSON.
+            `;
+    
+            const promptParts = [
+                { inlineData: { mimeType: image.mimeType, data: image.data } },
+                { text: structurePrompt }
+            ];
+    
+            const responseSchema = {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        name: { type: Type.STRING, description: 'Tên chi tiết, ví dụ: Hông Trái' },
+                        length: { type: Type.INTEGER, description: 'Chiều dài của chi tiết (mm)' },
+                        width: { type: Type.INTEGER, description: 'Chiều rộng của chi tiết (mm)' },
+                        qty: { type: Type.INTEGER, description: 'Số lượng của chi tiết này' },
+                        x: { type: Type.INTEGER, description: 'Vị trí tâm trên trục X (mm)' },
+                        y: { type: Type.INTEGER, description: 'Vị trí tâm trên trục Y (mm)' },
+                        z: { type: Type.INTEGER, description: 'Vị trí tâm trên trục Z (mm)' },
+                        rx: { type: Type.INTEGER, description: 'Góc xoay quanh trục X (độ)' },
+                        ry: { type: Type.INTEGER, description: 'Góc xoay quanh trục Y (độ)' },
+                        rz: { type: Type.INTEGER, description: 'Góc xoay quanh trục Z (độ)' },
+                    },
+                    required: ["name", "length", "width", "qty", "x", "y", "z", "rx", "ry", "rz"]
+                }
+            };
+    
+            const genAIResponse = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: { parts: promptParts },
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: responseSchema,
+                }
+            });
+    
+            try {
+                const parsedData = JSON.parse(genAIResponse.text);
+                return response.status(200).json(parsedData);
+            } catch (parseError) {
+                console.error("Serverless function (structure): Failed to parse JSON from Gemini.", parseError);
+                console.error("Original text from Gemini:", genAIResponse.text);
+                return response.status(500).json({ error: `Phản hồi từ AI không hợp lệ: ${genAIResponse.text}` });
+            }
+        }
+
+        // --- Handle Form Configuration from Text Request ---
         if (configureFromText) {
             if (!text) {
                 return response.status(400).json({ error: 'Yêu cầu cấu hình từ văn bản thiếu nội dung.' });
@@ -185,7 +259,7 @@ Ví dụ phản hồi: {\"length\": 1200, \"height\": 750}`;
             }
         }
 
-        return response.status(400).json({ error: 'Yêu cầu không hợp lệ. Thiếu "prompt", "configureFromText" hoặc "analyzeDimensions".' });
+        return response.status(400).json({ error: 'Yêu cầu không hợp lệ. Thiếu "prompt", "configureFromText", "analyzeDimensions", hoặc "analyzeStructure".' });
 
     } catch (error) {
         console.error("Error in serverless function:", error);

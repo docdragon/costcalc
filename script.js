@@ -230,7 +230,7 @@ function generateProductComponents() {
 function renderProductComponents() {
     DOM.componentsTableBody.innerHTML = '';
     if (!productComponents || productComponents.length === 0) {
-        DOM.componentsTableBody.innerHTML = '<tr><td colspan="11" style="text-align: center; padding: 1rem; color: var(--text-light);">Nhập kích thước sản phẩm để xem chi tiết.</td></tr>';
+        DOM.componentsTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 1rem; color: var(--text-light);">Nhập kích thước sản phẩm để xem chi tiết.</td></tr>';
         return;
     }
     productComponents.forEach(comp => {
@@ -247,12 +247,6 @@ function renderProductComponents() {
             <td data-label="Dài"><input type="text" inputmode="decimal" class="input-style component-input" data-field="length" value="${comp.length}"></td>
             <td data-label="Rộng"><input type="text" inputmode="decimal" class="input-style component-input" data-field="width" value="${comp.width}"></td>
             <td data-label="SL"><input type="text" inputmode="decimal" class="input-style component-input" data-field="qty" value="${comp.qty}" style="max-width: 60px; text-align: center;"></td>
-            <td data-label="X (mm)" class="col-advanced"><input type="text" inputmode="decimal" class="input-style component-input advanced-input" data-field="x" value="${comp.x || 0}"></td>
-            <td data-label="Y (mm)" class="col-advanced"><input type="text" inputmode="decimal" class="input-style component-input advanced-input" data-field="y" value="${comp.y || 0}"></td>
-            <td data-label="Z (mm)" class="col-advanced"><input type="text" inputmode="decimal" class="input-style component-input advanced-input" data-field="z" value="${comp.z || 0}"></td>
-            <td data-label="Xoay X (°)" class="col-advanced"><input type="text" inputmode="decimal" class="input-style component-input advanced-input" data-field="rx" value="${comp.rx || 0}"></td>
-            <td data-label="Xoay Y (°)" class="col-advanced"><input type="text" inputmode="decimal" class="input-style component-input advanced-input" data-field="ry" value="${comp.ry || 0}"></td>
-            <td data-label="Xoay Z (°)" class="col-advanced"><input type="text" inputmode="decimal" class="input-style component-input advanced-input" data-field="rz" value="${comp.rz || 0}"></td>
             <td data-label="Xóa" class="text-center">
                 <button class="remove-component-btn" data-id="${comp.id}"><i class="fas fa-trash"></i></button>
             </td>
@@ -1327,7 +1321,7 @@ async function handleImageAnalysis() {
     }
 
     DOM.analyzeImageBtn.disabled = true;
-    DOM.analyzeImageBtn.innerHTML = `<span class="spinner-sm"></span> Đang phân tích ảnh...`;
+    DOM.analyzeImageBtn.innerHTML = `<span class="spinner-sm"></span> Đang phân tích...`;
 
     try {
         const response = await fetch('/api/generate', {
@@ -1368,11 +1362,72 @@ async function handleImageAnalysis() {
         showToast(`Lỗi phân tích ảnh: ${error.message}`, 'error');
     } finally {
         DOM.analyzeImageBtn.disabled = false;
-        DOM.analyzeImageBtn.innerHTML = `<i class="fas fa-search-plus"></i><span>Phân tích Kích thước từ Ảnh</span>`;
+        DOM.analyzeImageBtn.innerHTML = `<i class="fas fa-ruler-combined"></i><span>Phân tích Kích thước</span>`;
     }
 }
 
 DOM.analyzeImageBtn.addEventListener('click', handleImageAnalysis);
+
+
+// --- Image Structure Analysis (New) ---
+async function handleImageStructureAnalysis() {
+    if (!uploadedImage) {
+        showToast('Vui lòng tải lên một hình ảnh trước.', 'error');
+        return;
+    }
+    const l = parseFloat(DOM.itemLengthInput.value);
+    const w = parseFloat(DOM.itemWidthInput.value);
+    const h = parseFloat(DOM.itemHeightInput.value);
+
+    if (!l || !w || !h) {
+        showToast('Vui lòng nhập kích thước tổng thể của sản phẩm trước khi phân tích cấu trúc.', 'error');
+        return;
+    }
+
+    DOM.analyzeStructureBtn.disabled = true;
+    DOM.analyzeStructureBtn.innerHTML = `<span class="spinner-sm"></span> Đang phân tích...`;
+
+    try {
+        const response = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                analyzeStructure: true,
+                image: uploadedImage,
+                dimensions: { l, w, h }
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Lỗi không xác định từ máy chủ');
+        }
+
+        if (Array.isArray(data) && data.length > 0) {
+            // Add unique IDs to the components returned by AI
+            productComponents = data.map((comp, i) => ({
+                ...comp,
+                id: `comp_${Date.now()}_${i}`,
+                isDefault: false // Mark as non-default so manual changes don't wipe them
+            }));
+            renderProductComponents();
+            update3DPreview();
+            showToast(`AI đã phân tích và tạo ra ${data.length} chi tiết cấu thành!`, 'success');
+        } else {
+            showToast('AI không thể xác định cấu trúc từ hình ảnh. Vui lòng thử ảnh khác rõ ràng hơn.', 'info');
+        }
+
+    } catch (error) {
+        console.error("Error analyzing image structure:", error);
+        showToast(`Lỗi phân tích cấu trúc: ${error.message}`, 'error');
+    } finally {
+        DOM.analyzeStructureBtn.disabled = false;
+        DOM.analyzeStructureBtn.innerHTML = `<i class="fas fa-sitemap"></i><span>Phân tích Cấu trúc & Vị trí</span>`;
+    }
+}
+DOM.analyzeStructureBtn.addEventListener('click', handleImageStructureAnalysis);
+
 
 // --- AI Configuration from Text ---
 async function handleAIConfig() {
@@ -1630,11 +1685,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         renderProductComponents();
         update3DPreview();
-    });
-
-    DOM.advancedPositioningToggle.addEventListener('change', (e) => {
-        const table = document.getElementById('component-table');
-        table.classList.toggle('advanced-view', e.target.checked);
     });
 
     handleFormUpdate();
