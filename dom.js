@@ -41,7 +41,6 @@ export const accessoriesList = document.getElementById('accessories-list');
 export const saveItemBtn = document.getElementById('save-item-btn');
 export const analyzeBtn = document.getElementById('analyze-btn');
 export const resultsSection = document.getElementById('results-section');
-export const aiLoadingPlaceholder = document.getElementById('ai-loading-placeholder');
 export const resultsContent = document.getElementById('results-content');
 export const priceSummaryContainer = document.getElementById('price-summary-container');
 export const totalCostValue = document.getElementById('total-cost-value');
@@ -49,6 +48,7 @@ export const suggestedPriceValue = document.getElementById('suggested-price-valu
 export const estimatedProfitValue = document.getElementById('estimated-profit-value');
 export const costBreakdownContainer = document.getElementById('cost-breakdown-container');
 export const cuttingLayoutSection = document.getElementById('cutting-layout-section');
+export const cuttingLayoutLoader = document.getElementById('cutting-layout-loader');
 export const cuttingLayoutSummary = document.getElementById('cutting-layout-summary');
 export const cuttingLayoutContainer = document.getElementById('cutting-layout-container');
 

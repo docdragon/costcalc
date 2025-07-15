@@ -1007,17 +1007,20 @@ function calculateEdgeBanding() {
 async function runAICuttingOptimization() {
     aiCalculationState = 'calculating';
     updateAnalyzeButton();
-    DOM.resultsSection.classList.remove('hidden');
-    DOM.resultsContent.classList.add('hidden');
-    DOM.aiLoadingPlaceholder.classList.remove('hidden');
+    
+    // Show the layout section and its loader
+    DOM.cuttingLayoutSection.classList.remove('hidden');
+    DOM.cuttingLayoutLoader.classList.remove('hidden');
+    DOM.cuttingLayoutSummary.innerHTML = '';
+    DOM.cuttingLayoutContainer.innerHTML = '';
     
     const mainWoodPieces = getPanelPiecesForAI();
     if(mainWoodPieces.length === 0) {
         showToast("Không có chi tiết ván chính để AI phân tích sơ đồ cắt.", "info");
         aiCalculationState = 'idle';
         updateAnalyzeButton();
-        DOM.resultsContent.classList.remove('hidden');
-        DOM.aiLoadingPlaceholder.classList.add('hidden');
+        DOM.cuttingLayoutSection.classList.add('hidden');
+        DOM.cuttingLayoutLoader.classList.add('hidden');
         return;
     }
 
@@ -1066,9 +1069,8 @@ async function runAICuttingOptimization() {
         aiCalculationState = 'done';
         
         const { cuttingLayout } = data;
-        if (cuttingLayout) {
+        if (cuttingLayout && cuttingLayout.totalSheetsUsed > 0) {
             renderCuttingLayout(cuttingLayout, DOM.cuttingLayoutContainer, DOM.cuttingLayoutSummary);
-            DOM.cuttingLayoutSection.classList.remove('hidden');
         } else {
             DOM.cuttingLayoutSection.classList.add('hidden');
         }
@@ -1080,9 +1082,9 @@ async function runAICuttingOptimization() {
         console.error("Error calling AI:", error);
         showToast(`Lỗi khi tối ưu: ${error.message}`, 'error');
         aiCalculationState = 'idle';
+        DOM.cuttingLayoutSection.classList.add('hidden');
     } finally {
-        DOM.aiLoadingPlaceholder.classList.add('hidden');
-        DOM.resultsContent.classList.remove('hidden');
+        DOM.cuttingLayoutLoader.classList.add('hidden');
         updateAnalyzeButton();
     }
 }
@@ -1362,16 +1364,16 @@ function renderItemDetailsToModal(itemId) {
     const mainWood = allLocalMaterials.find(m => m.id === inputs.mainWoodId)?.name || 'Không rõ';
     const backPanel = allLocalMaterials.find(m => m.id === inputs.backPanelId)?.name || 'Dùng ván chính';
     
-    let accessoriesHtml = (inputs.accessories && inputs.accessories.length > 0)
+    const accessoriesHtml = (inputs.accessories && inputs.accessories.length > 0)
         ? '<ul>' + inputs.accessories.map(a => `<li>${a.name} (SL: ${a.quantity} ${a.unit})</li>`).join('') + '</ul>'
-        : 'Không có';
+        : '<p>Không có phụ kiện nào.</p>';
     
     const tempContainer = document.createElement('div');
     renderCostBreakdown(costBreakdown, tempContainer);
     const breakdownHtml = tempContainer.innerHTML || '<p>Không có phân tích chi phí.</p>';
 
     const tempLayoutContainer = document.createElement('div');
-    tempLayoutContainer.className = 'cutting-layout-container';
+    tempLayoutContainer.className = 'cutting-layout-container in-modal';
     const tempSummary = document.createElement('div');
     renderCuttingLayout(cuttingLayout, tempLayoutContainer, tempSummary);
     const layoutHtml = (cuttingLayout?.sheets?.length > 0)
@@ -1384,16 +1386,27 @@ function renderItemDetailsToModal(itemId) {
             <div class="final-price-value">${(finalPrices.suggestedPrice || 0).toLocaleString('vi-VN')}đ</div>
             <p>Tổng chi phí: <strong>${(finalPrices.totalCost || 0).toLocaleString('vi-VN')}đ</strong> | Lợi nhuận: <strong>${(finalPrices.estimatedProfit || 0).toLocaleString('vi-VN')}đ</strong></p>
         </div>
-        <h4><i class="fas fa-ruler-combined"></i>Thông số Đầu vào</h4>
-        <ul>
-            <li><strong>Kích thước (D x R x C):</strong> ${inputs.length || 'N/A'} x ${inputs.width || 'N/A'} x ${inputs.height || 'N/A'} mm</li>
-            <li><strong>Chi phí nhân công:</strong> ${(Number(inputs.laborCost) || 0).toLocaleString('vi-VN')}đ</li>
-            <li><strong>Lợi nhuận mong muốn:</strong> ${inputs.profitMargin || 'N/A'}%</li>
-        </ul>
-        <h4><i class="fas fa-boxes"></i>Vật tư Sử dụng</h4>
-        <ul><li><strong>Ván chính:</strong> ${mainWood}</li><li><strong>Ván hậu:</strong> ${backPanel}</li><li><strong>Vật tư khác:</strong> ${accessoriesHtml}</li></ul>
-        ${breakdownHtml}
-        <div class="result-box" style="margin-top: 1.5rem;"><h3 class="result-box-header"><i class="fas fa-th-large"></i> Sơ đồ Cắt ván Gợi ý</h3>${layoutHtml}</div>
+        <div class="modal-details-grid">
+            <div class="modal-details-col">
+                <h4><i class="fas fa-ruler-combined"></i>Thông số & Vật tư chính</h4>
+                <ul>
+                    <li><strong>Kích thước (D x R x C):</strong> ${inputs.length || 'N/A'} x ${inputs.width || 'N/A'} x ${inputs.height || 'N/A'} mm</li>
+                    <li><strong>Ván chính:</strong> ${mainWood}</li>
+                    <li><strong>Ván hậu:</strong> ${backPanel}</li>
+                    <li><strong>Chi phí nhân công:</strong> ${(Number(inputs.laborCost) || 0).toLocaleString('vi-VN')}đ</li>
+                    <li><strong>Lợi nhuận mong muốn:</strong> ${inputs.profitMargin || 'N/A'}%</li>
+                </ul>
+                <h4><i class="fas fa-cogs"></i>Phụ kiện & Vật tư khác</h4>
+                ${accessoriesHtml}
+            </div>
+            <div class="modal-details-col">
+                ${breakdownHtml}
+                <div class="result-box">
+                    <h3 class="result-box-header"><i class="fas fa-th-large"></i> Sơ đồ Cắt ván Gợi ý</h3>
+                    ${layoutHtml}
+                </div>
+            </div>
+        </div>
     `;
     openModal(DOM.viewItemModal);
 }

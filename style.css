@@ -692,6 +692,30 @@ td button { transition: color 0.2s; }
     cursor: pointer;
 }
 
+/* --- Project Details Modal Grid --- */
+.modal-details-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem 2rem;
+    margin-top: 1.5rem;
+}
+@media (min-width: 768px) {
+    .modal-details-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+.modal-details-col > *:first-child {
+    margin-top: 0;
+}
+.modal-details-col .result-box {
+    margin-top: 1.5rem;
+    padding: 0;
+    border: none;
+}
+.modal-details-col .result-box > h3.result-box-header {
+    margin-top: 0;
+}
+
 
 /* --- Settings Form --- */
 .settings-intro {
@@ -737,16 +761,16 @@ td button { transition: color 0.2s; }
     animation: rotation 1s linear infinite;
     margin-right: 0.5rem;
 }
-#ai-loading-placeholder {
+#cutting-layout-loader {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 300px;
+    min-height: 200px;
     text-align: center;
     color: var(--text-light);
 }
-#ai-loading-placeholder p {
+#cutting-layout-loader p {
     margin-top: 1rem;
     font-weight: 500;
 }
@@ -841,6 +865,19 @@ td button { transition: color 0.2s; }
     word-break: break-word;
     line-height: 1.1;
 }
+
+/* Scaled-down cutting layout for modals */
+.cutting-layout-container.in-modal {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 1rem;
+}
+.cutting-layout-container.in-modal .cutting-sheet-title {
+    font-size: 0.75rem;
+}
+.cutting-layout-container.in-modal .cutting-piece-label {
+    font-size: 7px;
+}
+
 
 /* --- Guide Section --- */
 .guide-details {

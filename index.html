@@ -197,10 +197,6 @@
 
                             <!-- Results Section -->
                             <div id="results-section" class="hidden">
-                                <div id="ai-loading-placeholder" class="hidden">
-                                    <div class="spinner"></div>
-                                    <p>AI đang tối ưu sơ đồ cắt, vui lòng đợi...</p>
-                                </div>
                                 <div id="results-content">
                                     <div id="price-summary-container" class="result-box">
                                         <div class="grid-3-col">
@@ -225,6 +221,10 @@
                                     
                                     <div id="cutting-layout-section" class="result-box hidden">
                                         <h3 class="result-box-header"><i class="fas fa-th-large"></i> Sơ đồ Cắt ván Gợi ý từ AI</h3>
+                                        <div id="cutting-layout-loader" class="hidden">
+                                            <div class="spinner"></div>
+                                            <p>AI đang tối ưu sơ đồ cắt, vui lòng đợi...</p>
+                                        </div>
                                         <div id="cutting-layout-summary"></div>
                                         <div id="cutting-layout-container" class="cutting-layout-container">
                                             <!-- AI-generated layouts will be rendered here -->
