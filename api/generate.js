@@ -184,27 +184,18 @@ Ví dụ phản hồi: {\"length\": 1200, \"height\": 750}`;
             }
         }
 
-        // --- Handle Calculator Request (JSON with Schema) ---
+        // --- Handle Calculator Request (JSON with Schema for Cutting Layout) ---
         if (prompt) {
-             const promptParts = [];
-            if (image && image.data && image.mimeType) {
-                promptParts.push({
-                    inlineData: {
-                        mimeType: image.mimeType,
-                        data: image.data,
-                    },
-                });
-            }
-            promptParts.push({ text: prompt });
+            const promptParts = [{ text: prompt }];
             
-            // Define the strict schema for the JSON response
             const responseSchema = {
                 type: Type.OBJECT,
                 properties: {
                     cuttingLayout: {
                         type: Type.OBJECT,
+                        description: "Sơ đồ cắt ván tối ưu.",
                         properties: {
-                            totalSheetsUsed: { type: Type.INTEGER, description: "Tổng số tấm ván CHÍNH được sử dụng, dựa trên sơ đồ cắt tối ưu." },
+                            totalSheetsUsed: { type: Type.INTEGER, description: "Tổng số tấm ván CHÍNH được sử dụng." },
                             sheets: {
                                 type: Type.ARRAY,
                                 items: {
@@ -228,14 +219,6 @@ Ví dụ phản hồi: {\"length\": 1200, \"height\": 750}`;
                                 }
                             }
                         }
-                    },
-                    edgeBanding: {
-                        type: Type.OBJECT,
-                        properties: {
-                            totalLength: { type: Type.INTEGER, description: "Tổng chiều dài nẹp cạnh cần thiết, tính bằng mm." },
-                            reasoning: { type: Type.STRING, description: "Giải thích ngắn gọn về cách tính toán." }
-                        },
-                        required: ["totalLength"]
                     }
                 }
             };
@@ -264,11 +247,10 @@ Ví dụ phản hồi: {\"length\": 1200, \"height\": 750}`;
     } catch (error) {
         console.error("Error in serverless function:", error);
         const errorMessage = error.message || "Đã xảy ra lỗi không xác định trên máy chủ.";
-        // Avoid sending a response if headers already sent (for streaming errors)
         if (!response.headersSent) {
             response.status(500).json({ error: `Lỗi nội bộ máy chủ: ${errorMessage}` });
         } else {
-             response.end(); // Gracefully end the stream on error
+             response.end();
         }
     }
 }

@@ -808,7 +808,7 @@ td button { transition: color 0.2s; }
 .toast--info .toast-icon { color: #17a2b8; }
 
 /* --- Login/Disabled Placeholders --- */
-.login-prompt-view, .calculator-form-content, .materials-form-content, .saved-items-content, .settings-form-content, .quick-calc-form-content, .component-names-content {
+.login-prompt-view, .calculator-form-content, .materials-form-content, .saved-items-content, .settings-form-content, .quick-calc-form-content, .component-names-content, .config-form-content {
     display: none;
 }
 .login-prompt-view { text-align: center; padding: 2.5rem 0; }
@@ -983,4 +983,123 @@ td button { transition: color 0.2s; }
 }
 .pagination-controls .btn[data-direction="next"] i {
     margin-left: 0.4rem;
+}
+
+/* --- NEW: Config Tab Layout --- */
+.config-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+}
+@media (min-width: 1024px) {
+    .config-layout {
+        grid-template-columns: minmax(320px, 1fr) 2fr;
+    }
+}
+.config-list-panel {
+    border-right: none;
+    padding-right: 0;
+}
+@media (min-width: 1024px) {
+    .config-list-panel {
+        border-right: 1px solid var(--border-color);
+        padding-right: 2rem;
+    }
+}
+.config-list {
+    max-height: 400px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+.config-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+.config-list-item:hover {
+    background-color: var(--background-color);
+}
+.config-list-item.active {
+    background-color: #eef2ff;
+    border-color: var(--primary-color);
+    font-weight: 600;
+    color: var(--primary-color);
+}
+.config-list-item-actions button {
+    background: none; border: none; cursor: pointer; color: var(--text-light);
+    width: 28px; height: 28px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s, color 0.2s;
+}
+.config-list-item-actions button:hover {
+    background-color: #e2e8f0;
+    color: var(--text-dark);
+}
+.config-list-item-actions .delete-pt-btn:hover {
+    background-color: #fee2e2;
+    color: var(--danger-color);
+}
+.config-sub-header {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+#pt-components-list .remove-component-btn {
+    color: var(--text-light);
+}
+#pt-components-list .remove-component-btn:hover {
+    color: var(--danger-color);
+    background-color: #fee2e2;
+}
+
+/* --- NEW: Edge Banding Rules --- */
+.edge-banding-rules {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+}
+.edge-banding-rules label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+    user-select: none;
+}
+.edge-banding-rules input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--primary-color);
+}
+.edge-banding-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    font-size: 0.75rem;
+}
+.edge-banding-icon.on {
+    background-color: var(--success-color);
+    color: white;
+}
+.edge-banding-icon.off {
+    background-color: #e2e8f0;
+    color: var(--text-light);
+}
+.edge-banding-cell {
+    display: flex;
+    justify-content: center;
+    gap: 0.3rem;
 }

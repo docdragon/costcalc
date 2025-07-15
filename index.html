@@ -56,6 +56,7 @@
                 <button data-tab="calculator" class="tab-btn active"><i class="fas fa-magic"></i>Trình Báo Giá</button>
                 <button data-tab="quick-calc" class="tab-btn"><i class="fas fa-calculator"></i>Tính Nhanh</button>
                 <button data-tab="materials" class="tab-btn"><i class="fas fa-boxes"></i>Kho Vật Tư</button>
+                <button data-tab="config" class="tab-btn"><i class="fas fa-cogs"></i>Cấu hình</button>
                 <button data-tab="saved" class="tab-btn"><i class="fas fa-folder-open"></i>Dự Án</button>
             </nav>
         </div>
@@ -68,36 +69,23 @@
                     <div class="card main-card">
                         <h2 class="card-header">Tạo Báo giá Mới</h2>
                         <div class="content-wrapper calculator-form-content">
-                            <!-- AI Quick Config -->
-                            <div class="ai-config-section">
-                                <label for="ai-config-prompt" class="form-label"><i class="fas fa-wand-magic-sparkles"></i> Khởi tạo Nhanh với AI</label>
-                                <textarea id="ai-config-prompt" class="input-style" rows="2" placeholder="Vd: làm tủ bếp dưới dài 2 mét, rộng 60 phân, cao 85 phân, có 3 khoang, dùng ván MDF An Cường chống ẩm."></textarea>
-                                <button id="ai-config-btn" class="btn btn-secondary full-width" style="margin-top: 0.5rem;">
-                                    <i class="fas fa-cogs"></i> Tạo Sản phẩm từ Mô tả
-                                </button>
-                            </div>
-                            <hr class="form-divider">
-
                             <!-- Step 1: Product Info -->
-                            <div class="form-section">
+                            <div class="form-section" style="border-top: none; padding-top: 0; margin-top: 0;">
                                 <h3 class="form-section-header"><span class="step-circle">1</span>Thông tin & Kích thước Sản phẩm</h3>
                                 <div class="form-group">
                                     <label for="item-name" class="form-label">Tên sản phẩm / dự án</label>
                                     <input type="text" id="item-name" class="input-style" placeholder="Vd: Tủ bếp dưới chân sắt">
                                 </div>
+                                 <div class="form-group">
+                                    <label for="item-type" class="form-label">Loại sản phẩm</label>
+                                    <select id="item-type" class="input-style">
+                                        <!-- Dynamically populated by JS -->
+                                    </select>
+                                </div>
                                 <div class="grid-3-col">
                                     <div><label for="item-length" class="form-label">Dài (mm)</label><input type="text" inputmode="decimal" id="item-length" class="input-style" placeholder="Vd: 2000"></div>
                                     <div><label for="item-width" class="form-label">Rộng (mm)</label><input type="text" inputmode="decimal" id="item-width" class="input-style" placeholder="Vd: 600"></div>
                                     <div><label for="item-height" class="form-label">Cao (mm)</label><input type="text" inputmode="decimal" id="item-height" class="input-style" placeholder="Vd: 850"></div>
-                                </div>
-                                <div class="form-group" style="margin-top: 1.25rem;">
-                                    <label for="item-type" class="form-label">Loại sản phẩm</label>
-                                    <select id="item-type" class="input-style">
-                                        <option value="tu-bep-duoi">Tủ bếp dưới</option>
-                                        <option value="tu-bep-tren">Tủ bếp trên</option>
-                                        <option value="tu-ao">Tủ áo (Thùng, cánh, không hậu)</option>
-                                        <option value="khac">Khác (Hộp 4 mặt, hở trước & sau)</option>
-                                    </select>
                                 </div>
                             </div>
 
@@ -133,7 +121,7 @@
                                     <div class="component-header">
                                         <div>
                                             <label class="form-label">Danh sách Chi tiết Cấu thành</label>
-                                            <p class="form-text" style="margin-top: -0.25rem; margin-bottom: 0.75rem;">AI sẽ dựa vào danh sách này để tính toán sơ đồ cắt. Bạn có thể chỉnh sửa hoặc thêm chi tiết tùy chỉnh.</p>
+                                            <p class="form-text" style="margin-top: -0.25rem; margin-bottom: 0.75rem;">Danh sách được tải từ "Loại sản phẩm". Bạn có thể chỉnh sửa hoặc thêm chi tiết tùy chỉnh.</p>
                                         </div>
                                     </div>
                                     <div class="table-wrapper">
@@ -161,7 +149,7 @@
                                 <h3 class="form-section-header"><span class="step-circle">3</span>Phụ kiện & Chi phí Hoàn thiện</h3>
                                 <div class="form-group">
                                     <label for="edge-material-input" class="form-label">Vật liệu nẹp cạnh</label>
-                                    <p class="form-text" style="margin-top: -0.25rem; margin-bottom: 0.75rem;">Chọn loại nẹp để AI tính toán chi phí dán cạnh tự động.</p>
+                                    <p class="form-text" style="margin-top: -0.25rem; margin-bottom: 0.75rem;">Chọn loại nẹp để tính chi phí dán cạnh tự động. Quy tắc dán cạnh được thiết lập trong tab Cấu hình.</p>
                                     <div id="edge-material-combobox" class="combobox-container">
                                         <input type="text" id="edge-material-input" class="input-style combobox-input" placeholder="Tìm hoặc chọn loại nẹp...">
                                         <input type="hidden" class="combobox-value">
@@ -172,7 +160,7 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="material-accessories" class="form-label">Vật tư phụ & Phụ kiện khác</label>
-                                    <p class="form-text" style="margin-top: -0.25rem; margin-bottom: 0.75rem;">Thêm các phụ kiện khác như bản lề, ray trượt tại đây. Chi phí nẹp cạnh được tính riêng ở trên.</p>
+                                    <p class="form-text" style="margin-top: -0.25rem; margin-bottom: 0.75rem;">Thêm các phụ kiện khác như bản lề, ray trượt tại đây.</p>
                                     <div class="accessory-adder">
                                         <div id="main-material-accessories-combobox" class="combobox-container">
                                             <input type="text" class="input-style combobox-input" placeholder="Tìm phụ kiện, gia công...">
@@ -300,9 +288,9 @@
                                     <h4><i class="fas fa-question-circle"></i> Hướng dẫn sử dụng</h4>
                                 </summary>
                                 <ul>
-                                    <li><strong>Khởi tạo Nhanh:</strong> Nhập mô tả sản phẩm (vd: "tủ áo 2m x 1m8, 4 cánh") và nhấn nút, AI sẽ tự động điền các thông số.</li>
+                                    <li><strong>Chọn Loại Sản phẩm:</strong> Chọn một loại sản phẩm từ danh sách để tải cấu trúc chi tiết mặc định. Bạn có thể tùy chỉnh các loại sản phẩm này trong tab 'Cấu hình'.</li>
                                     <li><strong>Điền thông tin:</strong> Hoàn thiện các thông tin chi tiết về kích thước, vật liệu, và phụ kiện cho sản phẩm của bạn.</li>
-                                    <li><strong>Phân tích AI:</strong> Nhấn nút "Phân tích & Báo giá với AI" để nhận báo giá chi tiết, phân tích chi phí ẩn, gợi ý tối ưu và sơ đồ cắt ván.</li>
+                                    <li><strong>Phân tích AI:</strong> Nhấn nút "Phân tích & Báo giá với AI" để nhận báo giá chi tiết, phân tích chi phí và sơ đồ cắt ván.</li>
                                     <li><strong>Lưu & Tải lại:</strong> Đăng nhập và lưu các dự án quan trọng để xem lại hoặc chỉnh sửa sau này.</li>
                                 </ul>
                            </details>
@@ -511,6 +499,74 @@
                         <p>Vui lòng đăng nhập để thêm, sửa, xóa các loại vật tư cho xưởng của mình.</p>
                     </div>
                 </div>
+            </div>
+
+            <!-- Tab: Configuration -->
+            <div id="config-tab" class="tab-pane hidden">
+                <div class="card">
+                    <h2 class="card-header">Quản lý Loại Sản Phẩm</h2>
+                    <div class="content-wrapper config-form-content">
+                        <div class="config-layout">
+                            <!-- Left: List of Product Types -->
+                            <div class="config-list-panel">
+                                 <form id="product-type-form">
+                                    <input type="hidden" id="product-type-id">
+                                    <div class="form-group" style="margin-top: 0;">
+                                        <label for="product-type-name" class="form-label">Tên Loại Sản Phẩm</label>
+                                        <input type="text" id="product-type-name" class="input-style" placeholder="Vd: Tủ Bếp Dưới" required>
+                                    </div>
+                                    <div class="button-group" style="justify-content: flex-start; margin-top: 0.75rem;">
+                                        <button type="submit" class="btn btn-primary"><i class="fas fa-plus mr-2"></i> Thêm Mới</button>
+                                        <button type="button" id="cancel-product-type-edit-btn" class="btn btn-secondary hidden">Hủy</button>
+                                    </div>
+                                </form>
+                                <hr class="form-divider">
+                                <div id="product-types-list" class="config-list">
+                                    <!-- JS renders list here -->
+                                </div>
+                            </div>
+
+                            <!-- Right: Editor for the selected Product Type -->
+                            <div id="product-type-editor" class="config-editor-panel hidden">
+                                <h3 id="product-type-editor-title" class="table-header">Chỉnh sửa: Tủ Bếp Dưới</h3>
+                                <div class="form-group" style="margin-top: 0;">
+                                    <label class="form-label">Thêm chi tiết vào loại sản phẩm</label>
+                                    <div class="accessory-adder">
+                                        <div id="pt-component-add-combobox" class="combobox-container">
+                                            <input type="text" class="input-style combobox-input" placeholder="Tìm tên chi tiết...">
+                                            <input type="hidden" class="combobox-value">
+                                            <div class="combobox-options-wrapper"><ul class="combobox-options"></ul></div>
+                                        </div>
+                                        <input type="text" inputmode="decimal" id="pt-component-add-qty" class="input-style accessory-qty" placeholder="SL" value="1" min="1">
+                                        <button id="pt-component-add-btn" class="btn btn-secondary accessory-add-btn"><i class="fas fa-plus"></i> Thêm</button>
+                                    </div>
+                                </div>
+                                <div class="table-container">
+                                    <h4 class="config-sub-header">Danh sách chi tiết hiện tại</h4>
+                                     <div class="table-wrapper">
+                                        <table class="data-table">
+                                            <thead>
+                                                <tr>
+                                                    <th class="th-style">Tên Chi tiết</th>
+                                                    <th class="th-style text-center">Số lượng</th>
+                                                    <th class="th-style text-center">Xóa</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="pt-components-list">
+                                                <!-- JS renders components for selected type here -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="login-prompt-view">
+                        <div class="icon-prompt"><i class="fas fa-cogs"></i></div>
+                        <h3>Cấu hình sản phẩm</h3>
+                        <p>Vui lòng đăng nhập để tạo và quản lý các mẫu sản phẩm của bạn.</p>
+                    </div>
+                </div>
 
                 <div class="card" style="margin-top: 2rem;">
                     <h2 class="card-header">Quản lý Tên Chi tiết Cấu thành</h2>
@@ -527,6 +583,16 @@
                                      <input type="text" id="component-name-notes" class="input-style" placeholder="Tùy chọn">
                                 </div>
                             </div>
+                            <div class="form-group" style="margin-top: 1rem;">
+                                <label class="form-label">Quy tắc dán cạnh mặc định</label>
+                                <p class="form-text" style="margin-top:-0.25rem; margin-bottom: 0.75rem;">Xác định các cạnh sẽ được tính chi phí nẹp tự động. D1/D2 là 2 cạnh dài, R1/R2 là 2 cạnh rộng của chi tiết.</p>
+                                <div class="edge-banding-rules">
+                                    <label><input type="checkbox" id="component-edge-1"> Cạnh dài 1</label>
+                                    <label><input type="checkbox" id="component-edge-2"> Cạnh dài 2</label>
+                                    <label><input type="checkbox" id="component-edge-3"> Cạnh rộng 1</label>
+                                    <label><input type="checkbox" id="component-edge-4"> Cạnh rộng 2</label>
+                                </div>
+                            </div>
                             <div class="button-group" style="justify-content: flex-end;">
                                 <button type="button" id="cancel-component-name-edit-btn" class="btn btn-secondary hidden">Hủy</button>
                                 <button type="submit" class="btn btn-primary"><i class="fas fa-plus mr-2"></i> Thêm Tên</button>
@@ -538,9 +604,10 @@
                                 <table class="data-table">
                                     <thead>
                                         <tr>
-                                            <th class="th-style" style="width: 50%;">Tên</th>
+                                            <th class="th-style" style="width: 40%;">Tên</th>
                                             <th class="th-style">Ghi chú</th>
-                                            <th class="th-style text-center">Thao tác</th>
+                                            <th class="th-style text-center" colspan="4">Dán cạnh (D1-D2-R1-R2)</th>
+                                            <th class="th-style text-center" style="width: 15%;">Thao tác</th>
                                         </tr>
                                     </thead>
                                     <tbody id="component-names-table-body">
@@ -557,6 +624,7 @@
                     </div>
                 </div>
             </div>
+
 
             <!-- Tab 4: Dự án đã lưu -->
             <div id="saved-tab" class="tab-pane hidden">

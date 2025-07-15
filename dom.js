@@ -13,10 +13,6 @@ export const tabs = document.getElementById('tabs');
 export const tabContent = document.getElementById('tab-content');
 
 // --- Main Calculator Tab ---
-// AI Quick Config
-export const aiConfigPrompt = document.getElementById('ai-config-prompt');
-export const aiConfigBtn = document.getElementById('ai-config-btn');
-
 // Product Info
 export const itemNameInput = document.getElementById('item-name');
 export const itemLengthInput = document.getElementById('item-length');
@@ -31,7 +27,7 @@ export const mainMaterialWoodCombobox = document.getElementById('main-material-w
 export const mainMaterialBackPanelCombobox = document.getElementById('main-material-back-panel-combobox');
 export const edgeMaterialCombobox = document.getElementById('edge-material-combobox');
 
-// NEW: Components
+// Components
 export const componentsTableBody = document.getElementById('components-table-body');
 export const addCustomComponentBtn = document.getElementById('add-custom-component-btn');
 
@@ -99,7 +95,21 @@ export const prevPageBtn = document.getElementById('prev-page-btn');
 export const nextPageBtn = document.getElementById('next-page-btn');
 export const cancelEditBtn = document.getElementById('cancel-edit-button');
 
-// --- Component Names (in Materials Tab) ---
+// --- Configuration Tab ---
+// Product Type Manager
+export const productTypeForm = document.getElementById('product-type-form');
+export const productTypeIdInput = document.getElementById('product-type-id');
+export const productTypeNameInput = document.getElementById('product-type-name');
+export const cancelProductTypeEditBtn = document.getElementById('cancel-product-type-edit-btn');
+export const productTypesList = document.getElementById('product-types-list');
+export const productTypeEditor = document.getElementById('product-type-editor');
+export const productTypeEditorTitle = document.getElementById('product-type-editor-title');
+export const ptComponentAddCombobox = document.getElementById('pt-component-add-combobox');
+export const ptComponentAddQtyInput = document.getElementById('pt-component-add-qty');
+export const ptComponentAddBtn = document.getElementById('pt-component-add-btn');
+export const ptComponentsList = document.getElementById('pt-components-list');
+
+// Component Name Manager
 export const componentNameForm = document.getElementById('component-name-form');
 export const componentNamesTableBody = document.getElementById('component-names-table-body');
 export const cancelComponentNameEditBtn = document.getElementById('cancel-component-name-edit-btn');

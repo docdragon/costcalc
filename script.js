@@ -19,13 +19,20 @@ let currentUserId = null;
 let materialsCollectionRef = null;
 let savedItemsCollectionRef = null;
 let componentNamesCollectionRef = null;
+let productTypesCollectionRef = null; // New collection for product types
+
 let unsubscribeMaterials = null; 
 let unsubscribeSavedItems = null;
 let unsubscribeComponentNames = null;
+let unsubscribeProductTypes = null; // New listener
+
 let localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [], 'Gia Công': [] };
 let allLocalMaterials = []; // Flat array for filtering and sorting
 let localSavedItems = [];
-let localComponentNames = []; // For the new component name manager
+let localComponentNames = [];
+let localProductTypes = []; // For the new product type manager
+let currentEditingProductTypeId = null; // To track which product type is being edited
+
 let lastGeminiResult = null;
 let addedAccessories = [];
 let productComponents = [];
@@ -48,24 +55,51 @@ const sampleMaterials = [
 ];
 
 const sampleComponentNames = [
-    { name: 'Hông Trái', notes: 'Vách bên trái tủ' },
-    { name: 'Hông Phải', notes: 'Vách bên phải tủ' },
-    { name: 'Đáy', notes: 'Tấm ván dưới cùng' },
-    { name: 'Nóc', notes: 'Tấm ván trên cùng' },
-    { name: 'Hậu', notes: 'Tấm ván phía sau' },
-    { name: 'Cánh Mở', notes: '' },
-    { name: 'Đợt Cố Định', notes: '' },
-    { name: 'Vách Ngăn', notes: 'Vách chia khoang' },
+    { name: 'Hông Trái', notes: 'Vách bên trái tủ', edge1: true, edge2: false, edge3: true, edge4: false },
+    { name: 'Hông Phải', notes: 'Vách bên phải tủ', edge1: true, edge2: false, edge3: true, edge4: false },
+    { name: 'Đáy', notes: 'Tấm ván dưới cùng', edge1: true, edge2: false, edge3: false, edge4: false },
+    { name: 'Nóc', notes: 'Tấm ván trên cùng', edge1: true, edge2: false, edge3: false, edge4: false },
+    { name: 'Hậu', notes: 'Tấm ván phía sau', edge1: false, edge2: false, edge3: false, edge4: false },
+    { name: 'Cánh Mở', notes: '', edge1: true, edge2: true, edge3: true, edge4: true },
+    { name: 'Đợt Cố Định', notes: '', edge1: true, edge2: false, edge3: false, edge4: false },
+    { name: 'Vách Ngăn', notes: 'Vách chia khoang', edge1: true, edge2: false, edge3: false, edge4: false },
 ];
 
+const sampleProductTypes = [
+    { name: 'Tủ Bếp Dưới', components: [
+        { name: 'Hông Trái', qty: 1 }, { name: 'Hông Phải', qty: 1 },
+        { name: 'Đáy', qty: 1 }, { name: 'Hậu', qty: 1 }
+    ]},
+    { name: 'Tủ Áo 2 Cánh', components: [
+        { name: 'Hông Trái', qty: 1 }, { name: 'Hông Phải', qty: 1 },
+        { name: 'Đáy', qty: 1 }, { name: 'Nóc', qty: 1 },
+        { name: 'Cánh Mở', qty: 2 }, { name: 'Đợt Cố Định', qty: 1 }
+    ]}
+];
+
+
 async function addSampleData(userId) {
+    // Add sample component names first and get their new IDs
+    const componentNamesRef = collection(db, `users/${userId}/componentNames`);
+    const componentNameMap = {};
+    for (const compName of sampleComponentNames) {
+        const docRef = await addDoc(componentNamesRef, compName);
+        componentNameMap[compName.name] = docRef.id;
+    }
+    
+    // Add sample product types, using the new component name IDs
+    const productTypesRef = collection(db, `users/${userId}/productTypes`);
+    for (const prodType of sampleProductTypes) {
+        const componentsWithIds = prodType.components
+            .map(c => ({ componentNameId: componentNameMap[c.name], qty: c.qty }))
+            .filter(c => c.componentNameId); // Filter out any that might have failed to map
+        await addDoc(productTypesRef, { name: prodType.name, components: componentsWithIds });
+    }
+
+    // Add sample materials
     const materialsRef = collection(db, `users/${userId}/materials`);
     for (const material of sampleMaterials) {
         await addDoc(materialsRef, material);
-    }
-    const componentNamesRef = collection(db, `users/${userId}/componentNames`);
-    for (const name of sampleComponentNames) {
-        await addDoc(componentNamesRef, name);
     }
 }
 
@@ -78,7 +112,7 @@ async function checkAndAddSampleData(userId) {
         if (snapshot.empty) {
             console.log("No materials found for user, adding sample data.");
             await addSampleData(userId);
-            showToast('Đã thêm dữ liệu vật tư và chi tiết mẫu cho bạn!', 'info');
+            showToast('Đã thêm dữ liệu mẫu cho bạn!', 'info');
         }
     } catch (error) {
         console.error("Error checking/adding sample data:", error);
@@ -93,6 +127,7 @@ onAuthStateChanged(auth, async (user) => {
         materialsCollectionRef = collection(db, `users/${currentUserId}/materials`);
         savedItemsCollectionRef = collection(db, `users/${currentUserId}/savedItems`);
         componentNamesCollectionRef = collection(db, `users/${currentUserId}/componentNames`);
+        productTypesCollectionRef = collection(db, `users/${currentUserId}/productTypes`);
         await checkAndAddSampleData(currentUserId);
         listenForData();
     } else {
@@ -100,6 +135,7 @@ onAuthStateChanged(auth, async (user) => {
         if (unsubscribeMaterials) unsubscribeMaterials();
         if (unsubscribeSavedItems) unsubscribeSavedItems();
         if (unsubscribeComponentNames) unsubscribeComponentNames();
+        if (unsubscribeProductTypes) unsubscribeProductTypes();
         clearLocalData();
     }
     updateUIVisibility(loggedIn, user);
@@ -111,6 +147,7 @@ function listenForData() {
     listenForMaterials();
     listenForSavedItems();
     listenForComponentNames();
+    listenForProductTypes();
 }
 
 function clearLocalData() {
@@ -118,119 +155,113 @@ function clearLocalData() {
     allLocalMaterials = [];
     localSavedItems = [];
     localComponentNames = [];
+    localProductTypes = [];
     renderMaterials([]);
     renderSavedItems([]);
     renderComponentNames([]);
+    renderProductTypes([]);
     populateComboboxes();
-    updateQuickCalcMaterials(localMaterials); // Clear quick calc comboboxes too
+    populateProductTypeDropdown();
+    updateQuickCalcMaterials(localMaterials);
 }
 
 DOM.logoutBtn.addEventListener('click', () => signOut(auth));
 
 // --- Helper & Renderer Functions ---
 
-/**
- * Parses sheet dimensions from material notes (e.g., "Khổ 1220x2440mm").
- * @param {object} material The material object.
- * @returns {number} The area of the sheet in square meters. Returns a standard area if not found.
- */
 function getSheetArea(material) {
     const STANDARD_SHEET_AREA_M2 = 1.22 * 2.44;
     if (!material || !material.notes) return STANDARD_SHEET_AREA_M2;
-    // Regex to find dimensions like 1220x2440 or 1220 x 2440
     const match = material.notes.match(/(\d+)\s*x\s*(\d+)/);
     if (match && match[1] && match[2]) {
-        const widthMM = parseInt(match[1], 10);
-        const heightMM = parseInt(match[2], 10);
-        // Convert from mm^2 to m^2
-        return (widthMM * heightMM) / 1000000;
+        return (parseInt(match[1], 10) * parseInt(match[2], 10)) / 1000000;
     }
     return STANDARD_SHEET_AREA_M2;
 }
 
-/**
- * Parses board thickness from material name or notes.
- * @param {object} material The material object.
- * @returns {number} The thickness in mm.
- */
 function getBoardThickness(material) {
     const DEFAULT_THICKNESS = 17;
     if (!material) return DEFAULT_THICKNESS;
     const combinedText = `${material.name} ${material.notes || ''}`;
-    // Matches "17mm", "17ly", "17 mm" etc.
     const match = combinedText.match(/(\d+)\s*(mm|ly|li)/i);
-    if (match && match[1]) {
-        return parseInt(match[1], 10);
-    }
-    return DEFAULT_THICKNESS;
+    return match && match[1] ? parseInt(match[1], 10) : DEFAULT_THICKNESS;
 }
 
 
-// --- New: Component Management ---
+// --- Component Management (Refactored) ---
 
-/**
- * Generates the list of product components based on main form inputs.
- */
-function generateProductComponents() {
+const componentDimensionFormulas = {
+    'hông': (l, w, h, t) => ({ length: w, width: h }),
+    'vách': (l, w, h, t) => ({ length: w, width: h }),
+    'đáy': (l, w, h, t) => ({ length: l - 2 * t, width: w }),
+    'nóc': (l, w, h, t) => ({ length: l - 2 * t, width: w }),
+    'hậu': (l, w, h, t) => ({ length: l, width: h }),
+    'đợt ngang trước': (l, w, h, t) => ({ length: l - 2*t, width: 100 }),
+    'đợt ngang sau': (l, w, h, t) => ({ length: l - 2*t, width: 100 }),
+};
+
+function recalculateComponentDimensions() {
     const l = parseFloat(DOM.itemLengthInput.value) || 0;
     const w = parseFloat(DOM.itemWidthInput.value) || 0;
     const h = parseFloat(DOM.itemHeightInput.value) || 0;
-    const type = DOM.itemTypeSelect.value;
-    
     const mainWoodId = DOM.mainMaterialWoodCombobox.querySelector('.combobox-value').value;
     const mainWoodMaterial = localMaterials['Ván'].find(m => m.id === mainWoodId);
     const t = getBoardThickness(mainWoodMaterial);
+    
+    if (!l || !w || !h) return;
 
-    const newComponents = [];
-    if (!l || !w || !h) {
-        productComponents = [];
+    productComponents.forEach(comp => {
+        const compNameLower = comp.name.toLowerCase();
+        let calculated = false;
+        for (const key in componentDimensionFormulas) {
+            if (compNameLower.includes(key)) {
+                const { length, width } = componentDimensionFormulas[key](l, w, h, t);
+                comp.length = Math.round(length);
+                comp.width = Math.round(width);
+                calculated = true;
+                break;
+            }
+        }
+        // For components like doors ('cánh') or shelves ('đợt'), we might not have a universal formula,
+        // so we don't auto-update them if they already have dimensions. This allows for manual override.
+    });
+
+    renderProductComponents();
+    update3DPreview();
+}
+
+function loadComponentsByProductType(productTypeId) {
+    const productType = localProductTypes.find(pt => pt.id === productTypeId);
+    productComponents = [];
+    if (!productType || !productType.components) {
+        renderProductComponents();
         return;
     }
-
-    // Default component properties, including position and rotation
-    const pos = { x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0 };
     
-    // Common parts. The positions are calculated relative to the center (0,0,0) of the bounding box.
-    const hongTrai = { ...pos, name: 'Hông Trái', length: w, width: h, qty: 1, isDefault: true, x: (-l/2 + t/2), ry: 90 };
-    const hongPhai = { ...pos, name: 'Hông Phải', length: w, width: h, qty: 1, isDefault: true, x: (l/2 - t/2), ry: 90 };
-    const day = { ...pos, name: 'Đáy', length: l - 2*t, width: w, qty: 1, isDefault: true, y: (h/2 - t/2), rx: 90 };
-    const noc = { ...pos, name: 'Nóc', length: l - 2*t, width: w, qty: 1, isDefault: true, y: (-h/2 + t/2), rx: 90 };
-    const hau = { ...pos, name: 'Hậu', length: l, width: h, qty: 1, isDefault: true, materialType: 'back', z: (-w/2 + t/2) };
+    productType.components.forEach(compTemplate => {
+        const componentNameData = localComponentNames.find(cn => cn.id === compTemplate.componentNameId);
+        if (componentNameData) {
+            productComponents.push({
+                id: `comp_${Date.now()}_${Math.random()}`,
+                name: componentNameData.name,
+                length: 0, // Will be calculated
+                width: 0,  // Will be calculated
+                qty: compTemplate.qty,
+                componentNameId: compTemplate.componentNameId,
+                isDefault: true,
+                x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0,
+            });
+        }
+    });
 
-    // Type specific parts
-    switch(type) {
-        case 'tu-bep-duoi':
-            const dotNgangTruoc = { ...pos, name: 'Đợt ngang trước', length: l - 2*t, width: 100, qty: 1, isDefault: true, y: (-h/2 + t/2), z: (w/2 - 50), rx: 90 };
-            const dotNgangSau = { ...pos, name: 'Đợt ngang sau', length: l - 2*t, width: 100, qty: 1, isDefault: true, y: (-h/2 + t/2), z: (-w/2 + 50), rx: 90 };
-            newComponents.push(hongTrai, hongPhai, day, dotNgangTruoc, dotNgangSau, hau);
-            break;
-        case 'tu-bep-tren':
-            newComponents.push(hongTrai, hongPhai, day, noc, hau);
-            break;
-        case 'tu-ao':
-            newComponents.push(hongTrai, hongPhai, day, noc); // No back panel by default for wardrobe calculation
-            break;
-        case 'khac': // Box with 4 sides
-            newComponents.push(hongTrai, hongPhai, day, noc);
-            break;
-    }
-    
-    // Add unique IDs
-    const finalNewComponents = newComponents.map((comp, i) => ({ ...comp, id: `comp_${Date.now()}_${i}` }));
-
-    // Merge with existing custom components
-    const customComponents = productComponents.filter(p => !p.isDefault);
-    productComponents = [...finalNewComponents, ...customComponents].map(p => ({...p, length: Math.round(p.length), width: Math.round(p.width)}));
+    recalculateComponentDimensions();
 }
 
 
-/**
- * Renders the productComponents array into the components table.
- */
 function renderProductComponents() {
     DOM.componentsTableBody.innerHTML = '';
     if (!productComponents || productComponents.length === 0) {
-        DOM.componentsTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 1rem; color: var(--text-light);">Nhập kích thước sản phẩm để xem chi tiết.</td></tr>';
+        DOM.componentsTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 1rem; color: var(--text-light);">Chọn "Loại sản phẩm" hoặc thêm chi tiết tùy chỉnh.</td></tr>';
         return;
     }
     productComponents.forEach(comp => {
@@ -253,18 +284,18 @@ function renderProductComponents() {
         `;
         DOM.componentsTableBody.appendChild(tr);
 
-        // Initialize the combobox for this new row
         const comboboxContainer = tr.querySelector(`#comp-name-combobox-${comp.id}`);
         if(comboboxContainer) {
             initializeCombobox(
                 comboboxContainer, 
-                localComponentNames.map(c => ({ id: c.id, name: c.name, price: '', unit: ''})), // Adapt data for combobox
+                localComponentNames.map(c => ({ id: c.id, name: c.name, price: '', unit: ''})), 
                 (selectedId) => {
                     const selectedName = localComponentNames.find(c => c.id === selectedId)?.name;
                     const component = productComponents.find(p => p.id === comp.id);
                     if (component && selectedName) {
                         component.name = selectedName;
-                        // The main input's change listener will handle the rest
+                        component.componentNameId = selectedId;
+                        recalculateComponentDimensions();
                     }
                 },
                 { placeholder: 'Chọn tên...', allowCustom: true }
@@ -274,26 +305,15 @@ function renderProductComponents() {
     });
 }
 
-/**
- * Handles updates from the main form inputs to regenerate the component list.
- */
-function handleFormUpdate() {
-    generateProductComponents();
-    renderProductComponents();
-    update3DPreview();
-}
 
-
-/**
- * Reads the component table and returns a list of pieces for AI analysis.
- */
 function getPanelPiecesForAI() {
     const pieces = [];
     const backPanelId = DOM.mainMaterialBackPanelCombobox.querySelector('.combobox-value').value;
 
     productComponents.forEach(comp => {
-        if (comp.materialType === 'back' && backPanelId) {
-            return;
+        const isBackPanel = comp.name.toLowerCase().includes('hậu');
+        if (isBackPanel && backPanelId) {
+            return; // Skip back panels if a specific material is chosen for them
         }
 
         for (let i = 0; i < comp.qty; i++) {
@@ -306,7 +326,6 @@ function getPanelPiecesForAI() {
 }
 
 
-// REFACTORED: Takes container elements as arguments to avoid global side-effects.
 function renderCuttingLayout(layoutData, containerEl, summaryEl) {
     if (!layoutData || !layoutData.sheets || layoutData.totalSheetsUsed === 0) {
         summaryEl.innerHTML = `<p>AI không thể tạo sơ đồ cắt ván tối ưu từ thông tin được cung cấp.</p>`;
@@ -399,10 +418,6 @@ function listenForMaterials() {
     }, console.error);
 }
 
-
-/**
- * Applies current filter, sort, and pagination options and then renders the material list.
- */
 function displayMaterials() {
     let materialsToProcess = [...allLocalMaterials];
     const filterText = DOM.materialFilterInput.value.toLowerCase().trim();
@@ -416,33 +431,19 @@ function displayMaterials() {
     }
 
     switch (sortBy) {
-        case 'name-asc':
-            materialsToProcess.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
-            break;
-        case 'name-desc':
-            materialsToProcess.sort((a, b) => b.name.localeCompare(a.name, 'vi'));
-            break;
-        case 'price-asc':
-            materialsToProcess.sort((a, b) => a.price - b.price);
-            break;
-        case 'price-desc':
-            materialsToProcess.sort((a, b) => b.price - a.price);
-            break;
-        case 'type':
-            materialsToProcess.sort((a, b) => a.type.localeCompare(b.type, 'vi') || a.name.localeCompare(b.name, 'vi'));
-            break;
+        case 'name-asc': materialsToProcess.sort((a, b) => a.name.localeCompare(b.name, 'vi')); break;
+        case 'name-desc': materialsToProcess.sort((a, b) => b.name.localeCompare(a.name, 'vi')); break;
+        case 'price-asc': materialsToProcess.sort((a, b) => a.price - b.price); break;
+        case 'price-desc': materialsToProcess.sort((a, b) => b.price - a.price); break;
+        case 'type': materialsToProcess.sort((a, b) => a.type.localeCompare(b.type, 'vi') || a.name.localeCompare(b.name, 'vi')); break;
     }
     
     const totalItems = materialsToProcess.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-
-    if (currentPage > totalPages) {
-        currentPage = totalPages;
-    }
+    if (currentPage > totalPages) currentPage = totalPages;
     
     const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const paginatedItems = materialsToProcess.slice(startIndex, endIndex);
+    const paginatedItems = materialsToProcess.slice(startIndex, startIndex + itemsPerPage);
 
     renderMaterials(paginatedItems);
     updatePaginationControls(totalPages);
@@ -454,34 +455,18 @@ function updatePaginationControls(totalPages) {
         return;
     }
     DOM.paginationControls.classList.remove('hidden');
-
     DOM.pageInfo.textContent = `Trang ${currentPage} / ${totalPages}`;
     DOM.prevPageBtn.disabled = currentPage === 1;
     DOM.nextPageBtn.disabled = currentPage === totalPages;
 }
 
-DOM.materialFilterInput.addEventListener('input', () => {
-    currentPage = 1;
-    displayMaterials();
-});
-DOM.materialSortSelect.addEventListener('change', () => {
-    currentPage = 1;
-    displayMaterials();
-});
-DOM.prevPageBtn.addEventListener('click', () => {
-    if (currentPage > 1) {
-        currentPage--;
-        displayMaterials();
-    }
-});
+DOM.materialFilterInput.addEventListener('input', () => { currentPage = 1; displayMaterials(); });
+DOM.materialSortSelect.addEventListener('change', () => { currentPage = 1; displayMaterials(); });
+DOM.prevPageBtn.addEventListener('click', () => { if (currentPage > 1) { currentPage--; displayMaterials(); } });
 DOM.nextPageBtn.addEventListener('click', () => {
     const totalPages = Math.ceil(allLocalMaterials.length / itemsPerPage) || 1;
-    if (currentPage < totalPages) {
-        currentPage++;
-        displayMaterials();
-    }
+    if (currentPage < totalPages) { currentPage++; displayMaterials(); }
 });
-
 
 function renderMaterials(materials) {
     DOM.materialsTableBody.innerHTML = '';
@@ -572,21 +557,24 @@ function resetMaterialForm() {
 }
 
 
-// --- Component Name Management ---
+// --- Component Name Management (Configuration Tab) ---
 function listenForComponentNames() {
     if (unsubscribeComponentNames) unsubscribeComponentNames();
     unsubscribeComponentNames = onSnapshot(componentNamesCollectionRef, snapshot => {
         localComponentNames = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         localComponentNames.sort((a,b) => a.name.localeCompare(b.name, 'vi'));
         renderComponentNames(localComponentNames);
-        renderProductComponents(); // Re-render table with new combobox options
+        // Also update the combobox in the product type editor
+        if (DOM.ptComponentAddCombobox?.updateComboboxData) {
+            DOM.ptComponentAddCombobox.updateComboboxData(localComponentNames.map(c => ({ id: c.id, name: c.name })));
+        }
     }, console.error);
 }
 
 function renderComponentNames(names) {
     DOM.componentNamesTableBody.innerHTML = '';
     if (names.length === 0) {
-        DOM.componentNamesTableBody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 1rem; color: var(--text-light);">Chưa có tên chi tiết nào được tạo.</td></tr>`;
+        DOM.componentNamesTableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 1rem; color: var(--text-light);">Chưa có tên chi tiết nào được tạo.</td></tr>`;
         return;
     }
     names.forEach(cn => {
@@ -594,6 +582,10 @@ function renderComponentNames(names) {
         tr.innerHTML = `
             <td data-label="Tên">${cn.name}</td>
             <td data-label="Ghi chú">${cn.notes || ''}</td>
+            <td data-label="D1" class="text-center"><div class="edge-banding-icon ${cn.edge1 ? 'on' : 'off'}"><i class="fas fa-check"></i></div></td>
+            <td data-label="D2" class="text-center"><div class="edge-banding-icon ${cn.edge2 ? 'on' : 'off'}"><i class="fas fa-check"></i></div></td>
+            <td data-label="R1" class="text-center"><div class="edge-banding-icon ${cn.edge3 ? 'on' : 'off'}"><i class="fas fa-check"></i></div></td>
+            <td data-label="R2" class="text-center"><div class="edge-banding-icon ${cn.edge4 ? 'on' : 'off'}"><i class="fas fa-check"></i></div></td>
             <td data-label="Thao tác" class="text-center">
                 <button class="edit-cn-btn text-blue-500 hover:text-blue-700 mr-2" data-id="${cn.id}"><i class="fas fa-edit"></i></button>
                 <button class="delete-cn-btn text-red-500 hover:text-red-700" data-id="${cn.id}"><i class="fas fa-trash"></i></button>
@@ -608,7 +600,11 @@ DOM.componentNameForm.addEventListener('submit', async (e) => {
     if (!currentUserId) return;
     const nameData = {
         name: DOM.componentNameForm['component-name-input'].value,
-        notes: DOM.componentNameForm['component-name-notes'].value
+        notes: DOM.componentNameForm['component-name-notes'].value,
+        edge1: DOM.componentNameForm['component-edge-1'].checked,
+        edge2: DOM.componentNameForm['component-edge-2'].checked,
+        edge3: DOM.componentNameForm['component-edge-3'].checked,
+        edge4: DOM.componentNameForm['component-edge-4'].checked,
     };
     const id = DOM.componentNameForm['component-name-id'].value;
     try {
@@ -635,7 +631,11 @@ DOM.componentNamesTableBody.addEventListener('click', async (e) => {
         if (cn) {
             DOM.componentNameForm['component-name-id'].value = id;
             DOM.componentNameForm['component-name-input'].value = cn.name;
-            DOM.componentNameForm['component-name-notes'].value = cn.notes;
+            DOM.componentNameForm['component-name-notes'].value = cn.notes || '';
+            DOM.componentNameForm['component-edge-1'].checked = !!cn.edge1;
+            DOM.componentNameForm['component-edge-2'].checked = !!cn.edge2;
+            DOM.componentNameForm['component-edge-3'].checked = !!cn.edge3;
+            DOM.componentNameForm['component-edge-4'].checked = !!cn.edge4;
             DOM.componentNameForm.querySelector('button[type="submit"]').textContent = 'Cập nhật Tên';
             DOM.cancelComponentNameEditBtn.classList.remove('hidden');
         }
@@ -663,25 +663,204 @@ function resetComponentNameForm() {
 }
 
 
-function populateComboboxes() {
-    const allAccessoryMaterials = [
-        ...localMaterials['Ván'],
-        ...localMaterials['Phụ kiện'],
-        ...localMaterials['Gia Công']
-    ];
+// --- NEW: Product Type Management (Configuration Tab) ---
+function listenForProductTypes() {
+    if (unsubscribeProductTypes) unsubscribeProductTypes();
+    unsubscribeProductTypes = onSnapshot(productTypesCollectionRef, snapshot => {
+        localProductTypes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        localProductTypes.sort((a,b) => a.name.localeCompare(b.name, 'vi'));
+        renderProductTypes(localProductTypes);
+        populateProductTypeDropdown();
+    }, console.error);
+}
 
-    if (DOM.mainMaterialWoodCombobox?.updateComboboxData) {
-        DOM.mainMaterialWoodCombobox.updateComboboxData(localMaterials['Ván']);
+function renderProductTypes(types) {
+    DOM.productTypesList.innerHTML = '';
+    if (types.length === 0) {
+        DOM.productTypesList.innerHTML = `<p class="form-text">Chưa có loại sản phẩm nào. Thêm một loại ở trên để bắt đầu.</p>`;
+        return;
     }
-    if (DOM.mainMaterialBackPanelCombobox?.updateComboboxData) {
-        DOM.mainMaterialBackPanelCombobox.updateComboboxData(localMaterials['Ván']);
+    types.forEach(pt => {
+        const item = document.createElement('div');
+        item.className = 'config-list-item';
+        item.dataset.id = pt.id;
+        if (pt.id === currentEditingProductTypeId) {
+            item.classList.add('active');
+        }
+        item.innerHTML = `
+            <span>${pt.name}</span>
+            <div class="config-list-item-actions">
+                 <button class="delete-pt-btn" data-id="${pt.id}" title="Xóa loại sản phẩm"><i class="fas fa-trash"></i></button>
+            </div>
+        `;
+        DOM.productTypesList.appendChild(item);
+    });
+}
+
+function renderProductTypeEditor() {
+    const productType = localProductTypes.find(pt => pt.id === currentEditingProductTypeId);
+    if (!productType) {
+        DOM.productTypeEditor.classList.add('hidden');
+        return;
     }
-    if (DOM.mainMaterialAccessoriesCombobox?.updateComboboxData) {
-        DOM.mainMaterialAccessoriesCombobox.updateComboboxData(allAccessoryMaterials);
+
+    DOM.productTypeEditor.classList.remove('hidden');
+    DOM.productTypeEditorTitle.textContent = `Chỉnh sửa chi tiết cho: ${productType.name}`;
+    
+    DOM.ptComponentsList.innerHTML = '';
+    const components = productType.components || [];
+    if (components.length > 0) {
+        components.forEach(c => {
+            const componentName = localComponentNames.find(cn => cn.id === c.componentNameId)?.name || 'Không rõ';
+            const tr = document.createElement('tr');
+            tr.dataset.cnid = c.componentNameId;
+            tr.innerHTML = `
+                <td data-label="Tên">${componentName}</td>
+                <td data-label="Số lượng" class="text-center">${c.qty}</td>
+                <td data-label="Xóa" class="text-center">
+                    <button class="remove-component-btn" data-cnid="${c.componentNameId}"><i class="fas fa-trash"></i></button>
+                </td>
+            `;
+            DOM.ptComponentsList.appendChild(tr);
+        });
+    } else {
+        DOM.ptComponentsList.innerHTML = `<tr><td colspan="3" class="text-center" style="padding: 1rem; color: var(--text-light)">Chưa có chi tiết nào được thêm.</td></tr>`;
     }
-    if (DOM.edgeMaterialCombobox?.updateComboboxData) {
-        DOM.edgeMaterialCombobox.updateComboboxData(localMaterials['Cạnh']);
+}
+
+DOM.productTypeForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentUserId) return;
+    const name = DOM.productTypeNameInput.value.trim();
+    if (!name) return;
+
+    const data = { name };
+    const id = DOM.productTypeIdInput.value;
+
+    try {
+        if (id) {
+            await updateDoc(doc(db, `users/${currentUserId}/productTypes`, id), data);
+            showToast('Cập nhật loại sản phẩm thành công!', 'success');
+        } else {
+            const docRef = await addDoc(productTypesCollectionRef, { ...data, components: [] });
+            showToast('Thêm loại sản phẩm thành công!', 'success');
+            currentEditingProductTypeId = docRef.id;
+        }
+        resetProductTypeForm();
+        renderProductTypes(localProductTypes);
+        renderProductTypeEditor();
+    } catch (error) {
+        showToast('Đã có lỗi xảy ra.', 'error');
+        console.error("Error adding/updating product type:", error);
     }
+});
+
+DOM.productTypesList.addEventListener('click', async e => {
+    const item = e.target.closest('.config-list-item');
+    const deleteBtn = e.target.closest('.delete-pt-btn');
+
+    if (deleteBtn) {
+        e.stopPropagation();
+        const id = deleteBtn.dataset.id;
+        const pt = localProductTypes.find(p => p.id === id);
+        const confirmed = await showConfirm(`Bạn có chắc muốn xóa loại sản phẩm "${pt.name}"?`);
+        if (confirmed) {
+            await deleteDoc(doc(db, `users/${currentUserId}/productTypes`, id));
+            if (currentEditingProductTypeId === id) {
+                currentEditingProductTypeId = null;
+                DOM.productTypeEditor.classList.add('hidden');
+            }
+            showToast("Xóa thành công", "success");
+        }
+        return;
+    }
+    
+    if (item) {
+        currentEditingProductTypeId = item.dataset.id;
+        const pt = localProductTypes.find(p => p.id === currentEditingProductTypeId);
+        if (pt) {
+            DOM.productTypeIdInput.value = pt.id;
+            DOM.productTypeNameInput.value = pt.name;
+            DOM.productTypeForm.querySelector('button[type="submit"]').textContent = 'Cập nhật';
+            DOM.cancelProductTypeEditBtn.classList.remove('hidden');
+        }
+        renderProductTypes(localProductTypes);
+        renderProductTypeEditor();
+    }
+});
+
+DOM.cancelProductTypeEditBtn.addEventListener('click', () => {
+    resetProductTypeForm();
+    currentEditingProductTypeId = null;
+    renderProductTypes(localProductTypes);
+    DOM.productTypeEditor.classList.add('hidden');
+});
+
+function resetProductTypeForm() {
+    DOM.productTypeForm.reset();
+    DOM.productTypeIdInput.value = '';
+    DOM.productTypeForm.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-plus mr-2"></i> Thêm Mới';
+    DOM.cancelProductTypeEditBtn.classList.add('hidden');
+}
+
+DOM.ptComponentAddBtn.addEventListener('click', async () => {
+    const productType = localProductTypes.find(pt => pt.id === currentEditingProductTypeId);
+    if (!productType) return;
+    
+    const componentNameId = DOM.ptComponentAddCombobox.querySelector('.combobox-value').value;
+    const qty = parseInt(DOM.ptComponentAddQtyInput.value);
+    
+    if (!componentNameId || !qty || qty < 1) {
+        showToast('Vui lòng chọn chi tiết và nhập số lượng hợp lệ.', 'error');
+        return;
+    }
+    
+    const newComponents = productType.components || [];
+    const existing = newComponents.find(c => c.componentNameId === componentNameId);
+    if (existing) {
+        existing.qty = qty; // Update quantity if already exists
+    } else {
+        newComponents.push({ componentNameId, qty });
+    }
+    
+    await updateDoc(doc(db, `users/${currentUserId}/productTypes`, productType.id), { components: newComponents });
+    showToast('Đã thêm/cập nhật chi tiết.', 'success');
+
+    // Reset inputs
+    DOM.ptComponentAddQtyInput.value = '1';
+    if(DOM.ptComponentAddCombobox.setValue) DOM.ptComponentAddCombobox.setValue('');
+});
+
+DOM.ptComponentsList.addEventListener('click', async e => {
+    const deleteBtn = e.target.closest('.remove-component-btn');
+    if (deleteBtn) {
+        const productType = localProductTypes.find(pt => pt.id === currentEditingProductTypeId);
+        if (!productType) return;
+        const componentNameIdToRemove = deleteBtn.dataset.cnid;
+        const newComponents = (productType.components || []).filter(c => c.componentNameId !== componentNameIdToRemove);
+        await updateDoc(doc(db, `users/${currentUserId}/productTypes`, productType.id), { components: newComponents });
+        showToast('Đã xóa chi tiết.', 'success');
+    }
+});
+
+// --- Populate Dropdowns ---
+function populateProductTypeDropdown() {
+    DOM.itemTypeSelect.innerHTML = '<option value="">-- Chọn loại sản phẩm --</option>';
+    localProductTypes.forEach(pt => {
+        const option = document.createElement('option');
+        option.value = pt.id;
+        option.textContent = pt.name;
+        DOM.itemTypeSelect.appendChild(option);
+    });
+}
+
+function populateComboboxes() {
+    const allAccessoryMaterials = [ ...localMaterials['Phụ kiện'], ...localMaterials['Gia Công'] ];
+
+    if (DOM.mainMaterialWoodCombobox?.updateComboboxData) DOM.mainMaterialWoodCombobox.updateComboboxData(localMaterials['Ván']);
+    if (DOM.mainMaterialBackPanelCombobox?.updateComboboxData) DOM.mainMaterialBackPanelCombobox.updateComboboxData(localMaterials['Ván']);
+    if (DOM.mainMaterialAccessoriesCombobox?.updateComboboxData) DOM.mainMaterialAccessoriesCombobox.updateComboboxData(allAccessoryMaterials);
+    if (DOM.edgeMaterialCombobox?.updateComboboxData) DOM.edgeMaterialCombobox.updateComboboxData(localMaterials['Cạnh']);
 }
 
 
@@ -690,12 +869,8 @@ DOM.addAccessoryBtn.addEventListener('click', () => {
     const selectedId = DOM.mainMaterialAccessoriesCombobox.querySelector('.combobox-value').value;
     const quantity = parseFloat(DOM.accessoryQuantityInput.value);
 
-    if (!selectedId) {
-        showToast('Vui lòng chọn một vật tư từ danh sách.', 'error');
-        return;
-    }
-    if (!quantity || quantity <= 0) {
-        showToast('Vui lòng nhập số lượng hợp lệ.', 'error');
+    if (!selectedId || !quantity || quantity <= 0) {
+        showToast('Vui lòng chọn vật tư và nhập số lượng hợp lệ.', 'error');
         return;
     }
 
@@ -707,21 +882,13 @@ DOM.addAccessoryBtn.addEventListener('click', () => {
 
     const existing = addedAccessories.find(a => a.id === selectedId);
 
-    if (existing) {
-        existing.quantity += quantity;
-    } else {
-        addedAccessories.push({ ...material, quantity });
-    }
+    if (existing) existing.quantity += quantity;
+    else addedAccessories.push({ ...material, quantity });
+    
     renderAccessories();
     DOM.accessoryQuantityInput.value = '1';
-    
-    if (DOM.mainMaterialAccessoriesCombobox.setValue) {
-        DOM.mainMaterialAccessoriesCombobox.setValue('');
-    }
-
-    if (calculationState === 'done') {
-        recalculateFinalPrice();
-    }
+    if (DOM.mainMaterialAccessoriesCombobox.setValue) DOM.mainMaterialAccessoriesCombobox.setValue('');
+    if (calculationState === 'done') recalculateFinalPrice();
 });
 
 function renderAccessories() {
@@ -741,12 +908,9 @@ function renderAccessories() {
 
 DOM.accessoriesList.addEventListener('click', e => {
     if (e.target.classList.contains('remove-acc-btn')) {
-        const id = e.target.dataset.id;
-        addedAccessories = addedAccessories.filter(a => a.id !== id);
+        addedAccessories = addedAccessories.filter(a => a.id !== e.target.dataset.id);
         renderAccessories();
-        if (calculationState === 'done') {
-            recalculateFinalPrice();
-        }
+        if (calculationState === 'done') recalculateFinalPrice();
     }
 });
 
@@ -755,14 +919,9 @@ DOM.accessoriesList.addEventListener('change', e => {
         const id = e.target.dataset.id;
         const newQuantity = parseInt(e.target.value);
         const accessory = addedAccessories.find(a => a.id === id);
-        if (accessory && newQuantity > 0) {
-            accessory.quantity = newQuantity;
-        } else if (accessory) {
-            e.target.value = accessory.quantity; // revert if invalid
-        }
-        if (calculationState === 'done') {
-            recalculateFinalPrice();
-        }
+        if (accessory && newQuantity > 0) accessory.quantity = newQuantity;
+        else if (accessory) e.target.value = accessory.quantity;
+        if (calculationState === 'done') recalculateFinalPrice();
     }
 });
 
@@ -774,7 +933,7 @@ function clearInputs() {
     DOM.productDescriptionInput.value = '';
     DOM.profitMarginInput.value = '50';
     DOM.laborCostInput.value = '0';
-    DOM.aiConfigPrompt.value = '';
+    DOM.itemTypeSelect.value = '';
     
     addedAccessories = [];
     renderAccessories();
@@ -786,7 +945,6 @@ function clearInputs() {
     calculationState = 'idle';
     DOM.removeImageBtn.click();
 
-    // Reset comboboxes
     if (DOM.mainMaterialWoodCombobox.setValue) DOM.mainMaterialWoodCombobox.setValue('');
     if (DOM.mainMaterialBackPanelCombobox.setValue) DOM.mainMaterialBackPanelCombobox.setValue('');
     if (DOM.edgeMaterialCombobox.setValue) DOM.edgeMaterialCombobox.setValue('');
@@ -794,7 +952,6 @@ function clearInputs() {
     updateAnalyzeButton();
     DOM.aiAnalysisSection.classList.add('hidden');
     DOM.saveItemBtn.disabled = true;
-    
     update3DPreview();
 }
 
@@ -816,59 +973,59 @@ function updateAnalyzeButton() {
     }
 }
 
+function calculateEdgeBanding() {
+    let totalLength = 0;
+    productComponents.forEach(comp => {
+        const rules = localComponentNames.find(cn => cn.id === comp.componentNameId);
+        if (rules) {
+            if (rules.edge1) totalLength += comp.length;
+            if (rules.edge2) totalLength += comp.length;
+            if (rules.edge3) totalLength += comp.width;
+            if (rules.edge4) totalLength += comp.width;
+        }
+    });
+    return totalLength;
+}
+
 async function runAICalculation() {
     calculationState = 'calculating';
     updateAnalyzeButton();
     DOM.aiAnalysisSection.classList.remove('hidden');
-    
     DOM.aiLoadingPlaceholder.classList.remove('hidden');
     DOM.aiResultsContent.classList.add('hidden');
     
     const mainWoodPieces = getPanelPiecesForAI();
-
-    if(mainWoodPieces.length === 0 && productComponents.length === 0) {
-        showToast("Không có chi tiết nào để phân tích.", "info");
-        calculationState = 'idle'; 
-        updateAnalyzeButton();
-        DOM.aiLoadingPlaceholder.classList.add('hidden');
-        DOM.aiResultsContent.add('hidden');
-        return;
+    if(mainWoodPieces.length === 0) {
+        showToast("Không có chi tiết ván chính nào để AI phân tích sơ đồ cắt.", "info");
+        // We can still proceed to calculate price without cutting layout
     }
 
     const productInfoForAI = {
         name: DOM.itemNameInput.value,
-        type: DOM.itemTypeSelect.value,
+        type: DOM.itemTypeSelect.options[DOM.itemTypeSelect.selectedIndex]?.text,
         length: DOM.itemLengthInput.value,
         width: DOM.itemWidthInput.value,
         height: DOM.itemHeightInput.value,
-        description: DOM.productDescriptionInput.value
     };
 
     const prompt = `
-    NHIỆM VỤ: Bạn là một trợ lý AI chuyên nghiệp cho xưởng mộc, chuyên tối ưu hóa sản xuất và tính toán chi phí.
-    BỐI CẢNH: Người dùng đang thiết kế một sản phẩm nội thất.
+    NHIỆM VỤ: Bạn là một trợ lý AI chuyên nghiệp cho xưởng mộc, chuyên tối ưu hóa sản xuất.
+    BỐI CẢNH: Người dùng đang thiết kế một sản phẩm nội thất và cần tối ưu sơ đồ cắt ván.
     DỮ LIỆU ĐẦU VÀO:
     - Thông tin sản phẩm: ${JSON.stringify(productInfoForAI)}
     - Danh sách các miếng ván chính cần cắt (JSON): ${JSON.stringify(mainWoodPieces.map(({type, ...rest}) => rest))}
-    - Toàn bộ danh sách chi tiết cấu thành (gồm cả ván hậu): ${JSON.stringify(productComponents)}
 
     HƯỚNG DẪN THỰC HIỆN:
     1.  **Sơ đồ cắt ván (Bin Packing) cho VÁN CHÍNH:**
-        - Chỉ sử dụng các miếng trong "Danh sách các miếng ván chính cần cắt". Nếu danh sách này trống, bỏ qua bước này.
+        - Nếu danh sách miếng ván trống, trả về một đối tượng "cuttingLayout" rỗng.
         - Kích thước tấm ván tiêu chuẩn là 1220mm x 2440mm.
-        - Thực hiện thuật toán sắp xếp 2D. Ưu tiên xếp các miếng ván theo chiều dọc (chiều cao của miếng ván song song với cạnh 2440mm của tấm ván).
-        - Cho phép xoay các miếng ván 90 độ NẾU việc đó giúp tối ưu hóa và giảm tổng số tấm ván cần dùng.
+        - Thực hiện thuật toán sắp xếp 2D. Ưu tiên xếp các miếng ván theo chiều dọc.
+        - Cho phép xoay các miếng ván 90 độ NẾU việc đó giúp tối ưu hóa.
         - Trả về kết quả trong đối tượng JSON có tên "cuttingLayout".
 
-    2.  **Tính toán Dán Cạnh (Edge Banding):**
-        - Dựa vào "Toàn bộ danh sách chi tiết cấu thành" và "Thông tin sản phẩm" để xác định những cạnh nào cần dán nẹp.
-        - **Quy tắc:** Một chi tiết ván sẽ được dán cả 4 cạnh. Tuy nhiên, những cạnh giao nhau hoặc tiếp xúc với các chi tiết khác (ví dụ: đáy, nóc, hậu) sẽ KHÔNG được dán. Cạnh tiếp xúc sàn nhà, tường, hoặc mặt đá bếp cũng không dán. Chỉ tính các cạnh có thể nhìn thấy hoặc chạm vào được ở sản phẩm cuối cùng. Cánh tủ luôn được dán cả 4 cạnh.
-        - Tính tổng chiều dài (mm) của tất cả các cạnh cần dán.
-        - Trả về kết quả trong đối tượng JSON "edgeBanding".
-
-    3.  **ĐỊNH DẠNG ĐẦU RA (QUAN TRỌNG):**
+    2.  **ĐỊNH DẠNG ĐẦU RA (QUAN TRỌNG):**
         - Chỉ trả về một đối tượng JSON duy nhất.
-        - Đối tượng JSON này phải chứa "cuttingLayout" và "edgeBanding".
+        - Đối tượng JSON này phải chứa "cuttingLayout".
         - Không thêm bất kỳ văn bản, giải thích, hay ghi chú nào khác bên ngoài đối tượng JSON.
     `;
     
@@ -876,25 +1033,19 @@ async function runAICalculation() {
         const response = await fetch('/api/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: prompt, image: uploadedImage })
+            body: JSON.stringify({ prompt: prompt })
         });
         
         const data = await response.json();
 
         if (!response.ok) {
-            if (data.error && (data.error.includes('overloaded') || data.error.includes('UNAVAILABLE') || data.error.includes('503'))) {
-                showToast('AI đang quá tải, vui lòng thử lại sau giây lát.', 'info');
-            } else {
-                 throw new Error(data.error || `Lỗi máy chủ: ${response.status}`);
-            }
-            return;
+            throw new Error(data.error || `Lỗi máy chủ: ${response.status}`);
         }
 
         lastGeminiResult = data;
         calculationState = 'done';
         
         const { cuttingLayout } = data;
-        
         if (cuttingLayout) {
             renderCuttingLayout(cuttingLayout, DOM.cuttingLayoutContainer, DOM.cuttingLayoutSummary);
             DOM.cuttingLayoutSection.classList.remove('hidden');
@@ -904,16 +1055,11 @@ async function runAICalculation() {
         
         recalculateFinalPrice();
         addDynamicPricingListeners();
-        
         DOM.saveItemBtn.disabled = false;
 
     } catch (error) {
         console.error("Error calling AI:", error);
-        if (error.message.includes('503') || error.message.includes('overloaded')) {
-             showToast('AI đang quá tải, vui lòng thử lại sau giây lát.', 'info');
-        } else {
-             showToast(`Lỗi khi phân tích: ${error.message}`, 'error');
-        }
+        showToast(`Lỗi khi phân tích: ${error.message}`, 'error');
         calculationState = 'idle';
     } finally {
         DOM.aiLoadingPlaceholder.classList.add('hidden');
@@ -922,19 +1068,27 @@ async function runAICalculation() {
     }
 }
 
-/**
- * Recalculates the final price based on the last AI analysis and current form inputs.
- */
 function recalculateFinalPrice() {
-    if (calculationState !== 'done') return;
+    if (calculationState !== 'done' && calculationState !== 'idle') return;
 
     const costBreakdownItems = [];
     let baseMaterialCost = 0;
 
-    // 1. Main Wood Cost (from AI's cutting layout)
-    const totalSheetsUsed = lastGeminiResult?.cuttingLayout?.totalSheetsUsed || 0;
+    // 1. Main Wood Cost
     const mainWoodId = DOM.mainMaterialWoodCombobox.querySelector('.combobox-value').value;
     const mainWoodMaterial = localMaterials['Ván'].find(m => m.id === mainWoodId);
+    let totalSheetsUsed = 0;
+    if(lastGeminiResult?.cuttingLayout?.totalSheetsUsed > 0) {
+        totalSheetsUsed = lastGeminiResult.cuttingLayout.totalSheetsUsed;
+    } else {
+        // Fallback calculation if AI fails or isn't run
+        const mainWoodPieces = getPanelPiecesForAI();
+        if (mainWoodPieces.length > 0 && mainWoodMaterial) {
+            const totalAreaM2 = mainWoodPieces.reduce((sum, p) => sum + (p.width * p.height), 0) / 1000000;
+            const sheetAreaM2 = getSheetArea(mainWoodMaterial);
+            totalSheetsUsed = Math.ceil(totalAreaM2 / sheetAreaM2);
+        }
+    }
 
     if (mainWoodMaterial && totalSheetsUsed > 0) {
         const cost = totalSheetsUsed * mainWoodMaterial.price;
@@ -942,14 +1096,13 @@ function recalculateFinalPrice() {
         costBreakdownItems.push({
             name: `Ván chính: ${mainWoodMaterial.name}`,
             cost: cost,
-            reason: `${totalSheetsUsed} tấm x ${mainWoodMaterial.price.toLocaleString('vi-VN')}đ (tối ưu bởi AI)`
+            reason: `${totalSheetsUsed} tấm x ${mainWoodMaterial.price.toLocaleString('vi-VN')}đ`
         });
     }
 
-    // 2. Back Panel Cost (calculated client-side)
+    // 2. Back Panel Cost
     const backPanelId = DOM.mainMaterialBackPanelCombobox.querySelector('.combobox-value').value;
-    const backPanelPieces = productComponents.filter(p => p.materialType === 'back');
-
+    const backPanelPieces = productComponents.filter(p => p.name.toLowerCase().includes('hậu'));
     if (backPanelId && backPanelPieces.length > 0) {
         const backPanelMaterial = localMaterials['Ván'].find(m => m.id === backPanelId);
         if (backPanelMaterial) {
@@ -962,51 +1115,34 @@ function recalculateFinalPrice() {
                 costBreakdownItems.push({
                     name: `Ván hậu: ${backPanelMaterial.name}`,
                     cost: cost,
-                    reason: `Ước tính ${sheetsNeeded} tấm x ${backPanelMaterial.price.toLocaleString('vi-VN')}đ`
+                    reason: `Ước tính ${sheetsNeeded} tấm`
                 });
             }
         }
     }
     
-    // 3. Edge Banding Cost (from AI and selected material)
-    const edgeBandingData = lastGeminiResult?.edgeBanding;
+    // 3. Edge Banding Cost
+    const totalEdgeLengthMM = calculateEdgeBanding();
     const edgeMaterialId = DOM.edgeMaterialCombobox.querySelector('.combobox-value').value;
     const edgeMaterial = localMaterials['Cạnh'].find(m => m.id === edgeMaterialId);
 
-    if (edgeBandingData && edgeBandingData.totalLength > 0) {
-        if (edgeMaterial) {
-            const lengthInMeters = edgeBandingData.totalLength / 1000;
-            const cost = lengthInMeters * edgeMaterial.price;
-            baseMaterialCost += cost;
-            costBreakdownItems.push({
-                name: `Nẹp cạnh: ${edgeMaterial.name}`,
-                cost: cost,
-                reason: `AI tính toán ${edgeBandingData.totalLength}mm (${lengthInMeters.toFixed(2)}m) x ${edgeMaterial.price.toLocaleString('vi-VN')}đ/m`
-            });
-        } else {
-             costBreakdownItems.push({
-                name: `Nẹp cạnh cần thiết`,
-                cost: 0,
-                reason: `AI tính ${edgeBandingData.totalLength}mm. Vui lòng chọn vật tư 'Nẹp cạnh' để tính giá.`
-            });
-        }
+    if (totalEdgeLengthMM > 0 && edgeMaterial) {
+        const lengthInMeters = totalEdgeLengthMM / 1000;
+        const cost = lengthInMeters * edgeMaterial.price;
+        baseMaterialCost += cost;
+        costBreakdownItems.push({
+            name: `Nẹp cạnh: ${edgeMaterial.name}`,
+            cost: cost,
+            reason: `${lengthInMeters.toFixed(2)}m x ${edgeMaterial.price.toLocaleString('vi-VN')}đ/m`
+        });
     }
 
-    // 4. All other accessories from the list
+    // 4. All other accessories
     addedAccessories.forEach(acc => {
-        const material = allLocalMaterials.find(m => m.id === acc.id);
-        if (!material) return;
-
-        let cost = acc.quantity * material.price;
-        let reason = `${acc.quantity} ${material.unit} x ${material.price.toLocaleString('vi-VN')}đ`;
-        
+        const cost = acc.quantity * acc.price;
         if(cost > 0) {
             baseMaterialCost += cost;
-            costBreakdownItems.push({
-                name: `${material.name}`,
-                cost: cost,
-                reason: reason
-            });
+            costBreakdownItems.push({ name: acc.name, cost, reason: `${acc.quantity} ${acc.unit} x ${acc.price.toLocaleString('vi-VN')}đ` });
         }
     });
 
@@ -1032,30 +1168,15 @@ function recalculateFinalPrice() {
 let dynamicListenersAdded = false;
 function addDynamicPricingListeners() {
     if (dynamicListenersAdded) return;
-    
     DOM.laborCostInput.addEventListener('input', recalculateFinalPrice);
     DOM.profitMarginInput.addEventListener('input', recalculateFinalPrice);
-    
     dynamicListenersAdded = true;
 }
 
-
 DOM.analyzeBtn.addEventListener('click', async () => {
-    if (!currentUserId) {
-        showToast('Vui lòng đăng nhập để sử dụng tính năng này.', 'error');
-        return;
-    }
-    const itemName = DOM.itemNameInput.value.trim();
-    if (!itemName) {
-        showToast('Vui lòng nhập Tên sản phẩm / dự án.', 'error');
-        return;
-    }
-     const mainWoodId = DOM.mainMaterialWoodCombobox.querySelector('.combobox-value').value;
-     if (!mainWoodId) {
-        showToast('Vui lòng chọn vật liệu Ván chính.', 'error');
-        return;
-    }
-
+    if (!currentUserId) { showToast('Vui lòng đăng nhập để sử dụng tính năng này.', 'error'); return; }
+    if (!DOM.itemNameInput.value.trim()) { showToast('Vui lòng nhập Tên sản phẩm / dự án.', 'error'); return; }
+    if (!DOM.mainMaterialWoodCombobox.querySelector('.combobox-value').value) { showToast('Vui lòng chọn vật liệu Ván chính.', 'error'); return; }
     await runAICalculation();
 });
 
@@ -1075,13 +1196,12 @@ function renderSavedItems(items) {
         DOM.savedItemsTableBody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 1rem; color: var(--text-light);">Chưa có dự án nào được lưu.</td></tr>`;
         return;
     }
-    items.sort((a, b) => (b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0) - (a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0));
+    items.sort((a, b) => (b.createdAt?.toMillis ? b.createdAt.toMillis() : 0) - (a.createdAt?.toMillis ? a.createdAt.toMillis() : 0));
 
     items.forEach(item => {
         const tr = document.createElement('tr');
-        const itemName = (item && item.inputs && item.inputs.name) || 'Dự án không tên';
-        const createdAt = (item && item.createdAt) ? new Date(item.createdAt.toDate()).toLocaleString('vi-VN') : 'Không rõ';
-        
+        const itemName = item?.inputs?.name || 'Dự án không tên';
+        const createdAt = item?.createdAt ? new Date(item.createdAt.toDate()).toLocaleString('vi-VN') : 'Không rõ';
         tr.innerHTML = `
             <td data-label="Tên dự án">${itemName}</td>
             <td data-label="Ngày tạo">${createdAt}</td>
@@ -1097,7 +1217,7 @@ function renderSavedItems(items) {
 
 
 DOM.saveItemBtn.addEventListener('click', async () => {
-    if (!currentUserId || !lastGeminiResult || !lastGeminiResult.finalPrices) {
+    if (!currentUserId || !lastGeminiResult?.finalPrices) {
         showToast('Không có kết quả phân tích để lưu.', 'error');
         return;
     }
@@ -1108,7 +1228,7 @@ DOM.saveItemBtn.addEventListener('click', async () => {
             length: DOM.itemLengthInput.value,
             width: DOM.itemWidthInput.value,
             height: DOM.itemHeightInput.value,
-            type: DOM.itemTypeSelect.value,
+            productTypeId: DOM.itemTypeSelect.value,
             description: DOM.productDescriptionInput.value,
             profitMargin: DOM.profitMarginInput.value,
             laborCost: DOM.laborCostInput.value,
@@ -1119,7 +1239,6 @@ DOM.saveItemBtn.addEventListener('click', async () => {
             components: productComponents
         },
         cuttingLayout: lastGeminiResult.cuttingLayout,
-        edgeBanding: lastGeminiResult.edgeBanding,
         finalPrices: lastGeminiResult.finalPrices,
         createdAt: serverTimestamp()
     };
@@ -1140,26 +1259,16 @@ DOM.savedItemsTableBody.addEventListener('click', async e => {
     const loadBtn = e.target.closest('.load-btn');
 
     if (loadBtn) {
-        const id = loadBtn.dataset.id;
-        const itemToLoad = localSavedItems.find(i => i.id === id);
-        if (itemToLoad) {
-            loadItemIntoForm(itemToLoad);
-        } else {
-            showToast('Không tìm thấy dự án để tải.', 'error');
-        }
+        const itemToLoad = localSavedItems.find(i => i.id === loadBtn.dataset.id);
+        if (itemToLoad) loadItemIntoForm(itemToLoad);
     } else if (viewBtn) {
         renderItemDetailsToModal(viewBtn.dataset.id);
     } else if (deleteBtn) {
         const id = deleteBtn.dataset.id;
         const confirmed = await showConfirm('Bạn có chắc chắn muốn xóa dự án này?');
         if (confirmed) {
-            try {
-                await deleteDoc(doc(db, `users/${currentUserId}/savedItems`, id));
-                showToast('Xóa dự án thành công.', 'success');
-            } catch (error) {
-                showToast('Lỗi khi xóa dự án.', 'error');
-                console.error("Error deleting saved item:", error);
-            }
+            await deleteDoc(doc(db, `users/${currentUserId}/savedItems`, id));
+            showToast('Xóa dự án thành công.', 'success');
         }
     }
 });
@@ -1167,46 +1276,28 @@ DOM.savedItemsTableBody.addEventListener('click', async e => {
 
 function loadItemIntoForm(item) {
     clearInputs();
-
     const inputs = item.inputs || {};
 
     DOM.itemLengthInput.value = inputs.length || '';
     DOM.itemWidthInput.value = inputs.width || '';
     DOM.itemHeightInput.value = inputs.height || '';
     DOM.itemNameInput.value = inputs.name || '';
-    DOM.itemTypeSelect.value = inputs.type || 'khac';
+    DOM.itemTypeSelect.value = inputs.productTypeId || '';
     DOM.productDescriptionInput.value = inputs.description || '';
     DOM.profitMarginInput.value = inputs.profitMargin || '50';
     DOM.laborCostInput.value = inputs.laborCost || '0';
 
-    if (DOM.mainMaterialWoodCombobox.setValue) {
-        DOM.mainMaterialWoodCombobox.setValue(inputs.mainWoodId || '');
-    }
-    if (DOM.mainMaterialBackPanelCombobox.setValue) {
-        DOM.mainMaterialBackPanelCombobox.setValue(inputs.backPanelId || '');
-    }
-     if (DOM.edgeMaterialCombobox.setValue) {
-        DOM.edgeMaterialCombobox.setValue(inputs.edgeMaterialId || '');
-    }
+    if (DOM.mainMaterialWoodCombobox.setValue) DOM.mainMaterialWoodCombobox.setValue(inputs.mainWoodId || '');
+    if (DOM.mainMaterialBackPanelCombobox.setValue) DOM.mainMaterialBackPanelCombobox.setValue(inputs.backPanelId || '');
+    if (DOM.edgeMaterialCombobox.setValue) DOM.edgeMaterialCombobox.setValue(inputs.edgeMaterialId || '');
     
-    if (inputs.accessories && Array.isArray(inputs.accessories)) {
-        addedAccessories = JSON.parse(JSON.stringify(inputs.accessories));
-        renderAccessories();
-    }
+    addedAccessories = inputs.accessories ? JSON.parse(JSON.stringify(inputs.accessories)) : [];
+    renderAccessories();
     
-    if (inputs.components && Array.isArray(inputs.components)) {
-        productComponents = JSON.parse(JSON.stringify(inputs.components));
-    } else {
-        generateProductComponents();
-    }
+    productComponents = inputs.components ? JSON.parse(JSON.stringify(inputs.components)) : [];
     renderProductComponents();
 
-
-    lastGeminiResult = {
-        cuttingLayout: item.cuttingLayout,
-        edgeBanding: item.edgeBanding,
-        finalPrices: item.finalPrices, 
-    };
+    lastGeminiResult = { cuttingLayout: item.cuttingLayout, finalPrices: item.finalPrices };
 
     if(lastGeminiResult) {
         calculationState = 'done';
@@ -1215,110 +1306,74 @@ function loadItemIntoForm(item) {
         
         DOM.aiAnalysisSection.classList.remove('hidden');
         DOM.aiResultsContent.classList.remove('hidden');
-
         recalculateFinalPrice();
         
-        const { cuttingLayout } = lastGeminiResult;
-        if (cuttingLayout) {
-            renderCuttingLayout(cuttingLayout, DOM.cuttingLayoutContainer, DOM.cuttingLayoutSummary);
+        if (lastGeminiResult.cuttingLayout) {
+            renderCuttingLayout(lastGeminiResult.cuttingLayout, DOM.cuttingLayoutContainer, DOM.cuttingLayoutSummary);
             DOM.cuttingLayoutSection.classList.remove('hidden');
         } else {
             DOM.cuttingLayoutSection.classList.add('hidden');
         }
-
         addDynamicPricingListeners();
     }
 
-    const calculatorTabBtn = document.querySelector('button[data-tab="calculator"]');
-    if (calculatorTabBtn) calculatorTabBtn.click();
+    document.querySelector('button[data-tab="calculator"]')?.click();
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    
     update3DPreview();
-
     showToast('Đã tải dữ liệu dự án. Bạn có thể chỉnh sửa và phân tích lại.', 'info');
 }
 
 
 function renderItemDetailsToModal(itemId) {
     const item = localSavedItems.find(i => i.id === itemId);
-    if (!item) {
-        showToast('Không tìm thấy dự án.', 'error');
-        return;
-    }
+    if (!item) return;
 
-    const inputs = item.inputs || {};
-    const finalPrices = item.finalPrices || {};
+    const { inputs = {}, finalPrices = {}, cuttingLayout = {} } = item;
     const costBreakdown = finalPrices.costBreakdown || [];
-    const cuttingLayout = item.cuttingLayout || {};
     
     DOM.viewItemTitle.textContent = `Chi tiết dự án: ${inputs.name || 'Không tên'}`;
-    
     const mainWood = allLocalMaterials.find(m => m.id === inputs.mainWoodId)?.name || 'Không rõ';
     const backPanel = allLocalMaterials.find(m => m.id === inputs.backPanelId)?.name || 'Dùng ván chính';
     
-    let accessoriesHtml = 'Không có';
-
-    if (inputs.accessories && inputs.accessories.length > 0) {
-        accessoriesHtml = '<ul>' + inputs.accessories.map(a => `<li>${a.name} (SL: ${a.quantity} ${a.unit})</li>`).join('') + '</ul>';
-    }
-
-    let breakdownHtml = '<p>Không có phân tích chi phí.</p>';
-    if (costBreakdown.length > 0) {
-        const tempContainer = document.createElement('div');
-        renderCostBreakdown(costBreakdown, tempContainer);
-        breakdownHtml = tempContainer.innerHTML;
-    }
+    let accessoriesHtml = (inputs.accessories && inputs.accessories.length > 0)
+        ? '<ul>' + inputs.accessories.map(a => `<li>${a.name} (SL: ${a.quantity} ${a.unit})</li>`).join('') + '</ul>'
+        : 'Không có';
     
-    let layoutHtml = '<p>Không có sơ đồ cắt ván.</p>';
-    if (cuttingLayout && cuttingLayout.sheets && cuttingLayout.sheets.length > 0) {
-        const tempContainer = document.createElement('div');
-        tempContainer.className = 'cutting-layout-container';
-        const tempSummary = document.createElement('div');
-        renderCuttingLayout(cuttingLayout, tempContainer, tempSummary);
-        layoutHtml = tempSummary.innerHTML + tempContainer.innerHTML;
-    }
+    const tempContainer = document.createElement('div');
+    renderCostBreakdown(costBreakdown, tempContainer);
+    const breakdownHtml = tempContainer.innerHTML || '<p>Không có phân tích chi phí.</p>';
+
+    const tempLayoutContainer = document.createElement('div');
+    tempLayoutContainer.className = 'cutting-layout-container';
+    const tempSummary = document.createElement('div');
+    renderCuttingLayout(cuttingLayout, tempLayoutContainer, tempSummary);
+    const layoutHtml = (cuttingLayout?.sheets?.length > 0)
+        ? tempSummary.innerHTML + tempLayoutContainer.innerHTML
+        : '<p>Không có sơ đồ cắt ván.</p>';
 
     DOM.viewItemContent.innerHTML = `
         <div class="final-price-recommendation">
             <div class="final-price-label">Giá Bán Đề Xuất</div>
             <div class="final-price-value">${(finalPrices.suggestedPrice || 0).toLocaleString('vi-VN')}đ</div>
-            <p class="final-price-summary">
-                Tổng chi phí: <strong>${(finalPrices.totalCost || 0).toLocaleString('vi-VN')}đ</strong> | 
-                Lợi nhuận ước tính: <strong>${(finalPrices.estimatedProfit || 0).toLocaleString('vi-VN')}đ</strong>
-            </p>
+            <p>Tổng chi phí: <strong>${(finalPrices.totalCost || 0).toLocaleString('vi-VN')}đ</strong> | Lợi nhuận: <strong>${(finalPrices.estimatedProfit || 0).toLocaleString('vi-VN')}đ</strong></p>
         </div>
-
         <h4><i class="fas fa-ruler-combined"></i>Thông số Đầu vào</h4>
         <ul>
             <li><strong>Kích thước (D x R x C):</strong> ${inputs.length || 'N/A'} x ${inputs.width || 'N/A'} x ${inputs.height || 'N/A'} mm</li>
             <li><strong>Chi phí nhân công:</strong> ${(Number(inputs.laborCost) || 0).toLocaleString('vi-VN')}đ</li>
             <li><strong>Lợi nhuận mong muốn:</strong> ${inputs.profitMargin || 'N/A'}%</li>
         </ul>
-
         <h4><i class="fas fa-boxes"></i>Vật tư Sử dụng</h4>
-        <ul>
-            <li><strong>Ván chính:</strong> ${mainWood}</li>
-            <li><strong>Ván hậu:</strong> ${backPanel}</li>
-            <li><strong>Vật tư khác:</strong> ${accessoriesHtml}</li>
-        </ul>
-        
+        <ul><li><strong>Ván chính:</strong> ${mainWood}</li><li><strong>Ván hậu:</strong> ${backPanel}</li><li><strong>Vật tư khác:</strong> ${accessoriesHtml}</li></ul>
         ${breakdownHtml}
-        
-        <div class="result-box" style="margin-top: 1.5rem;">
-             <h3 class="result-box-header"><i class="fas fa-th-large"></i> Sơ đồ Cắt ván Gợi ý</h3>
-             ${layoutHtml}
-        </div>
+        <div class="result-box" style="margin-top: 1.5rem;"><h3 class="result-box-header"><i class="fas fa-th-large"></i> Sơ đồ Cắt ván Gợi ý</h3>${layoutHtml}</div>
     `;
-
     openModal(DOM.viewItemModal);
 }
 
-// --- Image Dimension Analysis ---
+// --- Image Analysis ---
 async function handleImageAnalysis() {
-    if (!uploadedImage) {
-        showToast('Vui lòng tải lên một hình ảnh trước.', 'error');
-        return;
-    }
+    if (!uploadedImage) { showToast('Vui lòng tải lên một hình ảnh trước.', 'error'); return; }
 
     DOM.analyzeImageBtn.disabled = true;
     DOM.analyzeImageBtn.innerHTML = `<span class="spinner-sm"></span> Đang phân tích...`;
@@ -1329,60 +1384,34 @@ async function handleImageAnalysis() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ analyzeDimensions: true, image: uploadedImage })
         });
-
         const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error || 'Lỗi không xác định từ máy chủ');
-        }
+        if (!response.ok) throw new Error(data.error || 'Lỗi không xác định từ máy chủ');
 
         let fieldsUpdated = 0;
-        if (data.length) {
-            DOM.itemLengthInput.value = data.length;
-            fieldsUpdated++;
-        }
-        if (data.width) {
-            DOM.itemWidthInput.value = data.width;
-            fieldsUpdated++;
-        }
-        if (data.height) {
-            DOM.itemHeightInput.value = data.height;
-            fieldsUpdated++;
-        }
+        if (data.length) { DOM.itemLengthInput.value = data.length; fieldsUpdated++; }
+        if (data.width) { DOM.itemWidthInput.value = data.width; fieldsUpdated++; }
+        if (data.height) { DOM.itemHeightInput.value = data.height; fieldsUpdated++; }
 
         if (fieldsUpdated > 0) {
             showToast(`AI đã điền ${fieldsUpdated} thông số kích thước!`, 'success');
-            handleFormUpdate();
+            recalculateComponentDimensions();
         } else {
-            showToast('Không tìm thấy kích thước nào trong ảnh. Vui lòng thử ảnh khác rõ ràng hơn.', 'info');
+            showToast('Không tìm thấy kích thước nào trong ảnh.', 'info');
         }
 
     } catch (error) {
-        console.error("Error analyzing image dimensions:", error);
         showToast(`Lỗi phân tích ảnh: ${error.message}`, 'error');
     } finally {
         DOM.analyzeImageBtn.disabled = false;
         DOM.analyzeImageBtn.innerHTML = `<i class="fas fa-ruler-combined"></i><span>Phân tích Kích thước</span>`;
     }
 }
-
 DOM.analyzeImageBtn.addEventListener('click', handleImageAnalysis);
 
-
-// --- Image Structure Analysis (New) ---
 async function handleImageStructureAnalysis() {
-    if (!uploadedImage) {
-        showToast('Vui lòng tải lên một hình ảnh trước.', 'error');
-        return;
-    }
-    const l = parseFloat(DOM.itemLengthInput.value);
-    const w = parseFloat(DOM.itemWidthInput.value);
-    const h = parseFloat(DOM.itemHeightInput.value);
-
-    if (!l || !w || !h) {
-        showToast('Vui lòng nhập kích thước tổng thể của sản phẩm trước khi phân tích cấu trúc.', 'error');
-        return;
-    }
+    if (!uploadedImage) { showToast('Vui lòng tải lên một hình ảnh trước.', 'error'); return; }
+    const l = parseFloat(DOM.itemLengthInput.value), w = parseFloat(DOM.itemWidthInput.value), h = parseFloat(DOM.itemHeightInput.value);
+    if (!l || !w || !h) { showToast('Vui lòng nhập kích thước tổng thể trước khi phân tích.', 'error'); return; }
 
     DOM.analyzeStructureBtn.disabled = true;
     DOM.analyzeStructureBtn.innerHTML = `<span class="spinner-sm"></span> Đang phân tích...`;
@@ -1391,35 +1420,21 @@ async function handleImageStructureAnalysis() {
         const response = await fetch('/api/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                analyzeStructure: true,
-                image: uploadedImage,
-                dimensions: { l, w, h }
-            })
+            body: JSON.stringify({ analyzeStructure: true, image: uploadedImage, dimensions: { l, w, h } })
         });
-
         const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error || 'Lỗi không xác định từ máy chủ');
-        }
+        if (!response.ok) throw new Error(data.error || 'Lỗi không xác định từ máy chủ');
 
         if (Array.isArray(data) && data.length > 0) {
-            // Add unique IDs to the components returned by AI
-            productComponents = data.map((comp, i) => ({
-                ...comp,
-                id: `comp_${Date.now()}_${i}`,
-                isDefault: false // Mark as non-default so manual changes don't wipe them
-            }));
+            productComponents = data.map((comp, i) => ({ ...comp, id: `comp_${Date.now()}_${i}`, isDefault: false }));
             renderProductComponents();
             update3DPreview();
             showToast(`AI đã phân tích và tạo ra ${data.length} chi tiết cấu thành!`, 'success');
         } else {
-            showToast('AI không thể xác định cấu trúc từ hình ảnh. Vui lòng thử ảnh khác rõ ràng hơn.', 'info');
+            showToast('AI không thể xác định cấu trúc từ hình ảnh.', 'info');
         }
 
     } catch (error) {
-        console.error("Error analyzing image structure:", error);
         showToast(`Lỗi phân tích cấu trúc: ${error.message}`, 'error');
     } finally {
         DOM.analyzeStructureBtn.disabled = false;
@@ -1429,92 +1444,14 @@ async function handleImageStructureAnalysis() {
 DOM.analyzeStructureBtn.addEventListener('click', handleImageStructureAnalysis);
 
 
-// --- AI Configuration from Text ---
-async function handleAIConfig() {
-    const text = DOM.aiConfigPrompt.value.trim();
-    if (!text) {
-        showToast('Vui lòng nhập mô tả sản phẩm.', 'error');
-        return;
-    }
-    
-    DOM.aiConfigBtn.disabled = true;
-    DOM.aiConfigBtn.innerHTML = `<span class="spinner-sm"></span> Đang phân tích...`;
-    
-    try {
-        const response = await fetch('/api/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ configureFromText: true, text: text })
-        });
-        
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(data.error || 'Lỗi không xác định từ máy chủ');
-        }
-        
-        let updatedFields = 0;
-        
-        if(data.length) { DOM.itemLengthInput.value = data.length; updatedFields++; }
-        if(data.width) { DOM.itemWidthInput.value = data.width; updatedFields++; }
-        if(data.height) { DOM.itemHeightInput.value = data.height; updatedFields++; }
-        if(data.itemName) { DOM.itemNameInput.value = data.itemName; updatedFields++; }
-        if(data.itemType) { DOM.itemTypeSelect.value = data.itemType; updatedFields++; }
-        
-        if(data.materialName) {
-            const allWood = localMaterials['Ván'];
-            let bestMatch = null;
-            let highestScore = 0;
-
-            allWood.forEach(wood => {
-                const name = wood.name.toLowerCase();
-                const aiName = data.materialName.toLowerCase();
-                if (name.includes(aiName) || aiName.includes(name)) {
-                   const score = name.length > aiName.length ? aiName.length / name.length : name.length / aiName.length;
-                   if (score > highestScore) {
-                       highestScore = score;
-                       bestMatch = wood.id;
-                   }
-                }
-            });
-
-            if (bestMatch && DOM.mainMaterialWoodCombobox.setValue) {
-                DOM.mainMaterialWoodCombobox.setValue(bestMatch);
-                updatedFields++;
-            }
-        }
-        
-        if (updatedFields > 0) {
-            showToast(`AI đã điền ${updatedFields} thông tin sản phẩm!`, 'success');
-            handleFormUpdate();
-        } else {
-            showToast('AI không thể trích xuất thông tin từ mô tả của bạn.', 'info');
-        }
-
-    } catch(error) {
-        console.error("AI Config Error:", error);
-        showToast(`Lỗi cấu hình AI: ${error.message}`);
-    } finally {
-        DOM.aiConfigBtn.disabled = false;
-        DOM.aiConfigBtn.innerHTML = `<i class="fas fa-cogs"></i> Tạo Sản phẩm từ Mô tả`;
-    }
-}
-DOM.aiConfigBtn.addEventListener('click', handleAIConfig);
-
-
 // --- 3D Preview ---
 function update3DPreview() {
     const scene = DOM.viewer3dContainer.querySelector('.scene-3d');
     if (!scene) return;
     scene.innerHTML = '';
 
-    const l = Number(DOM.itemLengthInput.value) || 0;
-    const w = Number(DOM.itemWidthInput.value) || 0;
-    const h = Number(DOM.itemHeightInput.value) || 0;
-
-    if (l === 0 || w === 0 || h === 0 || productComponents.length === 0) {
-        return;
-    }
+    const l = Number(DOM.itemLengthInput.value) || 0, w = Number(DOM.itemWidthInput.value) || 0, h = Number(DOM.itemHeightInput.value) || 0;
+    if (l === 0 || w === 0 || h === 0 || productComponents.length === 0) return;
     
     const mainWoodId = DOM.mainMaterialWoodCombobox.querySelector('.combobox-value').value;
     const mainWoodMaterial = localMaterials['Ván'].find(m => m.id === mainWoodId);
@@ -1528,126 +1465,67 @@ function update3DPreview() {
 
     productComponents.forEach(comp => {
         if (comp.length <= 0 || comp.width <= 0 || comp.qty <= 0) return;
-
         for (let i = 0; i < comp.qty; i++) {
             const panel = document.createElement('div');
             panel.className = 'component-3d-panel';
             panel.dataset.label = `${comp.name}${comp.qty > 1 ? ` ${i + 1}` : ''}`;
-
-            const s_compW = comp.length * scale;
-            const s_compH = comp.width * scale;
-            const s_t = t * scale;
-            
-            // Positioning from component data
-            const x = (comp.x || 0) * scale;
-            const y = (comp.y || 0) * scale;
-            const z = (comp.z || 0) * scale;
-            const rx = comp.rx || 0;
-            const ry = comp.ry || 0;
-            const rz = comp.rz || 0;
-            
-            panel.style.width = `${s_compW}px`;
-            panel.style.height = `${s_compH}px`;
-            panel.style.transform = `
-                translateX(${x}px) 
-                translateY(${y}px) 
-                translateZ(${z}px) 
-                rotateX(${rx}deg) 
-                rotateY(${ry}deg) 
-                rotateZ(${rz}deg)
-            `;
-            panel.style.setProperty('--thickness', `${s_t}px`);
+            panel.style.width = `${comp.length * scale}px`;
+            panel.style.height = `${comp.width * scale}px`;
+            panel.style.transform = `translateX(${comp.x*scale}px) translateY(${comp.y*scale}px) translateZ(${comp.z*scale}px) rotateX(${comp.rx||0}deg) rotateY(${comp.ry||0}deg) rotateZ(${comp.rz||0}deg)`;
+            panel.style.setProperty('--thickness', `${t * scale}px`);
             productContainer.appendChild(panel);
         }
     });
     scene.appendChild(productContainer);
 }
 
-
 function initialize3DPreview() {
     const scene = DOM.viewer3dContainer.querySelector('.scene-3d');
-    
-    let mouseX = 0, mouseY = 0;
-    let rotX = -20, rotY = -30;
-    let isDragging = false;
+    let mouseX = 0, mouseY = 0, rotX = -20, rotY = -30, isDragging = false;
+    scene.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
 
-    function onMouseMove(e) {
+    DOM.viewer3dContainer.addEventListener('mousedown', e => {
+        isDragging = true; mouseX = e.clientX; mouseY = e.clientY;
+        DOM.viewer3dContainer.style.cursor = 'grabbing';
+    });
+    document.addEventListener('mouseup', () => {
+        if (isDragging) { isDragging = false; DOM.viewer3dContainer.style.cursor = 'grab'; }
+    });
+    document.addEventListener('mousemove', e => {
         if (!isDragging) return;
         e.preventDefault();
-        const dx = e.clientX - mouseX;
-        const dy = e.clientY - mouseY;
-        rotY += dx * 0.5;
-        rotX -= dy * 0.5;
+        rotY += (e.clientX - mouseX) * 0.5;
+        rotX -= (e.clientY - mouseY) * 0.5;
         rotX = Math.max(-90, Math.min(90, rotX));
         scene.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
-        mouseX = e.clientX;
-        mouseY = e.clientY;
-    }
-
-    function onMouseDown(e) {
-        isDragging = true;
-        mouseX = e.clientX;
-        mouseY = e.clientY;
-        DOM.viewer3dContainer.style.cursor = 'grabbing';
-    }
-
-    function onMouseUp() {
-        if (isDragging) {
-            isDragging = false;
-            DOM.viewer3dContainer.style.cursor = 'grab';
-        }
-    }
-
-    DOM.viewer3dContainer.addEventListener('mousedown', onMouseDown);
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-
-    scene.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+        mouseX = e.clientX; mouseY = e.clientY;
+    });
     update3DPreview();
 }
-
 
 // --- App Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
     initializeTabs();
     initializeModals();
-    initializeImageUploader(
-        (imageData) => { 
-            uploadedImage = imageData;
-            DOM.imageAnalysisContainer.classList.remove('hidden');
-        },
-        () => { 
-            uploadedImage = null; 
-            DOM.imageAnalysisContainer.classList.add('hidden');
-        }
-    );
+    initializeImageUploader( (d) => { uploadedImage = d; DOM.imageAnalysisContainer.classList.remove('hidden'); }, () => { uploadedImage = null; DOM.imageAnalysisContainer.classList.add('hidden'); });
     initialize3DPreview();
     initializeMathInput('.input-style[type="text"][inputmode="decimal"]');
     
-    initializeCombobox(
-        DOM.mainMaterialWoodCombobox, [], 
-        () => { if (calculationState === 'done') recalculateFinalPrice(); update3DPreview(); }, 
-        { placeholder: "Tìm hoặc chọn ván chính..." }
-    );
-    initializeCombobox(
-        DOM.mainMaterialBackPanelCombobox, [], 
-        () => { if (calculationState === 'done') recalculateFinalPrice(); }, 
-        { placeholder: "Tìm hoặc chọn ván hậu...", allowEmpty: true, emptyOptionText: 'Dùng chung ván chính' }
-    );
-    initializeCombobox(
-        DOM.edgeMaterialCombobox, [], 
-        () => { if (calculationState === 'done') recalculateFinalPrice(); }, 
-        { placeholder: "Tìm hoặc chọn loại nẹp..." }
-    );
-    initializeCombobox(
-        DOM.mainMaterialAccessoriesCombobox, [], null, 
-        { placeholder: "Tìm phụ kiện, gia công..." }
-    );
+    // Main form Comboboxes
+    initializeCombobox(DOM.mainMaterialWoodCombobox, [], () => { recalculateComponentDimensions(); if (calculationState === 'done') recalculateFinalPrice(); }, { placeholder: "Tìm hoặc chọn ván chính..." });
+    initializeCombobox(DOM.mainMaterialBackPanelCombobox, [], () => { if (calculationState === 'done') recalculateFinalPrice(); }, { placeholder: "Tìm ván hậu...", allowEmpty: true, emptyOptionText: 'Dùng chung ván chính' });
+    initializeCombobox(DOM.edgeMaterialCombobox, [], () => { if (calculationState === 'done') recalculateFinalPrice(); }, { placeholder: "Tìm hoặc chọn loại nẹp..." });
+    initializeCombobox(DOM.mainMaterialAccessoriesCombobox, [], null, { placeholder: "Tìm phụ kiện, gia công..." });
+    
+    // Config tab Combobox
+    initializeCombobox(DOM.ptComponentAddCombobox, [], null, { placeholder: "Tìm chi tiết để thêm..." });
 
     initializeQuickCalc(localMaterials, showToast);
 
-    const formUpdateInputs = [DOM.itemLengthInput, DOM.itemWidthInput, DOM.itemHeightInput, DOM.itemTypeSelect];
-    formUpdateInputs.forEach(input => input.addEventListener('input', handleFormUpdate));
+    // Event Listeners for main calculator
+    DOM.itemTypeSelect.addEventListener('change', (e) => loadComponentsByProductType(e.target.value));
+    [DOM.itemLengthInput, DOM.itemWidthInput, DOM.itemHeightInput].forEach(input => input.addEventListener('input', recalculateComponentDimensions));
+    DOM.mainMaterialWoodCombobox.addEventListener('change', recalculateComponentDimensions); // For thickness change
 
     DOM.componentsTableBody.addEventListener('change', e => {
         if (e.target.classList.contains('component-input')) {
@@ -1666,26 +1544,15 @@ document.addEventListener('DOMContentLoaded', () => {
     DOM.componentsTableBody.addEventListener('click', e => {
         const deleteBtn = e.target.closest('.remove-component-btn');
         if (deleteBtn) {
-            const id = deleteBtn.dataset.id;
-            productComponents = productComponents.filter(p => p.id !== id);
+            productComponents = productComponents.filter(p => p.id !== deleteBtn.dataset.id);
             renderProductComponents();
             update3DPreview();
         }
     });
 
     DOM.addCustomComponentBtn.addEventListener('click', () => {
-        productComponents.push({
-            id: `comp_${Date.now()}`,
-            name: 'Chi tiết Mới',
-            length: 0,
-            width: 0,
-            qty: 1,
-            x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0,
-            isDefault: false
-        });
+        productComponents.push({ id: `comp_${Date.now()}`, name: 'Chi tiết Mới', length: 0, width: 0, qty: 1, isDefault: false, x:0,y:0,z:0,rx:0,ry:0,rz:0 });
         renderProductComponents();
         update3DPreview();
     });
-
-    handleFormUpdate();
 });
