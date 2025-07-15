@@ -398,7 +398,7 @@ tbody tr:nth-child(even) { background-color: #fdfdff; }
 }
 
 .text-center { text-align: center; }
-.text-right { text-right; }
+.text-right { text-right: right; }
 .font-semibold { font-weight: 600; }
 td button { transition: color 0.2s; }
 .text-blue-500 { color: var(--primary-color); }
@@ -517,7 +517,7 @@ td button { transition: color 0.2s; }
 }
 .price-label { font-size: 0.875rem; font-weight: 600; }
 .price-value {
-    font-size: clamp(1.75rem, 4vw, 2.25rem);
+    font-size: clamp(1.75rem, 4vw, 1.5rem);
     font-weight: 700;
     line-height: 1.1;
     margin: 0.5rem 0;
