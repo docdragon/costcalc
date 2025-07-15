@@ -201,18 +201,16 @@ const componentDimensionFormulas = {
     'cánh mở': (l, w, h, t, comp) => ({ length: h - 10, width: (l / comp.qty) - 4, x: 0, y: 0, z: w/2 - t/2, rx: 0, ry: 0, rz: 0 }),
 };
 
-function recalculateComponentDimensions() {
+function updateComponentCalculationsAndRender() {
     const l = parseFloat(DOM.itemLengthInput.value) || 0;
     const w = parseFloat(DOM.itemWidthInput.value) || 0;
     const h = parseFloat(DOM.itemHeightInput.value) || 0;
     const mainWoodId = DOM.mainMaterialWoodCombobox.querySelector('.combobox-value').value;
     const mainWoodMaterial = localMaterials['Ván'].find(m => m.id === mainWoodId);
     const t = getBoardThickness(mainWoodMaterial);
-    
-    // Only perform calculations if all dimensions are available
+
     if (l > 0 && w > 0 && h > 0) {
         productComponents.forEach(comp => {
-            // Only auto-calculate for default components that haven't been manually edited.
             if (!comp.isDefault) return;
 
             const compNameLower = comp.name.toLowerCase().trim();
@@ -231,7 +229,6 @@ function recalculateComponentDimensions() {
         });
     }
 
-    // Always render the components list, even if dimensions are not yet calculated
     renderProductComponents();
     updateProductPreview();
 }
@@ -239,78 +236,90 @@ function recalculateComponentDimensions() {
 function loadComponentsByProductType(productTypeId) {
     const productType = localProductTypes.find(pt => pt.id === productTypeId);
     productComponents = [];
-    if (!productType || !productType.components) {
-        renderProductComponents();
-        updateProductPreview();
-        return;
+    if (productType && productType.components) {
+        productType.components.forEach(compTemplate => {
+            const componentNameData = localComponentNames.find(cn => cn.id === compTemplate.componentNameId);
+            if (componentNameData) {
+                productComponents.push({
+                    id: `comp_${Date.now()}_${Math.random()}`,
+                    name: componentNameData.name,
+                    length: 0,
+                    width: 0,
+                    qty: compTemplate.qty,
+                    componentNameId: compTemplate.componentNameId,
+                    isDefault: true,
+                    x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0,
+                });
+            }
+        });
     }
-    
-    productType.components.forEach(compTemplate => {
-        const componentNameData = localComponentNames.find(cn => cn.id === compTemplate.componentNameId);
-        if (componentNameData) {
-            productComponents.push({
-                id: `comp_${Date.now()}_${Math.random()}`,
-                name: componentNameData.name,
-                length: 0, // Will be calculated
-                width: 0,  // Will be calculated
-                qty: compTemplate.qty,
-                componentNameId: compTemplate.componentNameId,
-                isDefault: true, // Mark as default to allow auto-calculation
-                x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0,
-            });
-        }
-    });
-
-    recalculateComponentDimensions();
+    updateComponentCalculationsAndRender();
 }
 
 
 function renderProductComponents() {
-    DOM.componentsTableBody.innerHTML = '';
-    if (!productComponents || productComponents.length === 0) {
-        DOM.componentsTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 1rem; color: var(--text-light);">Chọn "Loại sản phẩm" hoặc thêm chi tiết tùy chỉnh.</td></tr>';
-        return;
-    }
-    productComponents.forEach(comp => {
-        const tr = document.createElement('tr');
-        tr.dataset.id = comp.id;
-        tr.innerHTML = `
-            <td data-label="Tên Chi tiết">
-                 <div id="comp-name-combobox-${comp.id}" class="combobox-container component-combobox">
-                    <input type="text" class="input-style combobox-input component-input" data-field="name" placeholder="Chọn hoặc nhập..." value="${comp.name}">
-                    <input type="hidden" class="combobox-value">
-                    <div class="combobox-options-wrapper"><ul class="combobox-options"></ul></div>
-                </div>
-            </td>
-            <td data-label="Dài"><input type="text" inputmode="decimal" class="input-style component-input" data-field="length" value="${comp.length}"></td>
-            <td data-label="Rộng"><input type="text" inputmode="decimal" class="input-style component-input" data-field="width" value="${comp.width}"></td>
-            <td data-label="SL"><input type="text" inputmode="decimal" class="input-style component-input" data-field="qty" value="${comp.qty}" style="max-width: 60px; text-align: center;"></td>
-            <td data-label="Xóa" class="text-center">
-                <button class="remove-component-btn" data-id="${comp.id}"><i class="fas fa-trash"></i></button>
-            </td>
-        `;
-        DOM.componentsTableBody.appendChild(tr);
+    const rows = DOM.componentsTableBody.children;
 
-        const comboboxContainer = tr.querySelector(`#comp-name-combobox-${comp.id}`);
-        if(comboboxContainer) {
-            initializeCombobox(
-                comboboxContainer, 
-                localComponentNames.map(c => ({ id: c.id, name: c.name, price: '', unit: ''})), 
-                (selectedId) => {
-                    const selectedName = localComponentNames.find(c => c.id === selectedId)?.name;
-                    const component = productComponents.find(p => p.id === comp.id);
-                    if (component && selectedName) {
-                        component.name = selectedName;
-                        component.componentNameId = selectedId;
-                        component.isDefault = true; // Re-enable auto-calculation when a known type is selected
-                        recalculateComponentDimensions();
-                    }
-                },
-                { placeholder: 'Chọn tên...', allowCustom: true }
-            );
+    // If number of components is different, or if there are no rows when there should be, perform a full re-render.
+    if (rows.length !== productComponents.length || (rows.length === 0 && productComponents.length > 0)) {
+        DOM.componentsTableBody.innerHTML = ''; // Clear existing content
+        if (productComponents.length === 0) {
+            DOM.componentsTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 1rem; color: var(--text-light);">Chọn "Loại sản phẩm" hoặc thêm chi tiết tùy chỉnh.</td></tr>';
+            return;
         }
 
-    });
+        productComponents.forEach(comp => {
+            const tr = document.createElement('tr');
+            tr.dataset.id = comp.id;
+            tr.innerHTML = `
+                <td data-label="Tên Chi tiết">
+                    <div id="comp-name-combobox-${comp.id}" class="combobox-container component-combobox">
+                        <input type="text" class="input-style combobox-input component-input" data-field="name" placeholder="Chọn hoặc nhập..." value="${comp.name}">
+                        <input type="hidden" class="combobox-value">
+                        <div class="combobox-options-wrapper"><ul class="combobox-options"></ul></div>
+                    </div>
+                </td>
+                <td data-label="Dài"><input type="text" inputmode="decimal" class="input-style component-input" data-field="length" value="${comp.length}"></td>
+                <td data-label="Rộng"><input type="text" inputmode="decimal" class="input-style component-input" data-field="width" value="${comp.width}"></td>
+                <td data-label="SL"><input type="text" inputmode="decimal" class="input-style component-input" data-field="qty" value="${comp.qty}" style="max-width: 60px; text-align: center;"></td>
+                <td data-label="Xóa" class="text-center">
+                    <button class="remove-component-btn" data-id="${comp.id}"><i class="fas fa-trash"></i></button>
+                </td>
+            `;
+            DOM.componentsTableBody.appendChild(tr);
+
+            const comboboxContainer = tr.querySelector(`#comp-name-combobox-${comp.id}`);
+            if(comboboxContainer) {
+                initializeCombobox(
+                    comboboxContainer, 
+                    localComponentNames.map(c => ({ id: c.id, name: c.name, price: '', unit: ''})), 
+                    (selectedId) => {
+                        const selectedName = localComponentNames.find(c => c.id === selectedId)?.name;
+                        const component = productComponents.find(p => p.id === comp.id);
+                        if (component && selectedName) {
+                            component.name = selectedName;
+                            component.componentNameId = selectedId;
+                            component.isDefault = true;
+                            updateComponentCalculationsAndRender();
+                        }
+                    },
+                    { placeholder: 'Chọn tên...', allowCustom: true }
+                );
+            }
+        });
+    } else {
+        // Optimization: If the number of components is the same, just update the values.
+        productComponents.forEach((comp, index) => {
+            const row = rows[index];
+            if (row) {
+                const lengthInput = row.querySelector('input[data-field="length"]');
+                if (lengthInput) lengthInput.value = comp.length;
+                
+                const widthInput = row.querySelector('input[data-field="width"]');
+                if (widthInput) widthInput.value = comp.width;
+            }
+        });
+    }
 }
 
 
@@ -1409,7 +1418,7 @@ async function handleImageAnalysis() {
 
         if (fieldsUpdated > 0) {
             showToast(`AI đã điền ${fieldsUpdated} thông số kích thước!`, 'success');
-            recalculateComponentDimensions();
+            updateComponentCalculationsAndRender();
         } else {
             showToast('Không tìm thấy kích thước nào trong ảnh.', 'info');
         }
@@ -1518,7 +1527,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeMathInput('.input-style[type="text"][inputmode="decimal"]');
     
     // Main form Comboboxes
-    initializeCombobox(DOM.mainMaterialWoodCombobox, [], () => { recalculateComponentDimensions(); if (calculationState === 'done') recalculateFinalPrice(); }, { placeholder: "Tìm hoặc chọn ván chính..." });
+    initializeCombobox(DOM.mainMaterialWoodCombobox, [], () => { updateComponentCalculationsAndRender(); if (calculationState === 'done') recalculateFinalPrice(); }, { placeholder: "Tìm hoặc chọn ván chính..." });
     initializeCombobox(DOM.mainMaterialBackPanelCombobox, [], () => { if (calculationState === 'done') recalculateFinalPrice(); }, { placeholder: "Tìm ván hậu...", allowEmpty: true, emptyOptionText: 'Dùng chung ván chính' });
     initializeCombobox(DOM.edgeMaterialCombobox, [], () => { if (calculationState === 'done') recalculateFinalPrice(); }, { placeholder: "Tìm hoặc chọn loại nẹp..." });
     initializeCombobox(DOM.mainMaterialAccessoriesCombobox, [], null, { placeholder: "Tìm phụ kiện, gia công..." });
@@ -1530,8 +1539,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Event Listeners for main calculator
     DOM.itemTypeSelect.addEventListener('change', (e) => loadComponentsByProductType(e.target.value));
-    [DOM.itemLengthInput, DOM.itemWidthInput, DOM.itemHeightInput].forEach(input => input.addEventListener('input', recalculateComponentDimensions));
-    DOM.mainMaterialWoodCombobox.addEventListener('change', recalculateComponentDimensions); // For thickness change
+    [DOM.itemLengthInput, DOM.itemWidthInput, DOM.itemHeightInput].forEach(input => input.addEventListener('input', updateComponentCalculationsAndRender));
+    DOM.mainMaterialWoodCombobox.addEventListener('change', updateComponentCalculationsAndRender); // For thickness change
 
     DOM.componentsTableBody.addEventListener('change', e => {
         if (e.target.classList.contains('component-input')) {
