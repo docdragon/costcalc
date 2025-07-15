@@ -111,6 +111,7 @@ export const savedItemsTableBody = document.getElementById('saved-items-table-bo
 export const loginModal = document.getElementById('login-modal');
 export const openLoginModalBtn = document.getElementById('open-login-modal-btn');
 export const googleLoginBtn = document.getElementById('google-login-btn');
+export const rememberMeCheckbox = document.getElementById('remember-me-checkbox');
 export const loginError = document.getElementById('login-error');
 export const viewItemModal = document.getElementById('view-item-modal');
 export const viewItemTitle = document.getElementById('view-item-title');

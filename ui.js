@@ -1,5 +1,12 @@
 // ui.js
-import { auth, signInWithPopup, GoogleAuthProvider } from './firebase.js';
+import { 
+    auth, 
+    signInWithPopup, 
+    GoogleAuthProvider, 
+    setPersistence,
+    browserSessionPersistence,
+    browserLocalPersistence
+} from './firebase.js';
 import * as DOM from './dom.js';
 
 // --- State for UI ---
@@ -309,6 +316,12 @@ export function initializeMathInput(selector) {
 
 // --- Modal & Auth Button Listeners ---
 async function handleGoogleLogin() {
+    const persistenceType = DOM.rememberMeCheckbox.checked
+        ? browserLocalPersistence
+        : browserSessionPersistence;
+    
+    // Set persistence before calling the sign-in method
+    await setPersistence(auth, persistenceType);
     await signInWithPopup(auth, new GoogleAuthProvider());
 }
 

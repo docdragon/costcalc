@@ -5,7 +5,8 @@ import {
     deleteDoc, serverTimestamp, getDocs, query, limit, setDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { 
-    getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut 
+    getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut,
+    setPersistence, browserSessionPersistence, browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 // --- Cấu hình Firebase ---
@@ -42,5 +43,8 @@ export {
     GoogleAuthProvider,
     signInWithPopup,
     signOut,
-    setDoc
+    setDoc,
+    setPersistence,
+    browserSessionPersistence,
+    browserLocalPersistence
 };

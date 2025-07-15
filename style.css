@@ -683,6 +683,26 @@ td button { transition: color 0.2s; }
 }
 .google-btn img { margin-right: 0.75rem; }
 .google-btn:hover { background-color: #f9fafb; }
+.remember-me-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.25rem;
+    gap: 0.5rem;
+}
+.remember-me-container label {
+    font-size: 0.875rem;
+    color: var(--text-light);
+    user-select: none;
+    cursor: pointer;
+}
+.remember-me-container input[type="checkbox"] {
+    margin: 0;
+    width: 1.1rem;
+    height: 1.1rem;
+    accent-color: var(--primary-color);
+    cursor: pointer;
+}
 
 
 /* --- Settings Form --- */
