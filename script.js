@@ -209,27 +209,29 @@ function recalculateComponentDimensions() {
     const mainWoodMaterial = localMaterials['Ván'].find(m => m.id === mainWoodId);
     const t = getBoardThickness(mainWoodMaterial);
     
-    if (!l || !w || !h) return;
+    // Only perform calculations if all dimensions are available
+    if (l > 0 && w > 0 && h > 0) {
+        productComponents.forEach(comp => {
+            // Only auto-calculate for default components that haven't been manually edited.
+            if (!comp.isDefault) return;
 
-    productComponents.forEach(comp => {
-        // Only auto-calculate for default components that haven't been manually edited.
-        if (!comp.isDefault) return;
+            const compNameLower = comp.name.toLowerCase().trim();
+            if (componentDimensionFormulas[compNameLower]) {
+                const formula = componentDimensionFormulas[compNameLower];
+                const { length, width, x, y, z, rx, ry, rz } = formula(l, w, h, t, comp);
+                comp.length = Math.round(length);
+                comp.width = Math.round(width);
+                comp.x = Math.round(x);
+                comp.y = Math.round(y);
+                comp.z = Math.round(z);
+                comp.rx = rx;
+                comp.ry = ry;
+                comp.rz = rz;
+            }
+        });
+    }
 
-        const compNameLower = comp.name.toLowerCase().trim();
-        if (componentDimensionFormulas[compNameLower]) {
-            const formula = componentDimensionFormulas[compNameLower];
-            const { length, width, x, y, z, rx, ry, rz } = formula(l, w, h, t, comp);
-            comp.length = Math.round(length);
-            comp.width = Math.round(width);
-            comp.x = Math.round(x);
-            comp.y = Math.round(y);
-            comp.z = Math.round(z);
-            comp.rx = rx;
-            comp.ry = ry;
-            comp.rz = rz;
-        }
-    });
-
+    // Always render the components list, even if dimensions are not yet calculated
     renderProductComponents();
     updateProductPreview();
 }
@@ -824,8 +826,10 @@ DOM.ptComponentAddBtn.addEventListener('click', async () => {
         return;
     }
     
-    const newComponents = productType.components || [];
+    // Create a deep copy to avoid state mutation issues that can confuse onSnapshot
+    const newComponents = JSON.parse(JSON.stringify(productType.components || []));
     const existing = newComponents.find(c => c.componentNameId === componentNameId);
+
     if (existing) {
         existing.qty = qty; // Update quantity if already exists
     } else {
@@ -833,6 +837,8 @@ DOM.ptComponentAddBtn.addEventListener('click', async () => {
     }
     
     await updateDoc(doc(db, `users/${currentUserId}/productTypes`, productType.id), { components: newComponents });
+    // The onSnapshot listener will handle the UI update automatically.
+    
     showToast('Đã thêm/cập nhật chi tiết.', 'success');
 
     // Reset inputs
@@ -1477,7 +1483,7 @@ function updateProductPreview() {
         productContainer.className = 'product-3d-container';
         
         const maxDim = Math.max(l, w, h);
-        const scale = 120 / maxDim; // Adjusted scale for smaller viewports
+        const scale = 130 / maxDim; // Adjusted scale for smaller viewports
 
         productComponents.forEach(comp => {
             if (comp.length <= 0 || comp.width <= 0 || comp.qty <= 0) return;

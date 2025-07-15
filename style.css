@@ -914,7 +914,6 @@ td button { transition: color 0.2s; }
 .preview-canvas {
     width: 100%;
     height: 140px;
-    perspective: 1200px;
     background-image:
         linear-gradient(rgba(100, 116, 139, 0.1) 1px, transparent 1px),
         linear-gradient(90deg, rgba(100, 116, 139, 0.1) 1px, transparent 1px);
