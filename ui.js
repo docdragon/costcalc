@@ -79,46 +79,63 @@ export function updateUIVisibility(isLoggedIn, user) {
     if (isLoggedIn) closeAllModals();
 }
 
-// --- Image Upload Logic ---
-function handleImageFile(file) {
-    if (!file.type.startsWith('image/')) { showToast('Vui lòng chọn một file ảnh.', 'error'); return; }
-    const reader = new FileReader();
-    reader.onloadend = () => {
-        const imageSrc = reader.result;
-        const imageData = { mimeType: file.type, data: imageSrc.split(',')[1] };
-        if (onImageUploadedCallback) {
-            onImageUploadedCallback(imageData, imageSrc); // Pass imageSrc
-        }
-        DOM.imagePreview.src = imageSrc;
-        DOM.imageUploadPrompt.classList.add('hidden');
-        DOM.imagePreviewContainer.classList.remove('hidden');
-    };
-    reader.readAsDataURL(file);
-}
-
+// --- Image Upload Logic (Now in Sidebar) ---
 export function initializeImageUploader(uploadedCallback, removedCallback) {
     onImageUploadedCallback = uploadedCallback;
     onImageRemovedCallback = removedCallback;
-    DOM.imageUploader.addEventListener('click', () => DOM.imageInput.click());
-    DOM.imageUploader.addEventListener('dragover', (e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--primary-color)'; });
-    DOM.imageUploader.addEventListener('dragleave', (e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--border-color)'; });
-    DOM.imageUploader.addEventListener('drop', (e) => {
+
+    const uploader = DOM.sidebarImagePreviewWrapper;
+    const input = DOM.sidebarImageInput;
+    const removeBtn = DOM.sidebarRemoveImageBtn;
+    const previewImg = DOM.sidebarImagePreview;
+    const placeholder = DOM.sidebarImagePlaceholder;
+
+    if (!uploader || !input || !removeBtn || !previewImg || !placeholder) return;
+
+    const handleImageFile = (file) => {
+        if (!file.type.startsWith('image/')) {
+            showToast('Vui lòng chọn một file ảnh.', 'error');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const imageSrc = reader.result;
+            const imageData = { mimeType: file.type, data: imageSrc.split(',')[1] };
+            if (onImageUploadedCallback) {
+                onImageUploadedCallback(imageData, imageSrc);
+            }
+            // Update sidebar UI
+            previewImg.src = imageSrc;
+            placeholder.classList.add('hidden');
+            previewImg.classList.remove('hidden');
+            removeBtn.classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+    };
+
+    uploader.addEventListener('click', () => input.click());
+    uploader.addEventListener('dragover', (e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--primary-color)'; });
+    uploader.addEventListener('dragleave', (e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--border-color)'; });
+    uploader.addEventListener('drop', (e) => {
         e.preventDefault();
         e.currentTarget.style.borderColor = 'var(--border-color)';
         if (e.dataTransfer.files.length > 0) handleImageFile(e.dataTransfer.files[0]);
     });
-    DOM.imageInput.addEventListener('change', (e) => { if (e.target.files.length > 0) handleImageFile(e.target.files[0]); });
-    DOM.removeImageBtn.addEventListener('click', (e) => {
+    input.addEventListener('change', (e) => { if (e.target.files.length > 0) handleImageFile(e.target.files[0]); });
+
+    removeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        if(onImageRemovedCallback) {
+        if (onImageRemovedCallback) {
             onImageRemovedCallback();
         }
-        DOM.imageInput.value = '';
-        DOM.imagePreview.src = '#';
-        DOM.imagePreviewContainer.classList.add('hidden');
-        DOM.imageUploadPrompt.classList.remove('hidden');
+        input.value = '';
+        previewImg.src = '';
+        previewImg.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+        removeBtn.classList.add('hidden');
     });
 }
+
 
 // --- Tab Navigation ---
 export function initializeTabs() {

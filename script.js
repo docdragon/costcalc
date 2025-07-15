@@ -960,7 +960,7 @@ function clearInputs() {
 
     lastGeminiResult = null;
     aiCalculationState = 'idle';
-    DOM.removeImageBtn.click();
+    if(DOM.sidebarRemoveImageBtn) DOM.sidebarRemoveImageBtn.click();
 
     if (DOM.mainMaterialWoodCombobox.setValue) DOM.mainMaterialWoodCombobox.setValue('');
     if (DOM.mainMaterialBackPanelCombobox.setValue) DOM.mainMaterialBackPanelCombobox.setValue('');
@@ -1040,8 +1040,7 @@ async function runAICuttingOptimization() {
     1.  **Sơ đồ cắt ván (Bin Packing) cho VÁN CHÍNH:**
         - Nếu danh sách miếng ván trống, trả về một đối tượng "cuttingLayout" rỗng.
         - Kích thước tấm ván tiêu chuẩn là 1220mm x 2440mm.
-        - Thực hiện thuật toán sắp xếp 2D. Ưu tiên xếp các miếng ván theo chiều dọc.
-        - Cho phép xoay các miếng ván 90 độ NẾU việc đó giúp tối ưu hóa.
+        - Sắp xếp các miếng ván vào tấm ván tiêu chuẩn (1220mm x 2440mm). Thuật toán nên ưu tiên đặt chiều dài của miếng ván dọc theo chiều dài (2440mm) của tấm ván. Cho phép xoay các miếng ván 90 độ nếu cần thiết để tối ưu hóa không gian.
         - Trả về kết quả trong đối tượng JSON có tên "cuttingLayout".
 
     2.  **ĐỊNH DẠNG ĐẦU RA (QUAN TRỌNG):**
@@ -1314,17 +1313,11 @@ function loadItemIntoForm(item) {
         uploadedImage = inputs.uploadedImage;
         const imageSrc = `data:${uploadedImage.mimeType};base64,${uploadedImage.data}`;
 
-        // Update main uploader preview
-        DOM.imagePreview.src = imageSrc;
-        DOM.imagePreviewContainer.classList.remove('hidden');
-        DOM.imageUploadPrompt.classList.add('hidden');
-        DOM.imageAnalysisContainer.classList.remove('hidden');
-
-        // Update sidebar preview
         if (DOM.sidebarImagePreview && DOM.sidebarImagePlaceholder) {
             DOM.sidebarImagePreview.src = imageSrc;
             DOM.sidebarImagePreview.classList.remove('hidden');
             DOM.sidebarImagePlaceholder.classList.add('hidden');
+            DOM.sidebarRemoveImageBtn.classList.remove('hidden');
         }
     }
     
@@ -1405,79 +1398,6 @@ function renderItemDetailsToModal(itemId) {
     openModal(DOM.viewItemModal);
 }
 
-// --- Image Analysis ---
-async function handleImageAnalysis() {
-    if (!uploadedImage) { showToast('Vui lòng tải lên một hình ảnh trước.', 'error'); return; }
-
-    DOM.analyzeImageBtn.disabled = true;
-    DOM.analyzeImageBtn.innerHTML = `<span class="spinner-sm"></span> Đang phân tích...`;
-
-    try {
-        const response = await fetch('/api/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ analyzeDimensions: true, image: uploadedImage })
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Lỗi không xác định từ máy chủ');
-
-        let fieldsUpdated = 0;
-        if (data.length) { DOM.itemLengthInput.value = data.length; fieldsUpdated++; }
-        if (data.width) { DOM.itemWidthInput.value = data.width; fieldsUpdated++; }
-        if (data.height) { DOM.itemHeightInput.value = data.height; fieldsUpdated++; }
-
-        if (fieldsUpdated > 0) {
-            showToast(`AI đã điền ${fieldsUpdated} thông số kích thước!`, 'success');
-            updateComponentCalculationsAndRender();
-        } else {
-            showToast('Không tìm thấy kích thước nào trong ảnh.', 'info');
-        }
-
-    } catch (error) {
-        showToast(`Lỗi phân tích ảnh: ${error.message}`, 'error');
-    } finally {
-        DOM.analyzeImageBtn.disabled = false;
-        DOM.analyzeImageBtn.innerHTML = `<i class="fas fa-ruler-combined"></i><span>Phân tích Kích thước</span>`;
-    }
-}
-DOM.analyzeImageBtn.addEventListener('click', handleImageAnalysis);
-
-async function handleImageStructureAnalysis() {
-    if (!uploadedImage) { showToast('Vui lòng tải lên một hình ảnh trước.', 'error'); return; }
-    const l = parseFloat(DOM.itemLengthInput.value), w = parseFloat(DOM.itemWidthInput.value), h = parseFloat(DOM.itemHeightInput.value);
-    if (!l || !w || !h) { showToast('Vui lòng nhập kích thước tổng thể trước khi phân tích.', 'error'); return; }
-
-    DOM.analyzeStructureBtn.disabled = true;
-    DOM.analyzeStructureBtn.innerHTML = `<span class="spinner-sm"></span> Đang phân tích...`;
-
-    try {
-        const response = await fetch('/api/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ analyzeStructure: true, image: uploadedImage, dimensions: { l, w, h } })
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Lỗi không xác định từ máy chủ');
-
-        if (Array.isArray(data) && data.length > 0) {
-            productComponents = data.map((comp, i) => ({ ...comp, id: `comp_${Date.now()}_${i}`, isDefault: false }));
-            renderProductComponents();
-            runFullCalculation();
-            showToast(`AI đã phân tích và tạo ra ${data.length} chi tiết cấu thành!`, 'success');
-        } else {
-            showToast('AI không thể xác định cấu trúc từ hình ảnh.', 'info');
-        }
-
-    } catch (error) {
-        showToast(`Lỗi phân tích cấu trúc: ${error.message}`, 'error');
-    } finally {
-        DOM.analyzeStructureBtn.disabled = false;
-        DOM.analyzeStructureBtn.innerHTML = `<i class="fas fa-sitemap"></i><span>Phân tích Cấu trúc & Vị trí</span>`;
-    }
-}
-DOM.analyzeStructureBtn.addEventListener('click', handleImageStructureAnalysis);
-
-
 // --- App Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
     initializeTabs();
@@ -1485,21 +1405,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeImageUploader(
         (imageData, imageSrc) => {
             uploadedImage = imageData;
-            DOM.imageAnalysisContainer.classList.remove('hidden');
-            if (DOM.sidebarImagePreview && DOM.sidebarImagePlaceholder) {
-                DOM.sidebarImagePreview.src = imageSrc;
-                DOM.sidebarImagePreview.classList.remove('hidden');
-                DOM.sidebarImagePlaceholder.classList.add('hidden');
-            }
         },
         () => {
             uploadedImage = null;
-            DOM.imageAnalysisContainer.classList.add('hidden');
-            if (DOM.sidebarImagePreview && DOM.sidebarImagePlaceholder) {
-                DOM.sidebarImagePreview.src = '';
-                DOM.sidebarImagePreview.classList.add('hidden');
-                DOM.sidebarImagePlaceholder.classList.remove('hidden');
-            }
         }
     );
     initializeMathInput('.input-style[type="text"][inputmode="decimal"]');

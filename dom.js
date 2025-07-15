@@ -37,17 +37,6 @@ export const accessoryQuantityInput = document.getElementById('accessory-quantit
 export const addAccessoryBtn = document.getElementById('add-accessory-btn');
 export const accessoriesList = document.getElementById('accessories-list');
 
-// Description & Image
-export const imageUploader = document.getElementById('image-uploader');
-export const imageInput = document.getElementById('image-input');
-export const imageUploadPrompt = document.getElementById('image-upload-prompt');
-export const imagePreviewContainer = document.getElementById('image-preview-container');
-export const imagePreview = document.getElementById('image-preview');
-export const removeImageBtn = document.getElementById('remove-image-btn');
-export const imageAnalysisContainer = document.getElementById('image-analysis-container');
-export const analyzeImageBtn = document.getElementById('analyze-image-btn');
-export const analyzeStructureBtn = document.getElementById('analyze-structure-btn');
-
 // Actions & Results
 export const saveItemBtn = document.getElementById('save-item-btn');
 export const analyzeBtn = document.getElementById('analyze-btn');
@@ -63,10 +52,13 @@ export const cuttingLayoutSection = document.getElementById('cutting-layout-sect
 export const cuttingLayoutSummary = document.getElementById('cutting-layout-summary');
 export const cuttingLayoutContainer = document.getElementById('cutting-layout-container');
 
-// Product Preview
+// Product Preview (Sidebar)
 export const sidebarImagePreviewWrapper = document.getElementById('sidebar-image-preview-wrapper');
+export const sidebarImageInput = document.getElementById('sidebar-image-input');
 export const sidebarImagePreview = document.getElementById('sidebar-image-preview');
 export const sidebarImagePlaceholder = document.getElementById('sidebar-image-placeholder');
+export const sidebarRemoveImageBtn = document.getElementById('sidebar-remove-image-btn');
+
 
 // --- Quick Calculator Tab ---
 export const qcAreaInput = document.getElementById('qc-area');

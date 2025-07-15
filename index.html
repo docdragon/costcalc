@@ -184,31 +184,6 @@
                                         <input type="text" inputmode="decimal" id="profit-margin" class="input-style" value="50">
                                     </div>
                                 </div>
-                                <div class="form-group">
-                                    <label class="form-label">Hình ảnh tham khảo (Tùy chọn)</label>
-                                    <div id="image-uploader" class="image-uploader">
-                                        <input type="file" id="image-input" class="hidden" accept="image/*">
-                                        <div id="image-upload-prompt">
-                                            <i class="fas fa-cloud-upload-alt"></i>
-                                            <p>Nhấp hoặc kéo thả ảnh vào đây</p>
-                                            <span>AI sẽ phân tích ảnh để đưa ra gợi ý chính xác hơn</span>
-                                        </div>
-                                        <div id="image-preview-container" class="hidden">
-                                            <img id="image-preview" src="#" alt="Xem trước ảnh">
-                                            <button id="remove-image-btn" class="remove-image-btn">&times;</button>
-                                        </div>
-                                    </div>
-                                    <div id="image-analysis-container" class="hidden">
-                                        <button id="analyze-image-btn" class="btn btn-secondary full-width">
-                                            <i class="fas fa-ruler-combined"></i>
-                                            <span>Phân tích Kích thước</span>
-                                        </button>
-                                        <button id="analyze-structure-btn" class="btn btn-secondary full-width">
-                                            <i class="fas fa-sitemap"></i>
-                                            <span>Phân tích Cấu trúc & Vị trí</span>
-                                        </button>
-                                    </div>
-                                </div>
                             </div>
                            
                             <div class="main-actions-group">
@@ -269,13 +244,15 @@
                         <div class="content-wrapper calculator-form-content">
                             <!-- Product Preview -->
                              <div id="product-preview-section">
-                                <h4><i class="fas fa-image"></i> Xem trước Hình ảnh</h4>
+                                <h4><i class="fas fa-image"></i> Hình ảnh Sản phẩm</h4>
+                                <input type="file" id="sidebar-image-input" class="hidden" accept="image/*">
                                 <div id="sidebar-image-preview-wrapper" class="preview-canvas">
                                     <img id="sidebar-image-preview" src="" alt="Xem trước hình ảnh" class="hidden">
                                     <div id="sidebar-image-placeholder">
-                                        <i class="fas fa-camera"></i>
-                                        <p>Tải ảnh lên ở mục 3 để xem trước tại đây.</p>
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <p>Nhấp hoặc kéo thả ảnh vào đây</p>
                                     </div>
+                                    <button id="sidebar-remove-image-btn" class="remove-image-btn hidden">&times;</button>
                                 </div>
                             </div>
                             
