@@ -1382,9 +1382,24 @@ function renderItemDetailsToModal(itemId) {
 
     DOM.viewItemContent.innerHTML = `
         <div class="final-price-recommendation">
-            <div class="final-price-label">Giá Bán Đề Xuất</div>
-            <div class="final-price-value">${(finalPrices.suggestedPrice || 0).toLocaleString('vi-VN')}đ</div>
-            <p>Tổng chi phí: <strong>${(finalPrices.totalCost || 0).toLocaleString('vi-VN')}đ</strong> | Lợi nhuận: <strong>${(finalPrices.estimatedProfit || 0).toLocaleString('vi-VN')}đ</strong></p>
+            <div class="final-price-main">
+                <div class="final-price-label">Giá Bán Đề Xuất</div>
+                <div class="final-price-value">${(finalPrices.suggestedPrice || 0).toLocaleString('vi-VN')}đ</div>
+            </div>
+            <div class="final-price-breakdown">
+                <div>
+                    <span class="breakdown-label">Tổng Chi Phí</span>
+                    <span class="breakdown-value">${(finalPrices.totalCost || 0).toLocaleString('vi-VN')}đ</span>
+                </div>
+                <div>
+                    <span class="breakdown-label">Lợi Nhuận</span>
+                    <span class="breakdown-value">${(finalPrices.estimatedProfit || 0).toLocaleString('vi-VN')}đ</span>
+                </div>
+                <div>
+                    <span class="breakdown-label">Biên Lợi Nhuận</span>
+                    <span class="breakdown-value">${inputs.profitMargin || 'N/A'}%</span>
+                </div>
+            </div>
         </div>
         <div class="modal-details-grid">
             <div class="modal-details-col">
@@ -1439,7 +1454,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Event Listeners for main calculator
     DOM.itemTypeSelect.addEventListener('change', (e) => loadComponentsByProductType(e.target.value));
     
-    [DOM.itemLengthInput, DOM.itemWidthInput, DOM.itemHeightInput, DOM.laborCostInput, DOM.profitMarginInput].forEach(input => input.addEventListener('input', runFullCalculation));
+    [DOM.itemLengthInput, DOM.itemWidthInput, DOM.itemHeightInput].forEach(input => input.addEventListener('input', updateComponentCalculationsAndRender));
+    [DOM.laborCostInput, DOM.profitMarginInput].forEach(input => input.addEventListener('input', runFullCalculation));
     
     DOM.mainMaterialWoodCombobox.addEventListener('change', updateComponentCalculationsAndRender);
 
