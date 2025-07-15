@@ -76,12 +76,18 @@
                                     <label for="item-name" class="form-label">Tên sản phẩm / dự án</label>
                                     <input type="text" id="item-name" class="input-style" placeholder="Vd: Tủ bếp dưới chân sắt">
                                 </div>
-                                 <div class="form-group">
-                                    <label for="item-type" class="form-label">Loại sản phẩm</label>
-                                    <select id="item-type" class="input-style">
-                                        <!-- Dynamically populated by JS -->
-                                    </select>
-                                </div>
+                                 <div class="grid-2-col">
+                                     <div class="form-group" style="margin-top:0;">
+                                        <label for="item-type" class="form-label">Loại sản phẩm</label>
+                                        <select id="item-type" class="input-style">
+                                            <!-- Dynamically populated by JS -->
+                                        </select>
+                                     </div>
+                                     <div class="form-group" style="margin-top:0;">
+                                         <label for="item-quantity" class="form-label">Số lượng Sản phẩm</label>
+                                         <input type="text" inputmode="decimal" id="item-quantity" class="input-style" value="1" min="1">
+                                     </div>
+                                 </div>
                                 <div class="grid-3-col">
                                     <div><label for="item-length" class="form-label">Dài (mm)</label><input type="text" inputmode="decimal" id="item-length" class="input-style" placeholder="Vd: 2000"></div>
                                     <div><label for="item-width" class="form-label">Rộng (mm)</label><input type="text" inputmode="decimal" id="item-width" class="input-style" placeholder="Vd: 600"></div>
@@ -132,6 +138,7 @@
                                                 <input type="hidden" class="combobox-value">
                                                 <div class="combobox-options-wrapper"><ul class="combobox-options"></ul></div>
                                             </div>
+                                            <input type="text" inputmode="decimal" id="add-group-quantity" class="input-style accessory-qty" placeholder="SL Cụm" value="1" min="1">
                                             <button id="add-group-btn" class="btn btn-secondary accessory-add-btn"><i class="fas fa-plus-circle"></i> Thêm Cụm</button>
                                         </div>
                                     </div>
@@ -174,7 +181,7 @@
                                     <p class="form-text" style="margin-top: -0.25rem; margin-bottom: 0.75rem;">Thêm các phụ kiện khác như bản lề, ray trượt tại đây.</p>
                                     <div class="accessory-adder">
                                         <div id="main-material-accessories-combobox" class="combobox-container">
-                                            <input type="text" class="input-style combobox-input" placeholder="Tìm phụ kiện, gia công...">
+                                            <input type="text" class="input-style combobox-input" placeholder="Tìm phụ kiện, gia công, nẹp...">
                                             <input type="hidden" class="combobox-value">
                                             <div class="combobox-options-wrapper">
                                                 <ul class="combobox-options"></ul>
@@ -554,74 +561,6 @@
                 </div>
 
                 <div class="card" style="margin-top: 2rem;">
-                    <h2 class="card-header">Quản lý Tên Chi tiết & Công thức</h2>
-                    <div class="content-wrapper component-names-content">
-                        <form id="component-name-form" class="material-form">
-                            <input type="hidden" id="component-name-id">
-                            <div class="grid-2-col">
-                                 <div>
-                                    <label for="component-name-input" class="form-label">Tên chi tiết</label>
-                                    <input type="text" id="component-name-input" class="input-style" placeholder="Vd: Hông Trái, Đáy, Nóc..." required>
-                                </div>
-                                <div>
-                                     <label for="component-name-notes" class="form-label">Ghi chú</label>
-                                     <input type="text" id="component-name-notes" class="input-style" placeholder="Tùy chọn">
-                                </div>
-                            </div>
-                             <div class="grid-2-col" style="margin-top: 1rem;">
-                                <div>
-                                    <label for="component-length-formula" class="form-label">Công thức tính Chiều Dài</label>
-                                    <input type="text" id="component-length-formula" class="input-style" placeholder="Vd: L - 2*t">
-                                    <p class="form-text">Biến: L, W, H, t (Dài, Rộng, Cao, Dày ván)</p>
-                                </div>
-                                <div>
-                                    <label for="component-width-formula" class="form-label">Công thức tính Chiều Rộng</label>
-                                    <input type="text" id="component-width-formula" class="input-style" placeholder="Vd: W">
-                                </div>
-                            </div>
-                            <div class="form-group" style="margin-top: 1rem;">
-                                <label class="form-label">Quy tắc dán cạnh mặc định</label>
-                                <p class="form-text" style="margin-top:-0.25rem; margin-bottom: 0.75rem;">Xác định các cạnh sẽ được tính chi phí nẹp tự động. D1/D2 là 2 cạnh dài, R1/R2 là 2 cạnh rộng của chi tiết.</p>
-                                <div class="edge-banding-rules">
-                                    <label><input type="checkbox" id="component-edge-1"> Cạnh dài 1</label>
-                                    <label><input type="checkbox" id="component-edge-2"> Cạnh dài 2</label>
-                                    <label><input type="checkbox" id="component-edge-3"> Cạnh rộng 1</label>
-                                    <label><input type="checkbox" id="component-edge-4"> Cạnh rộng 2</label>
-                                </div>
-                            </div>
-                            <div class="button-group" style="justify-content: flex-end;">
-                                <button type="button" id="cancel-component-name-edit-btn" class="btn btn-secondary hidden">Hủy</button>
-                                <button type="submit" class="btn btn-primary"><i class="fas fa-plus mr-2"></i> Thêm Tên</button>
-                            </div>
-                        </form>
-                        <div class="table-container">
-                            <h3 class="table-header">Danh sách Tên Chi tiết</h3>
-                            <div class="table-wrapper">
-                                <table class="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th class="th-style" style="width: 25%;">Tên</th>
-                                            <th class="th-style">CT Dài</th>
-                                            <th class="th-style">CT Rộng</th>
-                                            <th class="th-style text-center" colspan="4">Dán cạnh (D1-D2-R1-R2)</th>
-                                            <th class="th-style text-center" style="width: 15%;">Thao tác</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="component-names-table-body">
-                                        <!-- JS will render here -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="login-prompt-view">
-                        <div class="icon-prompt"><i class="fas fa-list-alt"></i></div>
-                        <h3>Tùy chỉnh danh sách chi tiết</h3>
-                        <p>Vui lòng đăng nhập để quản lý danh sách tên chi tiết của bạn.</p>
-                    </div>
-                </div>
-
-                <div class="card" style="margin-top: 2rem;">
                     <h2 class="card-header">Quản lý Nhóm Chi tiết (Cụm)</h2>
                     <div class="content-wrapper config-form-content">
                         <p class="settings-intro">Tạo các cụm chi tiết có thể tái sử dụng, ví dụ như "Cụm hộc kéo" hoặc "Bộ cánh cửa", để thêm nhanh vào các dự án trong Trình Báo Giá.</p>
@@ -686,6 +625,81 @@
                         <p>Vui lòng đăng nhập để quản lý các nhóm chi tiết có thể tái sử dụng.</p>
                     </div>
                 </div>
+
+                <div class="card" style="margin-top: 2rem;">
+                    <h2 class="card-header">Quản lý Tên Chi tiết & Công thức</h2>
+                    <div class="content-wrapper component-names-content">
+                        <form id="component-name-form" class="material-form">
+                            <input type="hidden" id="component-name-id">
+                            <div class="grid-2-col">
+                                 <div>
+                                    <label for="component-name-input" class="form-label">Tên chi tiết</label>
+                                    <input type="text" id="component-name-input" class="input-style" placeholder="Vd: Hông Trái, Đáy, Nóc..." required>
+                                </div>
+                                <div>
+                                     <label for="component-name-notes" class="form-label">Ghi chú</label>
+                                     <input type="text" id="component-name-notes" class="input-style" placeholder="Tùy chọn">
+                                </div>
+                            </div>
+                             <div class="grid-2-col" style="margin-top: 1rem;">
+                                <div>
+                                    <label for="component-length-formula" class="form-label">Công thức tính Chiều Dài</label>
+                                    <input type="text" id="component-length-formula" class="input-style" placeholder="Vd: L - 2*t">
+                                    <p class="form-text">Biến: L, W, H, t (Dài, Rộng, Cao, Dày ván)</p>
+                                </div>
+                                <div>
+                                    <label for="component-width-formula" class="form-label">Công thức tính Chiều Rộng</label>
+                                    <input type="text" id="component-width-formula" class="input-style" placeholder="Vd: W">
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin-top: 1rem;">
+                                <label class="form-label">Quy tắc dán cạnh mặc định</label>
+                                <p class="form-text" style="margin-top:-0.25rem; margin-bottom: 0.75rem;">Xác định các cạnh sẽ được tính chi phí nẹp tự động. D1/D2 là 2 cạnh dài, R1/R2 là 2 cạnh rộng của chi tiết.</p>
+                                <div class="edge-banding-rules">
+                                    <label><input type="checkbox" id="component-edge-1"> Cạnh dài 1</label>
+                                    <label><input type="checkbox" id="component-edge-2"> Cạnh dài 2</label>
+                                    <label><input type="checkbox" id="component-edge-3"> Cạnh rộng 1</label>
+                                    <label><input type="checkbox" id="component-edge-4"> Cạnh rộng 2</label>
+                                </div>
+                            </div>
+                            <div class="button-group" style="justify-content: flex-end;">
+                                <button type="button" id="cancel-component-name-edit-btn" class="btn btn-secondary hidden">Hủy</button>
+                                <button type="submit" class="btn btn-primary"><i class="fas fa-plus mr-2"></i> Thêm Tên</button>
+                            </div>
+                        </form>
+                        <div class="table-container">
+                            <h3 class="table-header">Danh sách Tên Chi tiết</h3>
+                            <div class="table-wrapper">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="th-style" style="width: 25%;">Tên</th>
+                                            <th class="th-style">CT Dài</th>
+                                            <th class="th-style">CT Rộng</th>
+                                            <th class="th-style text-center" colspan="4">Dán cạnh (D1-D2-R1-R2)</th>
+                                            <th class="th-style text-center" style="width: 15%;">Thao tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="component-names-table-body">
+                                        <!-- JS will render here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div id="cn-pagination-controls" class="pagination-controls hidden">
+                                <span id="cn-page-info"></span>
+                                <div class="button-group" style="margin: 0; justify-content: flex-end;">
+                                    <button id="cn-prev-page-btn" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Trước</button>
+                                    <button id="cn-next-page-btn" class="btn btn-secondary">Sau <i class="fas fa-arrow-right"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="login-prompt-view">
+                        <div class="icon-prompt"><i class="fas fa-list-alt"></i></div>
+                        <h3>Tùy chỉnh danh sách chi tiết</h3>
+                        <p>Vui lòng đăng nhập để quản lý danh sách tên chi tiết của bạn.</p>
+                    </div>
+                </div>
             </div>
 
 
@@ -699,7 +713,10 @@
                                 <table class="data-table">
                                     <thead>
                                         <tr>
-                                            <th class="th-style">Tên dự án</th>
+                                            <th class="th-style" style="width: 30%;">Tên dự án</th>
+                                            <th class="th-style">Giá Bán</th>
+                                            <th class="th-style">Chi Phí</th>
+                                            <th class="th-style">Lợi Nhuận</th>
                                             <th class="th-style">Ngày tạo</th>
                                             <th class="th-style text-center">Thao tác</th>
                                         </tr>

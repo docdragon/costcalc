@@ -15,6 +15,7 @@ export const tabContent = document.getElementById('tab-content');
 // --- Main Calculator Tab ---
 // Product Info
 export const itemNameInput = document.getElementById('item-name');
+export const itemQuantityInput = document.getElementById('item-quantity');
 export const itemLengthInput = document.getElementById('item-length');
 export const itemWidthInput = document.getElementById('item-width');
 export const itemHeightInput = document.getElementById('item-height');
@@ -29,6 +30,7 @@ export const edgeMaterialCombobox = document.getElementById('edge-material-combo
 
 // Components
 export const addGroupCombobox = document.getElementById('add-group-combobox');
+export const addGroupQuantityInput = document.getElementById('add-group-quantity');
 export const addGroupBtn = document.getElementById('add-group-btn');
 export const componentsTableBody = document.getElementById('components-table-body');
 export const addCustomComponentBtn = document.getElementById('add-custom-component-btn');
@@ -110,6 +112,10 @@ export const componentNamesTableBody = document.getElementById('component-names-
 export const cancelComponentNameEditBtn = document.getElementById('cancel-component-name-edit-btn');
 export const componentLengthFormulaInput = document.getElementById('component-length-formula');
 export const componentWidthFormulaInput = document.getElementById('component-width-formula');
+export const cnPaginationControls = document.getElementById('cn-pagination-controls');
+export const cnPageInfo = document.getElementById('cn-page-info');
+export const cnPrevPageBtn = document.getElementById('cn-prev-page-btn');
+export const cnNextPageBtn = document.getElementById('cn-next-page-btn');
 
 
 // Component Group Manager

@@ -42,8 +42,12 @@ let addedAccessories = [];
 let productComponents = [];
 let uploadedImage = null;
 let aiCalculationState = 'idle'; // idle, calculating, done
+
+// Pagination state
 let currentPage = 1;
 const itemsPerPage = 10;
+let cnCurrentPage = 1;
+const cnItemsPerPage = 10;
 
 
 // --- Sample Data for New Users ---
@@ -598,7 +602,7 @@ function listenForComponentNames() {
     unsubscribeComponentNames = onSnapshot(componentNamesCollectionRef, snapshot => {
         localComponentNames = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         localComponentNames.sort((a,b) => a.name.localeCompare(b.name, 'vi'));
-        renderComponentNames(localComponentNames);
+        displayComponentNames();
         // Also update the comboboxes that use component names
         const componentNameOptions = localComponentNames.map(c => ({ id: c.id, name: c.name }));
         if (DOM.ptComponentAddCombobox?.updateComboboxData) {
@@ -608,6 +612,30 @@ function listenForComponentNames() {
             DOM.cgComponentAddCombobox.updateComboboxData(componentNameOptions);
         }
     }, console.error);
+}
+
+function displayComponentNames() {
+    let namesToProcess = [...localComponentNames]; 
+    const totalItems = namesToProcess.length;
+    const totalPages = Math.ceil(totalItems / cnItemsPerPage) || 1;
+    if (cnCurrentPage > totalPages) cnCurrentPage = totalPages;
+
+    const startIndex = (cnCurrentPage - 1) * cnItemsPerPage;
+    const paginatedItems = namesToProcess.slice(startIndex, startIndex + cnItemsPerPage);
+
+    renderComponentNames(paginatedItems);
+    updateCnPaginationControls(totalPages);
+}
+
+function updateCnPaginationControls(totalPages) {
+    if (totalPages <= 1) {
+        if(DOM.cnPaginationControls) DOM.cnPaginationControls.classList.add('hidden');
+        return;
+    }
+    DOM.cnPaginationControls.classList.remove('hidden');
+    DOM.cnPageInfo.textContent = `Trang ${cnCurrentPage} / ${totalPages}`;
+    DOM.cnPrevPageBtn.disabled = cnCurrentPage === 1;
+    DOM.cnNextPageBtn.disabled = cnCurrentPage === totalPages;
 }
 
 function renderComponentNames(names) {
@@ -1091,7 +1119,7 @@ function populateProductTypeDropdown() {
 }
 
 function populateComboboxes() {
-    const allAccessoryMaterials = [ ...localMaterials['Phụ kiện'], ...localMaterials['Gia Công'] ];
+    const allAccessoryMaterials = [ ...localMaterials['Phụ kiện'], ...localMaterials['Gia Công'], ...localMaterials['Cạnh'] ];
 
     if (DOM.mainMaterialWoodCombobox?.updateComboboxData) DOM.mainMaterialWoodCombobox.updateComboboxData(localMaterials['Ván']);
     if (DOM.mainMaterialBackPanelCombobox?.updateComboboxData) DOM.mainMaterialBackPanelCombobox.updateComboboxData(localMaterials['Ván']);
@@ -1167,6 +1195,7 @@ function clearInputs() {
     DOM.itemWidthInput.value = '';
     DOM.itemHeightInput.value = '';
     DOM.itemNameInput.value = '';
+    DOM.itemQuantityInput.value = '1';
     DOM.profitMarginInput.value = '50';
     DOM.laborCostInput.value = '0';
     DOM.itemTypeSelect.value = '';
@@ -1310,6 +1339,7 @@ async function runAICuttingOptimization() {
 function calculateAndDisplayFinalPrice() {
     const costBreakdownItems = [];
     let baseMaterialCost = 0;
+    const productQuantity = parseInt(DOM.itemQuantityInput.value) || 1;
 
     // 1. Main Wood Cost
     const mainWoodId = DOM.mainMaterialWoodCombobox.querySelector('.combobox-value').value;
@@ -1394,9 +1424,14 @@ function calculateAndDisplayFinalPrice() {
     const suggestedPrice = totalCost * (1 + profitMargin / 100);
     const estimatedProfit = suggestedPrice - totalCost;
     
-    DOM.totalCostValue.textContent = totalCost.toLocaleString('vi-VN') + 'đ';
-    DOM.suggestedPriceValue.textContent = suggestedPrice.toLocaleString('vi-VN') + 'đ';
-    DOM.estimatedProfitValue.textContent = estimatedProfit.toLocaleString('vi-VN') + 'đ';
+    // Multiply final results by product quantity
+    const finalTotalCost = totalCost * productQuantity;
+    const finalSuggestedPrice = suggestedPrice * productQuantity;
+    const finalEstimatedProfit = estimatedProfit * productQuantity;
+    
+    DOM.totalCostValue.textContent = finalTotalCost.toLocaleString('vi-VN') + 'đ';
+    DOM.suggestedPriceValue.textContent = finalSuggestedPrice.toLocaleString('vi-VN') + 'đ';
+    DOM.estimatedProfitValue.textContent = finalEstimatedProfit.toLocaleString('vi-VN') + 'đ';
     DOM.priceSummaryContainer.classList.remove('hidden');
 
     renderCostBreakdown(costBreakdownItems, DOM.costBreakdownContainer);
@@ -1406,6 +1441,7 @@ function calculateAndDisplayFinalPrice() {
         DOM.resultsContent.classList.remove('hidden');
         DOM.saveItemBtn.disabled = false;
         if (!lastGeminiResult) lastGeminiResult = {};
+        // Store the single-item price in the results for saving
         lastGeminiResult.finalPrices = { totalCost, suggestedPrice, estimatedProfit, costBreakdown: costBreakdownItems };
     }
 }
@@ -1432,7 +1468,7 @@ function listenForSavedItems() {
 function renderSavedItems(items) {
     DOM.savedItemsTableBody.innerHTML = '';
     if (items.length === 0) {
-        DOM.savedItemsTableBody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 1rem; color: var(--text-light);">Chưa có dự án nào được lưu.</td></tr>`;
+        DOM.savedItemsTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 1rem; color: var(--text-light);">Chưa có dự án nào được lưu.</td></tr>`;
         return;
     }
     items.sort((a, b) => (b.createdAt?.toMillis ? b.createdAt.toMillis() : 0) - (a.createdAt?.toMillis ? a.createdAt.toMillis() : 0));
@@ -1441,8 +1477,25 @@ function renderSavedItems(items) {
         const tr = document.createElement('tr');
         const itemName = item?.inputs?.name || 'Dự án không tên';
         const createdAt = item?.createdAt ? new Date(item.createdAt.toDate()).toLocaleString('vi-VN') : 'Không rõ';
+        const quantity = item?.inputs?.quantity || 1;
+
+        // Calculate total prices based on saved quantity
+        const singleItemPrice = item.finalPrices?.suggestedPrice || 0;
+        const singleItemCost = item.finalPrices?.totalCost || 0;
+        const singleItemProfit = item.finalPrices?.estimatedProfit || 0;
+
+        const totalSuggestedPrice = singleItemPrice * quantity;
+        const totalCost = singleItemCost * quantity;
+        const totalProfit = singleItemProfit * quantity;
+
         tr.innerHTML = `
-            <td data-label="Tên dự án">${itemName}</td>
+            <td data-label="Tên dự án">
+                ${itemName}
+                ${quantity > 1 ? `<span class="tag-type" style="margin-left: 0.5rem;">SL: ${quantity}</span>` : ''}
+            </td>
+            <td data-label="Giá Bán" class="font-semibold">${totalSuggestedPrice.toLocaleString('vi-VN')}đ</td>
+            <td data-label="Chi Phí">${totalCost.toLocaleString('vi-VN')}đ</td>
+            <td data-label="Lợi Nhuận">${totalProfit.toLocaleString('vi-VN')}đ</td>
             <td data-label="Ngày tạo">${createdAt}</td>
             <td data-label="Thao tác" class="text-center">
                 <button class="load-btn text-green-500 hover:text-green-700 mr-2" data-id="${item.id}" title="Tải lại dự án này"><i class="fas fa-upload"></i></button>
@@ -1464,6 +1517,7 @@ DOM.saveItemBtn.addEventListener('click', async () => {
     const itemData = {
         inputs: {
             name: DOM.itemNameInput.value,
+            quantity: DOM.itemQuantityInput.value,
             length: DOM.itemLengthInput.value,
             width: DOM.itemWidthInput.value,
             height: DOM.itemHeightInput.value,
@@ -1478,7 +1532,7 @@ DOM.saveItemBtn.addEventListener('click', async () => {
             uploadedImage: uploadedImage
         },
         cuttingLayout: lastGeminiResult.cuttingLayout,
-        finalPrices: lastGeminiResult.finalPrices,
+        finalPrices: lastGeminiResult.finalPrices, // Always save the single-item price
         createdAt: serverTimestamp()
     };
     
@@ -1521,6 +1575,7 @@ function loadItemIntoForm(item) {
     DOM.itemWidthInput.value = inputs.width || '';
     DOM.itemHeightInput.value = inputs.height || '';
     DOM.itemNameInput.value = inputs.name || '';
+    DOM.itemQuantityInput.value = inputs.quantity || '1';
     DOM.itemTypeSelect.value = inputs.productTypeId || '';
     DOM.profitMarginInput.value = inputs.profitMargin || '50';
     DOM.laborCostInput.value = inputs.laborCost || '0';
@@ -1577,7 +1632,13 @@ function renderItemDetailsToModal(itemId) {
 
     const { inputs = {}, finalPrices = {}, cuttingLayout = {} } = item;
     const costBreakdown = finalPrices.costBreakdown || [];
+    const quantity = parseInt(inputs.quantity) || 1;
     
+    // Calculate final prices based on quantity
+    const finalSuggestedPrice = (finalPrices.suggestedPrice || 0) * quantity;
+    const finalTotalCost = (finalPrices.totalCost || 0) * quantity;
+    const finalEstimatedProfit = (finalPrices.estimatedProfit || 0) * quantity;
+
     DOM.viewItemTitle.textContent = `Chi tiết dự án: ${inputs.name || 'Không tên'}`;
     const mainWood = allLocalMaterials.find(m => m.id === inputs.mainWoodId)?.name || 'Không rõ';
     const backPanel = allLocalMaterials.find(m => m.id === inputs.backPanelId)?.name || 'Dùng ván chính';
@@ -1601,17 +1662,17 @@ function renderItemDetailsToModal(itemId) {
     DOM.viewItemContent.innerHTML = `
         <div class="final-price-recommendation">
             <div class="final-price-main">
-                <div class="final-price-label">Giá Bán Đề Xuất</div>
-                <div class="final-price-value">${(finalPrices.suggestedPrice || 0).toLocaleString('vi-VN')}đ</div>
+                <div class="final-price-label">Giá Bán Đề Xuất (Tổng cho ${quantity} sản phẩm)</div>
+                <div class="final-price-value">${finalSuggestedPrice.toLocaleString('vi-VN')}đ</div>
             </div>
             <div class="final-price-breakdown">
                 <div>
                     <span class="breakdown-label">Tổng Chi Phí</span>
-                    <span class="breakdown-value">${(finalPrices.totalCost || 0).toLocaleString('vi-VN')}đ</span>
+                    <span class="breakdown-value">${finalTotalCost.toLocaleString('vi-VN')}đ</span>
                 </div>
                 <div>
                     <span class="breakdown-label">Lợi Nhuận</span>
-                    <span class="breakdown-value">${(finalPrices.estimatedProfit || 0).toLocaleString('vi-VN')}đ</span>
+                    <span class="breakdown-value">${finalEstimatedProfit.toLocaleString('vi-VN')}đ</span>
                 </div>
                 <div>
                     <span class="breakdown-label">Biên Lợi Nhuận</span>
@@ -1621,21 +1682,20 @@ function renderItemDetailsToModal(itemId) {
         </div>
         <div class="modal-details-grid">
             <div class="modal-details-col">
-                <h4><i class="fas fa-ruler-combined"></i>Thông số & Vật tư chính</h4>
+                <h4><i class="fas fa-ruler-combined"></i>Thông số & Vật tư chính (1 sản phẩm)</h4>
                 <ul>
                     <li><strong>Kích thước (D x R x C):</strong> ${inputs.length || 'N/A'} x ${inputs.width || 'N/A'} x ${inputs.height || 'N/A'} mm</li>
                     <li><strong>Ván chính:</strong> ${mainWood}</li>
                     <li><strong>Ván hậu:</strong> ${backPanel}</li>
                     <li><strong>Chi phí nhân công:</strong> ${(Number(inputs.laborCost) || 0).toLocaleString('vi-VN')}đ</li>
-                    <li><strong>Lợi nhuận mong muốn:</strong> ${inputs.profitMargin || 'N/A'}%</li>
                 </ul>
-                <h4><i class="fas fa-cogs"></i>Phụ kiện & Vật tư khác</h4>
+                <h4><i class="fas fa-cogs"></i>Phụ kiện & Vật tư khác (1 sản phẩm)</h4>
                 ${accessoriesHtml}
             </div>
             <div class="modal-details-col">
                 ${breakdownHtml}
                 <div class="result-box">
-                    <h3 class="result-box-header"><i class="fas fa-th-large"></i> Sơ đồ Cắt ván Gợi ý</h3>
+                    <h3 class="result-box-header"><i class="fas fa-th-large"></i> Sơ đồ Cắt ván Gợi ý (1 sản phẩm)</h3>
                     ${layoutHtml}
                 </div>
             </div>
@@ -1662,7 +1722,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeCombobox(DOM.mainMaterialWoodCombobox, [], () => { updateComponentCalculationsAndRender(); runFullCalculation(); }, { placeholder: "Tìm hoặc chọn ván chính..." });
     initializeCombobox(DOM.mainMaterialBackPanelCombobox, [], runFullCalculation, { placeholder: "Tìm ván hậu...", allowEmpty: true, emptyOptionText: 'Dùng chung ván chính' });
     initializeCombobox(DOM.edgeMaterialCombobox, [], runFullCalculation, { placeholder: "Tìm hoặc chọn loại nẹp..." });
-    initializeCombobox(DOM.mainMaterialAccessoriesCombobox, [], null, { placeholder: "Tìm phụ kiện, gia công..." });
+    initializeCombobox(DOM.mainMaterialAccessoriesCombobox, [], null, { placeholder: "Tìm phụ kiện, gia công, nẹp..." });
     initializeCombobox(DOM.addGroupCombobox, [], null, { placeholder: "Tìm một cụm chi tiết..." });
 
     // Config tab Comboboxes
@@ -1674,7 +1734,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Event Listeners for main calculator
     DOM.itemTypeSelect.addEventListener('change', (e) => loadComponentsByProductType(e.target.value));
     
-    [DOM.itemLengthInput, DOM.itemWidthInput, DOM.itemHeightInput].forEach(input => input.addEventListener('input', debounce(updateComponentCalculationsAndRender, 300)));
+    [DOM.itemLengthInput, DOM.itemWidthInput, DOM.itemHeightInput, DOM.itemQuantityInput].forEach(input => input.addEventListener('input', debounce(updateComponentCalculationsAndRender, 300)));
     [DOM.laborCostInput, DOM.profitMarginInput].forEach(input => input.addEventListener('input', runFullCalculation));
     
     DOM.mainMaterialWoodCombobox.addEventListener('change', updateComponentCalculationsAndRender);
@@ -1712,6 +1772,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     DOM.addGroupBtn.addEventListener('click', () => {
         const groupId = DOM.addGroupCombobox.querySelector('.combobox-value').value;
+        const groupInstanceQty = parseInt(DOM.addGroupQuantityInput.value) || 1;
+
         if (!groupId) {
             showToast('Vui lòng chọn một cụm để thêm.', 'error');
             return;
@@ -1727,7 +1789,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         name: nameData.name,
                         length: 0,
                         width: 0,
-                        qty: template.qty,
+                        qty: template.qty * groupInstanceQty,
                         componentNameId: template.componentNameId,
                         isDefault: true // Mark as default to allow formula calculation
                     };
@@ -1737,6 +1799,18 @@ document.addEventListener('DOMContentLoaded', () => {
             updateComponentCalculationsAndRender();
             showToast(`Đã thêm các chi tiết từ cụm "${group.name}".`, 'success');
             if (DOM.addGroupCombobox.setValue) DOM.addGroupCombobox.setValue('');
+            DOM.addGroupQuantityInput.value = '1';
         }
     });
+
+    // Component Name pagination listeners
+    if(DOM.cnPrevPageBtn) {
+        DOM.cnPrevPageBtn.addEventListener('click', () => { if (cnCurrentPage > 1) { cnCurrentPage--; displayComponentNames(); } });
+    }
+    if(DOM.cnNextPageBtn) {
+        DOM.cnNextPageBtn.addEventListener('click', () => {
+            const totalPages = Math.ceil(localComponentNames.length / cnItemsPerPage) || 1;
+            if (cnCurrentPage < totalPages) { cnCurrentPage++; displayComponentNames(); }
+        });
+    }
 });
