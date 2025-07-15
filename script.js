@@ -241,7 +241,7 @@ function loadComponentsByProductType(productTypeId) {
             const componentNameData = localComponentNames.find(cn => cn.id === compTemplate.componentNameId);
             if (componentNameData) {
                 productComponents.push({
-                    id: `comp_${Date.now()}_${Math.random()}`,
+                    id: `comp_${Date.now()}_${Math.floor(Math.random() * 100000)}`,
                     name: componentNameData.name,
                     length: 0,
                     width: 0,
