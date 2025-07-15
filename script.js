@@ -177,42 +177,50 @@ function generateProductComponents() {
     const h = parseFloat(DOM.itemHeightInput.value) || 0;
     const type = DOM.itemTypeSelect.value;
     
+    const mainWoodId = DOM.mainMaterialWoodCombobox.querySelector('.combobox-value').value;
+    const mainWoodMaterial = localMaterials['Ván'].find(m => m.id === mainWoodId);
+    const t = getBoardThickness(mainWoodMaterial);
+
     const newComponents = [];
     if (!l || !w || !h) {
         productComponents = [];
         return;
     }
 
-    // Common parts
-    newComponents.push({ id: `comp_${Date.now()}_1`, name: 'Hông Trái', length: w, width: h, qty: 1, isDefault: true });
-    newComponents.push({ id: `comp_${Date.now()}_2`, name: 'Hông Phải', length: w, width: h, qty: 1, isDefault: true });
+    // Default component properties, including position and rotation
+    const pos = { x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0 };
+    
+    // Common parts. The positions are calculated relative to the center (0,0,0) of the bounding box.
+    const hongTrai = { ...pos, name: 'Hông Trái', length: w, width: h, qty: 1, isDefault: true, x: (-l/2 + t/2), ry: 90 };
+    const hongPhai = { ...pos, name: 'Hông Phải', length: w, width: h, qty: 1, isDefault: true, x: (l/2 - t/2), ry: 90 };
+    const day = { ...pos, name: 'Đáy', length: l - 2*t, width: w, qty: 1, isDefault: true, y: (h/2 - t/2), rx: 90 };
+    const noc = { ...pos, name: 'Nóc', length: l - 2*t, width: w, qty: 1, isDefault: true, y: (-h/2 + t/2), rx: 90 };
+    const hau = { ...pos, name: 'Hậu', length: l, width: h, qty: 1, isDefault: true, materialType: 'back', z: (-w/2 + t/2) };
 
     // Type specific parts
     switch(type) {
         case 'tu-bep-duoi':
-            newComponents.push({ id: `comp_${Date.now()}_3`, name: 'Đáy', length: l, width: w, qty: 1, isDefault: true });
-            newComponents.push({ id: `comp_${Date.now()}_4`, name: 'Đợt ngang trên', length: l, width: 100, qty: 2, isDefault: true });
-            newComponents.push({ id: `comp_${Date.now()}_5`, name: 'Hậu', length: l, width: h, qty: 1, isDefault: true, materialType: 'back' });
+            const dotNgangTruoc = { ...pos, name: 'Đợt ngang trước', length: l - 2*t, width: 100, qty: 1, isDefault: true, y: (-h/2 + t/2), z: (w/2 - 50), rx: 90 };
+            const dotNgangSau = { ...pos, name: 'Đợt ngang sau', length: l - 2*t, width: 100, qty: 1, isDefault: true, y: (-h/2 + t/2), z: (-w/2 + 50), rx: 90 };
+            newComponents.push(hongTrai, hongPhai, day, dotNgangTruoc, dotNgangSau, hau);
             break;
         case 'tu-bep-tren':
-            newComponents.push({ id: `comp_${Date.now()}_3`, name: 'Đáy', length: l, width: w, qty: 1, isDefault: true });
-            newComponents.push({ id: `comp_${Date.now()}_4`, name: 'Nóc', length: l, width: w, qty: 1, isDefault: true });
-            newComponents.push({ id: `comp_${Date.now()}_5`, name: 'Hậu', length: l, width: h, qty: 1, isDefault: true, materialType: 'back' });
+            newComponents.push(hongTrai, hongPhai, day, noc, hau);
             break;
         case 'tu-ao':
-            newComponents.push({ id: `comp_${Date.now()}_3`, name: 'Đáy', length: l, width: w, qty: 1, isDefault: true });
-            newComponents.push({ id: `comp_${Date.now()}_4`, name: 'Nóc', length: l, width: w, qty: 1, isDefault: true });
-            // Wardrobes often don't have a back panel in this calculation, so it's omitted by default.
+            newComponents.push(hongTrai, hongPhai, day, noc); // No back panel by default for wardrobe calculation
             break;
         case 'khac': // Box with 4 sides
-            newComponents.push({ id: `comp_${Date.now()}_3`, name: 'Đáy', length: l, width: w, qty: 1, isDefault: true });
-            newComponents.push({ id: `comp_${Date.now()}_4`, name: 'Nóc', length: l, width: w, qty: 1, isDefault: true });
+            newComponents.push(hongTrai, hongPhai, day, noc);
             break;
     }
     
+    // Add unique IDs
+    const finalNewComponents = newComponents.map((comp, i) => ({ ...comp, id: `comp_${Date.now()}_${i}` }));
+
     // Merge with existing custom components
     const customComponents = productComponents.filter(p => !p.isDefault);
-    productComponents = [...newComponents, ...customComponents].map(p => ({...p, length: Math.round(p.length), width: Math.round(p.width)}));
+    productComponents = [...finalNewComponents, ...customComponents].map(p => ({...p, length: Math.round(p.length), width: Math.round(p.width)}));
 }
 
 
@@ -222,7 +230,7 @@ function generateProductComponents() {
 function renderProductComponents() {
     DOM.componentsTableBody.innerHTML = '';
     if (!productComponents || productComponents.length === 0) {
-        DOM.componentsTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 1rem; color: var(--text-light);">Nhập kích thước sản phẩm để xem chi tiết.</td></tr>';
+        DOM.componentsTableBody.innerHTML = '<tr><td colspan="11" style="text-align: center; padding: 1rem; color: var(--text-light);">Nhập kích thước sản phẩm để xem chi tiết.</td></tr>';
         return;
     }
     productComponents.forEach(comp => {
@@ -236,9 +244,15 @@ function renderProductComponents() {
                     <div class="combobox-options-wrapper"><ul class="combobox-options"></ul></div>
                 </div>
             </td>
-            <td data-label="Dài (mm)"><input type="text" inputmode="decimal" class="input-style component-input" data-field="length" value="${comp.length}"></td>
-            <td data-label="Rộng (mm)"><input type="text" inputmode="decimal" class="input-style component-input" data-field="width" value="${comp.width}"></td>
+            <td data-label="Dài"><input type="text" inputmode="decimal" class="input-style component-input" data-field="length" value="${comp.length}"></td>
+            <td data-label="Rộng"><input type="text" inputmode="decimal" class="input-style component-input" data-field="width" value="${comp.width}"></td>
             <td data-label="SL"><input type="text" inputmode="decimal" class="input-style component-input" data-field="qty" value="${comp.qty}" style="max-width: 60px; text-align: center;"></td>
+            <td data-label="X (mm)" class="col-advanced"><input type="text" inputmode="decimal" class="input-style component-input advanced-input" data-field="x" value="${comp.x || 0}"></td>
+            <td data-label="Y (mm)" class="col-advanced"><input type="text" inputmode="decimal" class="input-style component-input advanced-input" data-field="y" value="${comp.y || 0}"></td>
+            <td data-label="Z (mm)" class="col-advanced"><input type="text" inputmode="decimal" class="input-style component-input advanced-input" data-field="z" value="${comp.z || 0}"></td>
+            <td data-label="Xoay X (°)" class="col-advanced"><input type="text" inputmode="decimal" class="input-style component-input advanced-input" data-field="rx" value="${comp.rx || 0}"></td>
+            <td data-label="Xoay Y (°)" class="col-advanced"><input type="text" inputmode="decimal" class="input-style component-input advanced-input" data-field="ry" value="${comp.ry || 0}"></td>
+            <td data-label="Xoay Z (°)" class="col-advanced"><input type="text" inputmode="decimal" class="input-style component-input advanced-input" data-field="rz" value="${comp.rz || 0}"></td>
             <td data-label="Xóa" class="text-center">
                 <button class="remove-component-btn" data-id="${comp.id}"><i class="fas fa-trash"></i></button>
             </td>
@@ -1449,18 +1463,13 @@ function update3DPreview() {
     
     const mainWoodId = DOM.mainMaterialWoodCombobox.querySelector('.combobox-value').value;
     const mainWoodMaterial = localMaterials['Ván'].find(m => m.id === mainWoodId);
-    const t = getBoardThickness(mainWoodMaterial); // Get dynamic thickness
+    const t = getBoardThickness(mainWoodMaterial); 
 
     const productContainer = document.createElement('div');
     productContainer.className = 'product-3d-container';
 
     const maxDim = Math.max(l, w, h);
     const scale = 180 / maxDim;
-
-    const s_l = l * scale;
-    const s_w = w * scale;
-    const s_h = h * scale;
-    const s_t = t * scale; // Scaled thickness
 
     productComponents.forEach(comp => {
         if (comp.length <= 0 || comp.width <= 0 || comp.qty <= 0) return;
@@ -1470,42 +1479,28 @@ function update3DPreview() {
             panel.className = 'component-3d-panel';
             panel.dataset.label = `${comp.name}${comp.qty > 1 ? ` ${i + 1}` : ''}`;
 
-            let transforms = [];
-            let s_compW = comp.length * scale;
-            let s_compH = comp.width * scale;
-
-            // Positioning logic now accounts for thickness (t)
-            switch (comp.name) {
-                case 'Hông Trái':
-                    transforms = [`translateX(${-s_l / 2 + s_t / 2}px)`, 'rotateY(90deg)'];
-                    s_compW = w * scale; s_compH = h * scale;
-                    break;
-                case 'Hông Phải':
-                    transforms = [`translateX(${s_l / 2 - s_t / 2}px)`, 'rotateY(90deg)'];
-                    s_compW = w * scale; s_compH = h * scale;
-                    break;
-                case 'Đáy':
-                    transforms = [`translateY(${s_h / 2 - s_t / 2}px)`, 'rotateX(90deg)'];
-                    s_compW = l * scale; s_compH = w * scale;
-                    break;
-                case 'Nóc':
-                    transforms = [`translateY(${-s_h / 2 + s_t / 2}px)`, 'rotateX(90deg)'];
-                    s_compW = l * scale; s_compH = w * scale;
-                    break;
-                case 'Hậu':
-                    transforms = [`translateZ(${-s_w / 2 + s_t / 2}px)`];
-                    s_compW = l * scale; s_compH = h * scale;
-                    break;
-                // Default for custom components like 'Cánh', 'Vách ngăn'
-                default: 
-                    // Center the custom component for visualization
-                    transforms = [`translateZ(${s_w / 2 - s_t}px)`];
-                    break;
-            }
+            const s_compW = comp.length * scale;
+            const s_compH = comp.width * scale;
+            const s_t = t * scale;
+            
+            // Positioning from component data
+            const x = (comp.x || 0) * scale;
+            const y = (comp.y || 0) * scale;
+            const z = (comp.z || 0) * scale;
+            const rx = comp.rx || 0;
+            const ry = comp.ry || 0;
+            const rz = comp.rz || 0;
+            
             panel.style.width = `${s_compW}px`;
             panel.style.height = `${s_compH}px`;
-            panel.style.transform = transforms.join(' ');
-            // Give the panel visual thickness
+            panel.style.transform = `
+                translateX(${x}px) 
+                translateY(${y}px) 
+                translateZ(${z}px) 
+                rotateX(${rx}deg) 
+                rotateY(${ry}deg) 
+                rotateZ(${rz}deg)
+            `;
             panel.style.setProperty('--thickness', `${s_t}px`);
             productContainer.appendChild(panel);
         }
@@ -1630,10 +1625,16 @@ document.addEventListener('DOMContentLoaded', () => {
             length: 0,
             width: 0,
             qty: 1,
+            x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0,
             isDefault: false
         });
         renderProductComponents();
         update3DPreview();
+    });
+
+    DOM.advancedPositioningToggle.addEventListener('change', (e) => {
+        const table = document.getElementById('component-table');
+        table.classList.toggle('advanced-view', e.target.checked);
     });
 
     handleFormUpdate();

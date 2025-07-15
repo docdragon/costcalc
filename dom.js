@@ -34,6 +34,7 @@ export const edgeMaterialCombobox = document.getElementById('edge-material-combo
 // NEW: Components
 export const componentsTableBody = document.getElementById('components-table-body');
 export const addCustomComponentBtn = document.getElementById('add-custom-component-btn');
+export const advancedPositioningToggle = document.getElementById('advanced-positioning-toggle');
 
 
 // Accessories
