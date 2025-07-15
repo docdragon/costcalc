@@ -69,8 +69,6 @@ export const productPreviewContainer = document.getElementById('product-preview-
 export const previewFront = document.getElementById('preview-front');
 export const previewTop = document.getElementById('preview-top');
 export const previewLeft = document.getElementById('preview-left');
-export const interactive3dViewer = document.getElementById('interactive-3d-viewer');
-export const interactive3dScene = document.getElementById('interactive-3d-scene');
 
 // --- Quick Calculator Tab ---
 export const qcAreaInput = document.getElementById('qc-area');

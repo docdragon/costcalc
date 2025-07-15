@@ -1459,8 +1459,7 @@ function updateProductPreview() {
     const views = [
         { container: DOM.previewFront, rotation: 'rotateY(0deg) rotateX(0deg)' },
         { container: DOM.previewTop, rotation: 'rotateY(0deg) rotateX(-90deg)' },
-        { container: DOM.previewLeft, rotation: 'rotateY(90deg) rotateX(0deg)' },
-        { container: DOM.interactive3dViewer, rotation: null } // Interactive, handled separately
+        { container: DOM.previewLeft, rotation: 'rotateY(90deg) rotateX(0deg)' }
     ];
 
     views.forEach(view => {
@@ -1495,44 +1494,11 @@ function updateProductPreview() {
         sceneContainer.appendChild(productContainer);
 
         // Apply static rotation for 2D views
-        if (view.rotation && sceneContainer.parentElement.id !== 'interactive-3d-viewer') {
+        if (view.rotation) {
             const initial3DRot = 'rotateX(-20deg) rotateY(-30deg)';
             sceneContainer.style.transform = `${initial3DRot} ${view.rotation}`;
         }
     });
-
-    // Ensure the interactive one keeps its rotation if it has one
-    if (DOM.interactive3dScene && !DOM.interactive3dScene.style.transform) {
-        DOM.interactive3dScene.style.transform = 'rotateX(-20deg) rotateY(-30deg)';
-    }
-}
-
-function initializePreviews() {
-    const scene = DOM.interactive3dScene;
-    const viewer = DOM.interactive3dViewer;
-
-    if (!scene || !viewer) return;
-
-    let mouseX = 0, mouseY = 0, rotX = -20, rotY = -30, isDragging = false;
-    scene.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
-
-    viewer.addEventListener('mousedown', e => {
-        isDragging = true; mouseX = e.clientX; mouseY = e.clientY;
-        viewer.style.cursor = 'grabbing';
-    });
-    document.addEventListener('mouseup', () => {
-        if (isDragging) { isDragging = false; viewer.style.cursor = 'grab'; }
-    });
-    document.addEventListener('mousemove', e => {
-        if (!isDragging) return;
-        e.preventDefault();
-        rotY += (e.clientX - mouseX) * 0.5;
-        rotX -= (e.clientY - mouseY) * 0.5;
-        rotX = Math.max(-90, Math.min(90, rotX));
-        scene.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
-        mouseX = e.clientX; mouseY = e.clientY;
-    });
-    updateProductPreview();
 }
 
 // --- App Initialization ---
@@ -1540,7 +1506,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeTabs();
     initializeModals();
     initializeImageUploader( (d) => { uploadedImage = d; DOM.imageAnalysisContainer.classList.remove('hidden'); }, () => { uploadedImage = null; DOM.imageAnalysisContainer.classList.add('hidden'); });
-    initializePreviews();
     initializeMathInput('.input-style[type="text"][inputmode="decimal"]');
     
     // Main form Comboboxes
