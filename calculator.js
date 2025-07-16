@@ -353,9 +353,11 @@ function calculateAndDisplayFinalPrice() {
         DOM.resultsSection.classList.remove('hidden');
         DOM.resultsContent.classList.remove('hidden');
         DOM.saveItemBtn.disabled = false;
+        DOM.updateItemBtn.disabled = false;
         lastCalculationResult = { totalCost, suggestedPrice, estimatedProfit, costBreakdown: costBreakdownItems };
     } else {
         DOM.saveItemBtn.disabled = true;
+        DOM.updateItemBtn.disabled = true;
     }
 }
 
@@ -387,6 +389,7 @@ export function clearCalculatorInputs() {
 
     DOM.resultsSection.classList.add('hidden');
     DOM.saveItemBtn.disabled = true;
+    DOM.updateItemBtn.disabled = true;
 }
 
 export function loadItemIntoForm(item) {

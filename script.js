@@ -43,6 +43,7 @@ let localProductTypes = [];
 let localComponentGroups = [];
 let currentEditingProductTypeId = null;
 let currentEditingComponentGroupId = null;
+let currentEditingItemId = null;
 
 // Pagination state
 let currentPage = 1;
@@ -880,6 +881,13 @@ DOM.cgComponentsList.addEventListener('click', async e => {
 });
 
 
+// --- Calculator Action Buttons ---
+function updateCalculatorActionButtons() {
+    const isEditing = !!currentEditingItemId;
+    DOM.saveItemBtn.classList.toggle('hidden', isEditing);
+    DOM.updateItemBtn.classList.toggle('hidden', !isEditing);
+}
+
 
 // --- Populate Dropdowns ---
 function populateProductTypeDropdown() {
@@ -1037,6 +1045,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize all modules
     initializeCalculator();
     initializeQuickCalc(localMaterials, showToast);
+    updateCalculatorActionButtons();
 
     // Main form Comboboxes
     if (DOM.itemTypeCombobox) {
@@ -1063,12 +1072,40 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             await addDoc(savedItemsCollectionRef, itemData);
             showToast('Lưu dự án thành công!', 'success');
-            clearCalculatorInputs();
+            DOM.clearFormBtn.click(); // Programmatically click the clear button
         } catch (error) {
             showToast('Lỗi khi lưu dự án.', 'error');
             console.error("Error saving item:", error);
         }
     });
+
+    DOM.updateItemBtn.addEventListener('click', async () => {
+        if (!currentEditingItemId) {
+            showToast('Không có dự án nào đang được chỉnh sửa để cập nhật.', 'error');
+            return;
+        }
+        const itemDataToSave = getCalculatorStateForSave();
+        if (!itemDataToSave) return;
+
+        const itemData = { ...itemDataToSave, updatedAt: serverTimestamp() };
+        try {
+            const itemRef = doc(db, `users/${currentUserId}/savedItems`, currentEditingItemId);
+            await updateDoc(itemRef, itemData);
+            showToast('Cập nhật dự án thành công!', 'success');
+        } catch (error) {
+            showToast('Lỗi khi cập nhật dự án.', 'error');
+            console.error("Error updating item:", error);
+        }
+    });
+    
+    DOM.clearFormBtn.addEventListener('click', () => {
+        clearCalculatorInputs();
+        currentEditingItemId = null;
+        updateCalculatorActionButtons();
+        showToast('Đã xóa biểu mẫu. Sẵn sàng cho dự án mới.', 'info');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
 
     DOM.savedItemsTableBody.addEventListener('click', async e => {
         const viewBtn = e.target.closest('.view-btn');
@@ -1078,7 +1115,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
         if (loadBtn) {
             const itemToLoad = localSavedItems.find(i => i.id === loadBtn.dataset.id);
-            if (itemToLoad) loadItemIntoForm(itemToLoad);
+            if (itemToLoad) {
+                currentEditingItemId = itemToLoad.id;
+                loadItemIntoForm(itemToLoad);
+                updateCalculatorActionButtons();
+            }
         } else if (viewBtn) {
             renderItemDetailsToModal(viewBtn.dataset.id);
         } else if (copyBtn) {

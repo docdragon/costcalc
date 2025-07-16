@@ -243,11 +243,14 @@ body {
 
 .main-actions-group {
     display: flex;
-    flex-direction: column-reverse;
+    flex-direction: column;
     gap: 0.75rem;
     margin-top: 2rem;
     border-top: 1px solid var(--border-color);
     padding-top: 1.5rem;
+}
+.main-actions-group .btn {
+    width: 100%;
 }
 @media (min-width: 768px) {
     .main-actions-group {
@@ -256,6 +259,9 @@ body {
     }
     .main-actions-group .btn {
         width: auto;
+    }
+    .main-actions-group > .btn:first-child {
+        margin-right: auto;
     }
 }
 

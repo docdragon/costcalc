@@ -44,6 +44,8 @@ export const accessoriesList = document.getElementById('accessories-list');
 
 // Actions & Results
 export const saveItemBtn = document.getElementById('save-item-btn');
+export const updateItemBtn = document.getElementById('update-item-btn');
+export const clearFormBtn = document.getElementById('clear-form-btn');
 export const resultsSection = document.getElementById('results-section');
 export const resultsContent = document.getElementById('results-content');
 export const priceSummaryContainer = document.getElementById('price-summary-container');
