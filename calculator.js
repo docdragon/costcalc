@@ -391,11 +391,15 @@ async function runAICuttingOptimization() {
 
     HƯỚNG DẪN THỰC HIỆN:
     1.  **Thuật toán Sắp xếp (2D Bin Packing):**
-        - Kích thước tấm ván tiêu chuẩn để sắp xếp là 1220mm (chiều rộng) x 2440mm (chiều cao).
+        - Kích thước tấm ván tiêu chuẩn là **1220mm (chiều rộng) x 2440mm (chiều cao)**. Hướng vân gỗ của tấm ván chạy dọc theo chiều cao 2440mm.
         - Sắp xếp tất cả các miếng ván được cung cấp vào số lượng tấm ván tiêu chuẩn ít nhất có thể.
-        - **RÀNG BUỘC TỐI QUAN TRỌNG: Các miếng ván trên cùng một tấm ván TUYỆT ĐỐI KHÔNG ĐƯỢC CHỒNG CHÉO LÊN NHAU.** Mỗi miếng ván phải nằm gọn trong vùng ranh giới của tấm ván (0,0) đến (1220, 2440).
-        - Có thể xoay các miếng ván 90 độ (đảo ngược chiều rộng và chiều cao) nếu việc đó giúp tối ưu hóa không gian.
-        - Với mỗi miếng ván đã được đặt, hãy cung cấp tọa độ (x, y) của góc trên cùng bên trái của nó.
+        - **Ưu tiên hướng vân gỗ:** Theo mặc định, hướng vân gỗ của mỗi chi tiết chạy dọc theo \`width\` của nó trong JSON đầu vào. Hãy cố gắng sắp xếp các chi tiết sao cho \`width\` của chúng song song với chiều cao 2440mm của tấm ván (hướng vân gỗ trùng khớp).
+        - **Cho phép xoay:** Bạn có thể xoay các chi tiết 90 độ (đảo \`width\` và \`height\`) NẾU việc đó giúp tiết kiệm vật liệu đáng kể hoặc là cách duy nhất để chi tiết vừa vặn.
+        - **RÀNG BUỘC TỐI QUAN TRỌNG VỀ VỊ TRÍ:**
+            - Các chi tiết trên cùng một tấm ván **TUYỆT ĐỐI KHÔNG ĐƯỢC CHỒNG CHÉO LÊN NHAU.**
+            - Mọi chi tiết phải nằm **HOÀN TOÀN** bên trong ranh giới tấm ván. Đối với mỗi chi tiết đã đặt tại (x, y) với kích thước cuối cùng là (w, h) sau khi xoay (nếu có), phải đảm bảo hai điều kiện sau:
+                - \`x + w <= 1220\`
+                - \`y + h <= 2440\`
 
     2.  **ĐỊNH DẠNG ĐẦU RA (JSON):**
         - Chỉ trả về một đối tượng JSON duy nhất, tuân thủ nghiêm ngặt schema đã được cung cấp.
@@ -674,7 +678,7 @@ export function initializeCalculator() {
     
     DOM.mainMaterialWoodCombobox.addEventListener('change', updateComponentCalculationsAndRender);
 
-    DOM.componentsTableBody.addEventListener('change', e => {
+    DOM.componentsTableBody.addEventListener('input', e => {
         if (e.target.classList.contains('component-input')) {
             const id = e.target.closest('tr').dataset.id;
             const field = e.target.dataset.field;
