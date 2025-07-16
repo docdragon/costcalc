@@ -912,14 +912,30 @@ function listenForSavedItems() {
     if (unsubscribeSavedItems) unsubscribeSavedItems();
     unsubscribeSavedItems = onSnapshot(savedItemsCollectionRef, snapshot => {
         localSavedItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        renderSavedItems(localSavedItems);
+        displaySavedItems();
     }, console.error);
+}
+
+function displaySavedItems() {
+    let itemsToProcess = [...localSavedItems];
+    const filterText = DOM.savedItemsFilterInput ? DOM.savedItemsFilterInput.value.toLowerCase().trim() : '';
+
+    if (filterText) {
+        itemsToProcess = itemsToProcess.filter(item => {
+            const inputs = item.inputs || {};
+            const name = (inputs.name || '').toLowerCase();
+            const description = (inputs.description || '').toLowerCase();
+            return name.includes(filterText) || description.includes(filterText);
+        });
+    }
+
+    renderSavedItems(itemsToProcess);
 }
 
 function renderSavedItems(items) {
     DOM.savedItemsTableBody.innerHTML = '';
     if (items.length === 0) {
-        DOM.savedItemsTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 1rem; color: var(--text-light);">Chưa có dự án nào được lưu.</td></tr>`;
+        DOM.savedItemsTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 1rem; color: var(--text-light);">Không tìm thấy dự án nào.</td></tr>`;
         return;
     }
     items.sort((a, b) => (b.createdAt?.toMillis ? b.createdAt.toMillis() : 0) - (a.createdAt?.toMillis ? a.createdAt.toMillis() : 0));
@@ -1157,6 +1173,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+
+    if (DOM.savedItemsFilterInput) {
+        DOM.savedItemsFilterInput.addEventListener('input', debounce(displaySavedItems, 300));
+    }
 
     // Component Name pagination and filter listeners
     if (DOM.cnFilterInput) {

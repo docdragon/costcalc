@@ -133,6 +133,7 @@ export const cgComponentsList = document.getElementById('cg-components-list');
 
 // --- Saved Projects Tab ---
 export const savedItemsTableBody = document.getElementById('saved-items-table-body');
+export const savedItemsFilterInput = document.getElementById('saved-items-filter-input');
 
 // --- Modals ---
 export const loginModal = document.getElementById('login-modal');
