@@ -15,6 +15,7 @@ export const tabContent = document.getElementById('tab-content');
 // --- Main Calculator Tab ---
 // Product Info
 export const itemNameInput = document.getElementById('item-name');
+export const itemDescriptionInput = document.getElementById('item-description');
 export const itemLengthInput = document.getElementById('item-length');
 export const itemWidthInput = document.getElementById('item-width');
 export const itemHeightInput = document.getElementById('item-height');
@@ -43,7 +44,6 @@ export const accessoriesList = document.getElementById('accessories-list');
 
 // Actions & Results
 export const saveItemBtn = document.getElementById('save-item-btn');
-export const analyzeBtn = document.getElementById('analyze-btn');
 export const resultsSection = document.getElementById('results-section');
 export const resultsContent = document.getElementById('results-content');
 export const priceSummaryContainer = document.getElementById('price-summary-container');
@@ -51,10 +51,6 @@ export const totalCostValue = document.getElementById('total-cost-value');
 export const suggestedPriceValue = document.getElementById('suggested-price-value');
 export const estimatedProfitValue = document.getElementById('estimated-profit-value');
 export const costBreakdownContainer = document.getElementById('cost-breakdown-container');
-export const cuttingLayoutSection = document.getElementById('cutting-layout-section');
-export const cuttingLayoutLoader = document.getElementById('cutting-layout-loader');
-export const cuttingLayoutSummary = document.getElementById('cutting-layout-summary');
-export const cuttingLayoutContainer = document.getElementById('cutting-layout-container');
 
 // Product Preview (Sidebar)
 export const sidebarImagePreviewWrapper = document.getElementById('sidebar-image-preview-wrapper');

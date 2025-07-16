@@ -918,15 +918,29 @@ function renderSavedItems(items) {
 
     items.forEach(item => {
         const tr = document.createElement('tr');
-        const itemName = item?.inputs?.name || 'Dự án không tên';
+        const inputs = item.inputs || {};
+        const itemName = inputs.name || 'Dự án không tên';
         const createdAt = item?.createdAt ? new Date(item.createdAt.toDate()).toLocaleString('vi-VN') : 'Không rõ';
+        const finalPrices = item.finalPrices || {};
+        const suggestedPrice = finalPrices.suggestedPrice || 0;
+        const totalCost = finalPrices.totalCost || 0;
+        const estimatedProfit = finalPrices.estimatedProfit || 0;
 
-        const suggestedPrice = item.finalPrices?.suggestedPrice || 0;
-        const totalCost = item.finalPrices?.totalCost || 0;
-        const estimatedProfit = item.finalPrices?.estimatedProfit || 0;
+        const dims = (inputs.length && inputs.width && inputs.height) 
+            ? `${inputs.length} x ${inputs.width} x ${inputs.height} mm` 
+            : 'Không rõ kích thước';
+        const mainWoodName = allLocalMaterials.find(m => m.id === inputs.mainWoodId)?.name || 'Chưa chọn ván';
+        const descriptionHtml = inputs.description ? `<p class="project-description">${inputs.description}</p>` : '';
 
         tr.innerHTML = `
-            <td data-label="Tên dự án">${itemName}</td>
+            <td data-label="Tên & Chi tiết Dự án">
+                <div class="project-name-main">${itemName}</div>
+                <div class="project-details-list">
+                    <span class="project-detail-item"><i class="fas fa-fw fa-ruler-combined"></i> ${dims}</span>
+                    <span class="project-detail-item"><i class="fas fa-fw fa-layer-group"></i> ${mainWoodName}</span>
+                </div>
+                ${descriptionHtml}
+            </td>
             <td data-label="Giá Bán" class="font-semibold">${suggestedPrice.toLocaleString('vi-VN')}đ</td>
             <td data-label="Chi Phí">${totalCost.toLocaleString('vi-VN')}đ</td>
             <td data-label="Lợi Nhuận">${estimatedProfit.toLocaleString('vi-VN')}đ</td>
@@ -946,7 +960,7 @@ function renderItemDetailsToModal(itemId) {
     const item = localSavedItems.find(i => i.id === itemId);
     if (!item) return;
 
-    const { inputs = {}, finalPrices = {}, cuttingLayout = {} } = item;
+    const { inputs = {}, finalPrices = {} } = item;
     const costBreakdown = finalPrices.costBreakdown || [];
     
     const suggestedPrice = finalPrices.suggestedPrice || 0;
@@ -961,9 +975,6 @@ function renderItemDetailsToModal(itemId) {
         ? '<ul>' + inputs.accessories.map(a => `<li>${a.name} (SL: ${a.quantity} ${a.unit})</li>`).join('') + '</ul>'
         : '<p>Không có phụ kiện nào.</p>';
     
-    const tempContainer = document.createElement('div');
-    // We need a local version of renderCostBreakdown since it's in calculator.js now
-    // For simplicity, let's just generate it here.
     let breakdownHtml = '<h3 class="result-box-header"><i class="fas fa-file-invoice-dollar"></i> Phân tích Chi phí Vật tư</h3><ul class="cost-list">';
     if (costBreakdown.length > 0) {
         costBreakdown.forEach(item => {
@@ -979,32 +990,6 @@ function renderItemDetailsToModal(itemId) {
     } else {
         breakdownHtml = '<p>Không có phân tích chi phí.</p>';
     }
-
-    const tempLayoutContainer = document.createElement('div');
-    tempLayoutContainer.className = 'cutting-layout-container in-modal';
-    const tempSummary = document.createElement('div');
-    // Local renderCuttingLayout
-    let layoutHtml = '';
-    if (cuttingLayout && cuttingLayout.sheets && cuttingLayout.totalSheetsUsed > 0) {
-        tempSummary.innerHTML = `<p><strong>Kết quả tối ưu:</strong> Cần dùng <strong>${cuttingLayout.totalSheetsUsed}</strong> tấm ván chính.</p>`;
-        const STANDARD_WIDTH = 1220, STANDARD_HEIGHT = 2440;
-        cuttingLayout.sheets.forEach(sheetData => {
-            let sheetHtml = `<div class="cutting-sheet-wrapper">
-                <h4 class="cutting-sheet-title">Sơ đồ Tấm ván #${sheetData.sheetNumber}</h4>
-                <div class="cutting-sheet">`;
-            sheetData.pieces.forEach(piece => {
-                const left = (piece.x / STANDARD_WIDTH) * 100, top = (piece.y / STANDARD_HEIGHT) * 100;
-                const pieceWidth = (piece.width / STANDARD_WIDTH) * 100, pieceHeight = (piece.height / STANDARD_HEIGHT) * 100;
-                sheetHtml += `<div class="cutting-piece" style="left:${left}%;top:${top}%;width:${pieceWidth}%;height:${pieceHeight}%;"><div class="cutting-piece-label">${piece.name}<br>(${piece.width}x${piece.height})</div></div>`;
-            });
-            sheetHtml += '</div></div>';
-            tempLayoutContainer.innerHTML += sheetHtml;
-        });
-        layoutHtml = tempSummary.innerHTML + tempLayoutContainer.innerHTML;
-    } else {
-        layoutHtml = '<p>Không có sơ đồ cắt ván.</p>';
-    }
-
 
     DOM.viewItemContent.innerHTML = `
         <div class="final-price-recommendation">
@@ -1022,6 +1007,7 @@ function renderItemDetailsToModal(itemId) {
             <div class="modal-details-col">
                 <h4><i class="fas fa-ruler-combined"></i>Thông số & Vật tư chính</h4>
                 <ul>
+                    <li><strong>Mô tả:</strong> ${inputs.description || 'Không có'}</li>
                     <li><strong>Kích thước (D x R x C):</strong> ${inputs.length || 'N/A'} x ${inputs.width || 'N/A'} x ${inputs.height || 'N/A'} mm</li>
                     <li><strong>Ván chính:</strong> ${mainWood}</li>
                     <li><strong>Ván hậu:</strong> ${backPanel}</li>
@@ -1032,10 +1018,6 @@ function renderItemDetailsToModal(itemId) {
             </div>
             <div class="modal-details-col">
                 ${breakdownHtml}
-                <div class="result-box">
-                    <h3 class="result-box-header"><i class="fas fa-th-large"></i> Sơ đồ Cắt ván Gợi ý</h3>
-                    ${layoutHtml}
-                </div>
             </div>
         </div>
     `;
@@ -1109,7 +1091,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
                     const newItemData = {
                         inputs: newInputs,
-                        cuttingLayout: JSON.parse(JSON.stringify(itemToCopy.cuttingLayout || null)),
                         finalPrices: JSON.parse(JSON.stringify(itemToCopy.finalPrices || null)),
                         createdAt: serverTimestamp()
                     };

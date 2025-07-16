@@ -847,7 +847,7 @@ td button { transition: color 0.2s; }
     margin-top: 1rem;
     font-weight: 500;
 }
-#results-content.hidden, #cutting-layout-section.hidden { display: none; }
+#results-content.hidden { display: none; }
 
 
 @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -888,73 +888,6 @@ td button { transition: color 0.2s; }
 /* --- Utility --- */
 .hidden { display: none !important; }
 .mr-2 { margin-right: 0.5rem; }
-
-/* --- AI Cutting Layout --- */
-.cutting-layout-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 1.5rem;
-    margin-top: 1rem;
-}
-#cutting-layout-summary {
-    font-size: 0.9rem;
-    font-weight: 500;
-    padding: 0.75rem 1.25rem;
-    background-color: #eef2ff;
-    border-radius: 0.5rem;
-    color: var(--primary-color);
-}
-#cutting-layout-summary p { margin: 0; }
-.cutting-sheet-wrapper { margin-bottom: 1rem; }
-.cutting-sheet-title { font-weight: 600; margin-bottom: 0.75rem; font-size: 0.875rem; text-align: center;}
-.cutting-sheet {
-    position: relative;
-    width: 100%;
-    height: 0;
-    padding-bottom: 200%; 
-    background-color: #f8fafc;
-    border: 1px solid var(--border-color);
-    box-sizing: border-box;
-    border-radius: 4px;
-    overflow: hidden;
-}
-.cutting-piece {
-    position: absolute;
-    box-sizing: border-box;
-    border: 1px solid var(--primary-hover);
-    background-color: rgba(79, 70, 229, 0.1);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    overflow: hidden;
-}
-.cutting-piece-label {
-    font-size: 9px;
-    color: var(--primary-color);
-    font-weight: 500;
-    text-align: center;
-    padding: 1px;
-    white-space: normal;
-    word-break: break-word;
-    line-height: 1.1;
-}
-
-/* Scaled-down cutting layout for modals */
-.cutting-layout-container.in-modal {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1rem;
-    margin-top: 1rem;
-}
-.cutting-layout-container.in-modal .cutting-sheet-wrapper {
-    /* No flex properties needed */
-}
-@media (min-width: 820px) {
-    .modal-content.modal-lg .cutting-layout-container.in-modal {
-        grid-template-columns: repeat(4, 1fr);
-    }
-}
-
 
 /* --- Guide Section --- */
 .guide-details {
@@ -1233,4 +1166,61 @@ td button { transition: color 0.2s; }
 .form-label, .card-header, .form-section-header, .table-header {
     display: flex;
     align-items: center;
+}
+
+textarea.input-style {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.project-name-main {
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.project-details-list {
+    font-size: 0.8rem;
+    color: var(--text-light);
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding-left: 0.25rem;
+}
+
+.project-detail-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.project-detail-item i.fa-fw {
+    width: 14px;
+    text-align: center;
+    color: var(--text-light);
+}
+
+.project-description {
+    font-style: italic;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed var(--border-color);
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-width: 100%;
+}
+
+@media (max-width: 768px) {
+    .data-table:not(.component-table) td[data-label^="Tên"] {
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+    }
+    .data-table:not(.component-table) td[data-label^="Tên"]::before {
+        margin-bottom: 0.5rem;
+    }
+    .project-name-main, .project-details-list {
+        width: 100%;
+    }
 }

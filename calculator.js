@@ -11,12 +11,10 @@ let localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [], 'Gia Công'
 let allLocalMaterials = [];
 let currentUserId = null;
 
-let lastGeminiResult = null;
+let lastCalculationResult = null;
 let addedAccessories = [];
 let productComponents = [];
 let uploadedImage = null;
-let aiCalculationState = 'idle'; // idle, calculating, done
-
 
 // --- Data Updaters ---
 export function updateCalculatorData(data) {
@@ -223,82 +221,7 @@ function renderAccessories() {
     });
 }
 
-// --- AI & Price Calculation ---
-
-function getPanelPiecesForAI() {
-    const pieces = [];
-    const mainWoodId = DOM.mainMaterialWoodCombobox.querySelector('.combobox-value').value;
-    const backPanelId = DOM.mainMaterialBackPanelCombobox.querySelector('.combobox-value').value;
-
-    productComponents.forEach(comp => {
-        let effectiveMaterialId = comp.materialId;
-        if (!effectiveMaterialId) {
-            const isBackPanel = comp.name.toLowerCase().includes('hậu');
-            if (isBackPanel && backPanelId) {
-                effectiveMaterialId = backPanelId;
-            } else {
-                effectiveMaterialId = mainWoodId;
-            }
-        }
-        
-        if (effectiveMaterialId === mainWoodId) {
-            for (let i = 0; i < comp.qty; i++) {
-                const pieceName = `${comp.name}${comp.qty > 1 ? ` (${i + 1})` : ''}`;
-                pieces.push({ name: pieceName, width: comp.length, height: comp.width });
-            }
-        }
-    });
-    return pieces.filter(p => p.width > 0 && p.height > 0);
-}
-
-
-function renderCuttingLayout(layoutData, containerEl, summaryEl) {
-    if (!layoutData || !layoutData.sheets || layoutData.totalSheetsUsed === 0) {
-        summaryEl.innerHTML = `<p>AI không thể tạo sơ đồ cắt ván tối ưu từ thông tin được cung cấp.</p>`;
-        containerEl.innerHTML = '';
-        return;
-    }
-
-    containerEl.innerHTML = '';
-    const totalSheets = layoutData.totalSheetsUsed;
-    summaryEl.innerHTML = `<p><strong>Kết quả tối ưu:</strong> Cần dùng <strong>${totalSheets}</strong> tấm ván chính (kích thước 1220 x 2440mm) để hoàn thành sản phẩm này.</p>`;
-
-    const STANDARD_WIDTH = 1220;
-    const STANDARD_HEIGHT = 2440;
-
-    layoutData.sheets.forEach(sheetData => {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'cutting-sheet-wrapper';
-        const title = document.createElement('h4');
-        title.className = 'cutting-sheet-title';
-        title.textContent = `Sơ đồ Tấm ván #${sheetData.sheetNumber}`;
-        wrapper.appendChild(title);
-        const sheetEl = document.createElement('div');
-        sheetEl.className = 'cutting-sheet';
-        sheetData.pieces.forEach(piece => {
-            const pieceEl = document.createElement('div');
-            pieceEl.className = 'cutting-piece';
-            const w = piece.width, h = piece.height;
-            const left = (piece.x / STANDARD_WIDTH) * 100;
-            const top = (piece.y / STANDARD_HEIGHT) * 100;
-            const pieceWidth = (w / STANDARD_WIDTH) * 100;
-            const pieceHeight = (h / STANDARD_HEIGHT) * 100;
-            pieceEl.style.left = `${left}%`;
-            pieceEl.style.top = `${top}%`;
-            pieceEl.style.width = `${pieceWidth}%`;
-            pieceEl.style.height = `${pieceHeight}%`;
-            const label = document.createElement('div');
-            label.className = 'cutting-piece-label';
-            if (pieceWidth > 5 && pieceHeight > 5) {
-               label.innerHTML = `${piece.name}<br>(${w}x${h})`;
-            }
-            pieceEl.appendChild(label);
-            sheetEl.appendChild(pieceEl);
-        });
-        wrapper.appendChild(sheetEl);
-        containerEl.appendChild(wrapper);
-    });
-}
+// --- Price Calculation ---
 
 function renderCostBreakdown(breakdown, container) {
     if (!breakdown || breakdown.length === 0) {
@@ -321,24 +244,6 @@ function renderCostBreakdown(breakdown, container) {
     container.classList.remove('hidden');
 }
 
-
-function updateAnalyzeButton() {
-    switch(aiCalculationState) {
-        case 'idle':
-            DOM.analyzeBtn.disabled = false;
-            DOM.analyzeBtn.innerHTML = '<i class="fas fa-th-large"></i> Tối ưu Cắt ván với AI';
-            break;
-        case 'calculating':
-            DOM.analyzeBtn.disabled = true;
-            DOM.analyzeBtn.innerHTML = `<span class="spinner-sm"></span> Đang tối ưu...`;
-            break;
-        case 'done':
-            DOM.analyzeBtn.disabled = false;
-            DOM.analyzeBtn.innerHTML = '<i class="fas fa-redo"></i> Tối ưu lại';
-            break;
-    }
-}
-
 function calculateEdgeBanding() {
     let totalLength = 0;
     productComponents.forEach(comp => {
@@ -353,102 +258,11 @@ function calculateEdgeBanding() {
     return totalLength;
 }
 
-async function runAICuttingOptimization() {
-    aiCalculationState = 'calculating';
-    updateAnalyzeButton();
-    
-    DOM.cuttingLayoutSection.classList.remove('hidden');
-    DOM.cuttingLayoutLoader.classList.remove('hidden');
-    DOM.cuttingLayoutSummary.innerHTML = '';
-    DOM.cuttingLayoutContainer.innerHTML = '';
-    
-    const mainWoodPieces = getPanelPiecesForAI();
-    if(mainWoodPieces.length === 0) {
-        showToast("Không có chi tiết ván chính để AI phân tích sơ đồ cắt.", "info");
-        aiCalculationState = 'idle';
-        updateAnalyzeButton();
-        DOM.cuttingLayoutSection.classList.add('hidden');
-        DOM.cuttingLayoutLoader.classList.add('hidden');
-        return;
-    }
-
-    const productInfoForAI = {
-        name: DOM.itemNameInput.value,
-        type: DOM.itemTypeCombobox.querySelector('.combobox-input').value,
-        length: DOM.itemLengthInput.value,
-        width: DOM.itemWidthInput.value,
-        height: DOM.itemHeightInput.value,
-    };
-
-    const prompt = `
-    NHIỆM VỤ: Bạn là một trợ lý AI chuyên nghiệp cho xưởng mộc, chuyên thực hiện tối ưu hóa sơ đồ cắt (nesting) để giảm thiểu lãng phí vật liệu.
-
-    BỐI CẢNH: Người dùng đã cung cấp danh sách các chi tiết (miếng ván) cần cắt từ các tấm ván tiêu chuẩn.
-
-    DỮ LIỆU ĐẦU VÀO:
-    - Thông tin sản phẩm: ${JSON.stringify(productInfoForAI)}
-    - Danh sách các miếng ván chính cần cắt (JSON): ${JSON.stringify(mainWoodPieces.map(({type, ...rest}) => rest))}
-
-    HƯỚNG DẪN THỰC HIỆN:
-    1.  **Thuật toán Sắp xếp (2D Bin Packing):**
-        - Kích thước tấm ván tiêu chuẩn là **1220mm (chiều rộng) x 2440mm (chiều cao)**. Hướng vân gỗ của tấm ván chạy dọc theo chiều cao 2440mm.
-        - Sắp xếp tất cả các miếng ván được cung cấp vào số lượng tấm ván tiêu chuẩn ít nhất có thể.
-        - **Ưu tiên hướng vân gỗ:** Theo mặc định, hướng vân gỗ của mỗi chi tiết chạy dọc theo \`width\` của nó trong JSON đầu vào. Hãy cố gắng sắp xếp các chi tiết sao cho \`width\` của chúng song song với chiều cao 2440mm của tấm ván (hướng vân gỗ trùng khớp).
-        - **Cho phép xoay:** Bạn có thể xoay các chi tiết 90 độ (đảo \`width\` và \`height\`) NẾU việc đó giúp tiết kiệm vật liệu đáng kể hoặc là cách duy nhất để chi tiết vừa vặn.
-        - **RÀNG BUỘC TỐI QUAN TRỌNG VỀ VỊ TRÍ:**
-            - Các chi tiết trên cùng một tấm ván **TUYỆT ĐỐI KHÔNG ĐƯỢC CHỒNG CHÉO LÊN NHAU.**
-            - Mọi chi tiết phải nằm **HOÀN TOÀN** bên trong ranh giới tấm ván. Đối với mỗi chi tiết đã đặt tại (x, y) với kích thước cuối cùng là (w, h) sau khi xoay (nếu có), phải đảm bảo hai điều kiện sau:
-                - \`x + w <= 1220\`
-                - \`y + h <= 2440\`
-
-    2.  **ĐỊNH DẠNG ĐẦU RA (JSON):**
-        - Chỉ trả về một đối tượng JSON duy nhất, tuân thủ nghiêm ngặt schema đã được cung cấp.
-        - Đối tượng JSON phải chứa key "cuttingLayout".
-        - Không thêm bất kỳ văn bản, giải thích, hay ký tự nào khác bên ngoài đối tượng JSON.
-    `;
-    
-    try {
-        const response = await fetch('/api/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: prompt })
-        });
-        
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error || `Lỗi máy chủ: ${response.status}`);
-        }
-
-        lastGeminiResult = data;
-        aiCalculationState = 'done';
-        
-        const { cuttingLayout } = data;
-        if (cuttingLayout && cuttingLayout.totalSheetsUsed > 0) {
-            renderCuttingLayout(cuttingLayout, DOM.cuttingLayoutContainer, DOM.cuttingLayoutSummary);
-        } else {
-            DOM.cuttingLayoutSection.classList.add('hidden');
-        }
-        
-        runFullCalculation(); // Recalculate with new optimized sheet count
-        DOM.saveItemBtn.disabled = false;
-
-    } catch (error) {
-        console.error("Error calling AI:", error);
-        showToast(`Lỗi khi tối ưu: ${error.message}`, 'error');
-        aiCalculationState = 'idle';
-        DOM.cuttingLayoutSection.classList.add('hidden');
-    } finally {
-        DOM.cuttingLayoutLoader.classList.add('hidden');
-        updateAnalyzeButton();
-    }
-}
-
 function calculateAndDisplayFinalPrice() {
     const costBreakdownItems = [];
     let baseMaterialCost = 0;
 
-    // --- NEW: Calculate wood panel costs based on material groups ---
+    // --- Calculate wood panel costs based on material groups ---
     const materialUsage = new Map();
     const mainWoodId = DOM.mainMaterialWoodCombobox.querySelector('.combobox-value').value;
     const backPanelId = DOM.mainMaterialBackPanelCombobox.querySelector('.combobox-value').value;
@@ -487,23 +301,15 @@ function calculateAndDisplayFinalPrice() {
     materialUsage.forEach((usage, materialId) => {
         const { material, totalArea } = usage;
         let sheetsNeeded = 0;
-
-        // Use AI-optimized sheet count for main material if available
-        if (materialId === mainWoodId && lastGeminiResult?.cuttingLayout?.totalSheetsUsed > 0) {
-            sheetsNeeded = lastGeminiResult.cuttingLayout.totalSheetsUsed;
-        } else {
-            const sheetAreaM2 = getSheetArea(material);
-            if (sheetAreaM2 > 0) {
-                sheetsNeeded = Math.ceil(totalArea / sheetAreaM2);
-            }
+        const sheetAreaM2 = getSheetArea(material);
+        if (sheetAreaM2 > 0) {
+            sheetsNeeded = Math.ceil(totalArea / sheetAreaM2);
         }
 
         if (sheetsNeeded > 0) {
             const cost = sheetsNeeded * material.price;
             baseMaterialCost += cost;
-            const reason = (materialId === mainWoodId && lastGeminiResult?.cuttingLayout?.totalSheetsUsed > 0)
-                ? `${sheetsNeeded} tấm (tối ưu AI) x ${material.price.toLocaleString('vi-VN')}đ`
-                : `${sheetsNeeded} tấm (ước tính từ ${totalArea.toFixed(2)}m²) x ${material.price.toLocaleString('vi-VN')}đ`;
+            const reason = `${sheetsNeeded} tấm (ước tính từ ${totalArea.toFixed(2)}m²) x ${material.price.toLocaleString('vi-VN')}đ`;
             costBreakdownItems.push({ name: `Ván: ${material.name}`, cost, reason });
         }
     });
@@ -547,8 +353,9 @@ function calculateAndDisplayFinalPrice() {
         DOM.resultsSection.classList.remove('hidden');
         DOM.resultsContent.classList.remove('hidden');
         DOM.saveItemBtn.disabled = false;
-        if (!lastGeminiResult) lastGeminiResult = {};
-        lastGeminiResult.finalPrices = { totalCost, suggestedPrice, estimatedProfit, costBreakdown: costBreakdownItems };
+        lastCalculationResult = { totalCost, suggestedPrice, estimatedProfit, costBreakdown: costBreakdownItems };
+    } else {
+        DOM.saveItemBtn.disabled = true;
     }
 }
 
@@ -560,6 +367,7 @@ export function clearCalculatorInputs() {
     DOM.itemWidthInput.value = '';
     DOM.itemHeightInput.value = '';
     DOM.itemNameInput.value = '';
+    DOM.itemDescriptionInput.value = '';
     DOM.profitMarginInput.value = '50';
     DOM.laborCostInput.value = '0';
     if (DOM.itemTypeCombobox.setValue) DOM.itemTypeCombobox.setValue('');
@@ -570,17 +378,14 @@ export function clearCalculatorInputs() {
     productComponents = [];
     renderProductComponents();
 
-    lastGeminiResult = null;
-    aiCalculationState = 'idle';
+    lastCalculationResult = null;
     if(DOM.sidebarRemoveImageBtn) DOM.sidebarRemoveImageBtn.click();
 
     if (DOM.mainMaterialWoodCombobox.setValue) DOM.mainMaterialWoodCombobox.setValue('');
     if (DOM.mainMaterialBackPanelCombobox.setValue) DOM.mainMaterialBackPanelCombobox.setValue('');
     if (DOM.edgeMaterialCombobox.setValue) DOM.edgeMaterialCombobox.setValue('');
 
-    updateAnalyzeButton();
     DOM.resultsSection.classList.add('hidden');
-    DOM.cuttingLayoutSection.classList.add('hidden');
     DOM.saveItemBtn.disabled = true;
 }
 
@@ -592,6 +397,7 @@ export function loadItemIntoForm(item) {
     DOM.itemWidthInput.value = inputs.width || '';
     DOM.itemHeightInput.value = inputs.height || '';
     DOM.itemNameInput.value = inputs.name || '';
+    DOM.itemDescriptionInput.value = inputs.description || '';
     if (DOM.itemTypeCombobox.setValue) DOM.itemTypeCombobox.setValue(inputs.productTypeId || '');
     DOM.profitMarginInput.value = inputs.profitMargin || '50';
     DOM.laborCostInput.value = inputs.laborCost || '0';
@@ -618,31 +424,16 @@ export function loadItemIntoForm(item) {
     productComponents = inputs.components ? JSON.parse(JSON.stringify(inputs.components)) : [];
     renderProductComponents();
 
-    lastGeminiResult = { cuttingLayout: item.cuttingLayout, finalPrices: item.finalPrices };
-
-    if(lastGeminiResult) {
-        aiCalculationState = lastGeminiResult.cuttingLayout ? 'done' : 'idle';
-        updateAnalyzeButton();
-        
-        DOM.resultsSection.classList.remove('hidden');
-        DOM.resultsContent.classList.remove('hidden');
-        calculateAndDisplayFinalPrice();
-        
-        if (lastGeminiResult.cuttingLayout) {
-            renderCuttingLayout(lastGeminiResult.cuttingLayout, DOM.cuttingLayoutContainer, DOM.cuttingLayoutSummary);
-            DOM.cuttingLayoutSection.classList.remove('hidden');
-        } else {
-            DOM.cuttingLayoutSection.classList.add('hidden');
-        }
-    }
-
+    // The results will be recalculated based on the loaded inputs
+    calculateAndDisplayFinalPrice();
+    
     document.querySelector('button[data-tab="calculator"]')?.click();
     window.scrollTo({ top: 0, behavior: 'smooth' });
     showToast('Đã tải dữ liệu dự án. Bạn có thể chỉnh sửa và tính toán lại.', 'info');
 }
 
 export function getCalculatorStateForSave() {
-     if (!currentUserId || !lastGeminiResult?.finalPrices) {
+     if (!currentUserId || !lastCalculationResult) {
         showToast('Không có kết quả phân tích để lưu.', 'error');
         return null;
     }
@@ -650,6 +441,7 @@ export function getCalculatorStateForSave() {
     return {
         inputs: {
             name: DOM.itemNameInput.value,
+            description: DOM.itemDescriptionInput.value,
             length: DOM.itemLengthInput.value,
             width: DOM.itemWidthInput.value,
             height: DOM.itemHeightInput.value,
@@ -663,8 +455,7 @@ export function getCalculatorStateForSave() {
             components: productComponents,
             uploadedImage: uploadedImage
         },
-        cuttingLayout: lastGeminiResult?.cuttingLayout || null,
-        finalPrices: lastGeminiResult.finalPrices,
+        finalPrices: lastCalculationResult,
     };
 }
 
@@ -770,12 +561,5 @@ export function initializeCalculator() {
             else if (accessory) e.target.value = accessory.quantity;
             runFullCalculation();
         }
-    });
-    
-    DOM.analyzeBtn.addEventListener('click', async () => {
-        if (!currentUserId) { showToast('Vui lòng đăng nhập để sử dụng tính năng này.', 'error'); return; }
-        if (!DOM.itemNameInput.value.trim()) { showToast('Vui lòng nhập Tên sản phẩm / dự án.', 'error'); return; }
-        if (!DOM.mainMaterialWoodCombobox.querySelector('.combobox-value').value) { showToast('Vui lòng chọn vật liệu Ván chính.', 'error'); return; }
-        await runAICuttingOptimization();
     });
 }
