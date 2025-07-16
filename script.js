@@ -64,14 +64,14 @@ const sampleMaterials = [
 ];
 
 const sampleComponentNames = [
-    { name: 'Hông Trái', notes: 'Vách bên trái tủ', lengthFormula: 'H', widthFormula: 'W', edge1: true, edge2: false, edge3: true, edge4: false },
-    { name: 'Hông Phải', notes: 'Vách bên phải tủ', lengthFormula: 'H', widthFormula: 'W', edge1: true, edge2: false, edge3: true, edge4: false },
-    { name: 'Đáy', notes: 'Tấm ván dưới cùng', lengthFormula: 'L - 2*t', widthFormula: 'W', edge1: true, edge2: false, edge3: false, edge4: false },
-    { name: 'Nóc', notes: 'Tấm ván trên cùng', lengthFormula: 'L - 2*t', widthFormula: 'W', edge1: true, edge2: false, edge3: false, edge4: false },
-    { name: 'Hậu', notes: 'Tấm ván phía sau', lengthFormula: 'L', widthFormula: 'H', edge1: false, edge2: false, edge3: false, edge4: false },
-    { name: 'Cánh Mở', notes: '', lengthFormula: 'H - 4', widthFormula: '(L / 2) - 4', edge1: true, edge2: true, edge3: true, edge4: true },
-    { name: 'Đợt Cố Định', notes: '', lengthFormula: 'L - 2*t', widthFormula: 'W', edge1: true, edge2: false, edge3: false, edge4: false },
-    { name: 'Vách Ngăn', notes: 'Vách chia khoang', lengthFormula: 'H - 2*t', widthFormula: 'W', edge1: true, edge2: false, edge3: false, edge4: false },
+    { name: 'Hông Trái', lengthFormula: 'H', widthFormula: 'W', edge1: true, edge2: false, edge3: true, edge4: false },
+    { name: 'Hông Phải', lengthFormula: 'H', widthFormula: 'W', edge1: true, edge2: false, edge3: true, edge4: false },
+    { name: 'Đáy', lengthFormula: 'L - 2*t', widthFormula: 'W', edge1: true, edge2: false, edge3: false, edge4: false },
+    { name: 'Nóc', lengthFormula: 'L - 2*t', widthFormula: 'W', edge1: true, edge2: false, edge3: false, edge4: false },
+    { name: 'Hậu', lengthFormula: 'L', widthFormula: 'H', edge1: false, edge2: false, edge3: false, edge4: false },
+    { name: 'Cánh Mở', lengthFormula: 'H - 4', widthFormula: '(L / 2) - 4', edge1: true, edge2: true, edge3: true, edge4: true },
+    { name: 'Đợt Cố Định', lengthFormula: 'L - 2*t', widthFormula: 'W', edge1: true, edge2: false, edge3: false, edge4: false },
+    { name: 'Vách Ngăn', lengthFormula: 'H - 2*t', widthFormula: 'W', edge1: true, edge2: false, edge3: false, edge4: false },
 ];
 
 const sampleProductTypes = [
@@ -380,8 +380,7 @@ function displayComponentNames() {
 
     if (filterText) {
         namesToProcess = namesToProcess.filter(cn => 
-            cn.name.toLowerCase().includes(filterText) || 
-            (cn.notes && cn.notes.toLowerCase().includes(filterText))
+            cn.name.toLowerCase().includes(filterText)
         );
     }
      
@@ -418,10 +417,7 @@ function renderComponentNames(names) {
     names.forEach(cn => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td data-label="Tên & Ghi chú">
-                <div>${cn.name}</div>
-                ${cn.notes ? `<small class="form-text" style="margin: 0; display: block;">${cn.notes}</small>` : ''}
-            </td>
+            <td data-label="Tên">${cn.name}</td>
             <td data-label="CT Dài">${cn.lengthFormula || '-'}</td>
             <td data-label="CT Rộng">${cn.widthFormula || '-'}</td>
             <td data-label="D1" class="text-center"><div class="edge-banding-icon ${cn.edge1 ? 'on' : 'off'}"><i class="fas fa-check"></i></div></td>
@@ -442,7 +438,6 @@ DOM.componentNameForm.addEventListener('submit', async (e) => {
     if (!currentUserId) return;
     const nameData = {
         name: DOM.componentNameForm['component-name-input'].value,
-        notes: DOM.componentNameForm['component-name-notes'].value,
         lengthFormula: DOM.componentLengthFormulaInput.value.trim(),
         widthFormula: DOM.componentWidthFormulaInput.value.trim(),
         edge1: DOM.componentNameForm['component-edge-1'].checked,
@@ -475,7 +470,6 @@ DOM.componentNamesTableBody.addEventListener('click', async (e) => {
         if (cn) {
             DOM.componentNameForm['component-name-id'].value = id;
             DOM.componentNameForm['component-name-input'].value = cn.name;
-            DOM.componentNameForm['component-name-notes'].value = cn.notes || '';
             DOM.componentLengthFormulaInput.value = cn.lengthFormula || '';
             DOM.componentWidthFormulaInput.value = cn.widthFormula || '';
             DOM.componentNameForm['component-edge-1'].checked = !!cn.edge1;

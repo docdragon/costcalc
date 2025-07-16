@@ -112,7 +112,6 @@ export const componentNamesTableBody = document.getElementById('component-names-
 export const cancelComponentNameEditBtn = document.getElementById('cancel-component-name-edit-btn');
 export const componentLengthFormulaInput = document.getElementById('component-length-formula');
 export const componentWidthFormulaInput = document.getElementById('component-width-formula');
-export const componentNameNotesInput = document.getElementById('component-name-notes');
 export const cnFilterInput = document.getElementById('cn-filter-input');
 export const cnPaginationControls = document.getElementById('cn-pagination-controls');
 export const cnPageInfo = document.getElementById('cn-page-info');
