@@ -368,6 +368,9 @@ td button { transition: color 0.2s; }
 .hover\:text-red-700:hover { color: var(--danger-hover); }
 .text-green-500 { color: var(--success-color); }
 .hover\:text-green-700:hover { color: var(--success-hover); }
+.text-purple-500 { color: #8b5cf6; }
+.hover\:text-purple-700:hover { color: #7c3aed; }
+
 
 /* --- Component Table --- */
 .component-header {
@@ -938,21 +941,18 @@ td button { transition: color 0.2s; }
 
 /* Scaled-down cutting layout for modals */
 .cutting-layout-container.in-modal {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 1.5rem;
-    overflow-x: auto;
-    margin: 0 -1rem;
-    padding: 0.5rem 1rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
 }
 .cutting-layout-container.in-modal .cutting-sheet-wrapper {
-    flex: 0 0 160px;
+    /* No flex properties needed */
 }
-.cutting-layout-container.in-modal .cutting-sheet-title {
-    font-size: 0.75rem;
-}
-.cutting-layout-container.in-modal .cutting-piece-label {
-    font-size: 7px;
+@media (min-width: 820px) {
+    .modal-content.modal-lg .cutting-layout-container.in-modal {
+        grid-template-columns: repeat(4, 1fr);
+    }
 }
 
 
@@ -1169,4 +1169,68 @@ td button { transition: color 0.2s; }
     display: flex;
     justify-content: center;
     gap: 0.3rem;
+}
+
+/* --- NEW: Tooltip Icons --- */
+.tooltip-icon-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 0.5rem;
+}
+
+.card-header > .tooltip-icon-wrapper {
+    font-size: 1rem; /* make it smaller than the header text */
+}
+
+.tooltip-icon {
+    color: var(--text-light);
+    cursor: help;
+    font-size: 0.9rem;
+    transition: color 0.2s;
+}
+.tooltip-icon:hover {
+    color: var(--primary-color);
+}
+.tooltip-text {
+    visibility: hidden;
+    width: 250px;
+    background-color: var(--text-dark);
+    color: #fff;
+    text-align: left;
+    border-radius: 6px;
+    padding: 0.75rem;
+    position: absolute;
+    z-index: 10;
+    bottom: 150%;
+    left: 50%;
+    margin-left: -125px; /* Half of width */
+    opacity: 0;
+    transition: opacity 0.3s, visibility 0.3s;
+    font-size: 0.8rem;
+    font-weight: 400;
+    line-height: 1.5;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    pointer-events: none; /* Add this so it doesn't interfere with hover state */
+}
+.tooltip-text::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: var(--text-dark) transparent transparent transparent;
+}
+.tooltip-icon-wrapper:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* to align tooltip icon with labels */
+.form-label, .card-header, .form-section-header, .table-header {
+    display: flex;
+    align-items: center;
 }

@@ -934,6 +934,7 @@ function renderSavedItems(items) {
             <td data-label="Thao tác" class="text-center">
                 <button class="load-btn text-green-500 hover:text-green-700 mr-2" data-id="${item.id}" title="Tải lại dự án này"><i class="fas fa-upload"></i></button>
                 <button class="view-btn text-blue-500 hover:text-blue-700 mr-2" data-id="${item.id}" title="Xem chi tiết"><i class="fas fa-eye"></i></button>
+                <button class="copy-btn text-purple-500 hover:text-purple-700 mr-2" data-id="${item.id}" title="Sao chép dự án"><i class="fas fa-copy"></i></button>
                 <button class="delete-saved-item-btn text-red-500 hover:text-red-700" data-id="${item.id}" title="Xóa dự án"><i class="fas fa-trash"></i></button>
             </td>
         `;
@@ -1091,18 +1092,46 @@ document.addEventListener('DOMContentLoaded', () => {
         const viewBtn = e.target.closest('.view-btn');
         const deleteBtn = e.target.closest('.delete-saved-item-btn');
         const loadBtn = e.target.closest('.load-btn');
+        const copyBtn = e.target.closest('.copy-btn');
     
         if (loadBtn) {
             const itemToLoad = localSavedItems.find(i => i.id === loadBtn.dataset.id);
             if (itemToLoad) loadItemIntoForm(itemToLoad);
         } else if (viewBtn) {
             renderItemDetailsToModal(viewBtn.dataset.id);
+        } else if (copyBtn) {
+            const id = copyBtn.dataset.id;
+            const itemToCopy = localSavedItems.find(i => i.id === id);
+            if (itemToCopy) {
+                try {
+                    const newInputs = JSON.parse(JSON.stringify(itemToCopy.inputs || {}));
+                    newInputs.name = (newInputs.name || 'Dự án') + ' (Bản sao)';
+    
+                    const newItemData = {
+                        inputs: newInputs,
+                        cuttingLayout: JSON.parse(JSON.stringify(itemToCopy.cuttingLayout || null)),
+                        finalPrices: JSON.parse(JSON.stringify(itemToCopy.finalPrices || null)),
+                        createdAt: serverTimestamp()
+                    };
+    
+                    await addDoc(savedItemsCollectionRef, newItemData);
+                    showToast('Sao chép dự án thành công!', 'success');
+                } catch (error) {
+                    showToast('Lỗi khi sao chép dự án.', 'error');
+                    console.error("Error copying item:", error);
+                }
+            }
         } else if (deleteBtn) {
             const id = deleteBtn.dataset.id;
             const confirmed = await showConfirm('Bạn có chắc chắn muốn xóa dự án này?');
             if (confirmed) {
-                await deleteDoc(doc(db, `users/${currentUserId}/savedItems`, id));
-                showToast('Xóa dự án thành công.', 'success');
+                try {
+                    await deleteDoc(doc(db, `users/${currentUserId}/savedItems`, id));
+                    showToast('Xóa dự án thành công.', 'success');
+                } catch(error) {
+                    showToast('Lỗi khi xoá dự án.', 'error');
+                    console.error("Error deleting saved item:", error);
+                }
             }
         }
     });

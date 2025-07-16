@@ -125,10 +125,13 @@
                                 </div>
                                 <div class="form-group">
                                     <div class="component-header">
-                                        <div>
-                                            <label class="form-label">Danh sách Chi tiết Cấu thành</label>
-                                            <p class="form-text" style="margin-top: -0.25rem; margin-bottom: 0.75rem;">Kích thước được tính tự động từ công thức. Bạn có thể chọn vật liệu riêng cho từng chi tiết.</p>
-                                        </div>
+                                        <label class="form-label">
+                                            Danh sách Chi tiết Cấu thành
+                                            <span class="tooltip-icon-wrapper">
+                                                <i class="fas fa-question-circle tooltip-icon"></i>
+                                                <span class="tooltip-text">Kích thước được tính tự động từ công thức. Bạn có thể chọn vật liệu riêng cho từng chi tiết.</span>
+                                            </span>
+                                        </label>
                                     </div>
                                     <div class="component-group-adder">
                                         <label class="form-label">Thêm Nhanh Cụm Chi tiết</label>
@@ -167,8 +170,13 @@
                              <div class="form-section">
                                 <h3 class="form-section-header"><span class="step-circle">3</span>Phụ kiện & Chi phí Hoàn thiện</h3>
                                 <div class="form-group">
-                                    <label for="edge-material-input" class="form-label">Vật liệu nẹp cạnh</label>
-                                    <p class="form-text" style="margin-top: -0.25rem; margin-bottom: 0.75rem;">Chọn loại nẹp để tính chi phí dán cạnh tự động. Quy tắc dán cạnh được thiết lập trong tab Cấu hình.</p>
+                                    <label for="edge-material-input" class="form-label">
+                                        Vật liệu nẹp cạnh
+                                        <span class="tooltip-icon-wrapper">
+                                            <i class="fas fa-question-circle tooltip-icon"></i>
+                                            <span class="tooltip-text">Chọn loại nẹp để tính chi phí dán cạnh tự động. Quy tắc dán cạnh được thiết lập trong tab Cấu hình.</span>
+                                        </span>
+                                    </label>
                                     <div id="edge-material-combobox" class="combobox-container">
                                         <input type="text" id="edge-material-input" class="input-style combobox-input" placeholder="Tìm hoặc chọn loại nẹp...">
                                         <input type="hidden" class="combobox-value">
@@ -178,8 +186,13 @@
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label for="material-accessories" class="form-label">Vật tư phụ & Phụ kiện khác</label>
-                                    <p class="form-text" style="margin-top: -0.25rem; margin-bottom: 0.75rem;">Thêm các phụ kiện khác như bản lề, ray trượt tại đây.</p>
+                                    <label for="material-accessories" class="form-label">
+                                        Vật tư phụ & Phụ kiện khác
+                                        <span class="tooltip-icon-wrapper">
+                                            <i class="fas fa-question-circle tooltip-icon"></i>
+                                            <span class="tooltip-text">Thêm các phụ kiện khác như bản lề, ray trượt, chi phí gia công tại đây.</span>
+                                        </span>
+                                    </label>
                                     <div class="accessory-adder">
                                         <div id="main-material-accessories-combobox" class="combobox-container">
                                             <input type="text" class="input-style combobox-input" placeholder="Tìm phụ kiện, gia công, nẹp...">
@@ -276,7 +289,7 @@
                             </div>
                             
                             <!-- Guide -->
-                            <details class="guide-details" open>
+                            <details class="guide-details">
                                 <summary>
                                     <h4><i class="fas fa-question-circle"></i> Hướng dẫn sử dụng</h4>
                                 </summary>
@@ -300,12 +313,17 @@
             <!-- Tab: Quick Calculator -->
             <div id="quick-calc-tab" class="tab-pane hidden">
                 <div class="card">
-                    <h2 class="card-header"><i class="fas fa-calculator" style="margin-right: 0.75rem;"></i>Tính Giá Nhanh</h2>
+                    <h2 class="card-header">
+                        <i class="fas fa-calculator" style="margin-right: 0.75rem;"></i>Tính Giá Nhanh
+                        <span class="tooltip-icon-wrapper">
+                            <i class="fas fa-question-circle tooltip-icon"></i>
+                            <span class="tooltip-text">Công cụ này giúp bạn ước tính nhanh chi phí dựa trên tổng số vật tư. Mọi thay đổi sẽ được tự động cập nhật vào kết quả bên dưới.</span>
+                        </span>
+                    </h2>
                     <div class="content-wrapper quick-calc-form-content">
-                        <p class="settings-intro">Công cụ này giúp bạn ước tính nhanh chi phí dựa trên tổng số vật tư. Mọi thay đổi sẽ được tự động cập nhật vào kết quả bên dưới.</p>
                         
                         <!-- Section 1: Board Materials -->
-                        <div class="form-group" style="margin-top: 0;">
+                        <div class="form-group" style="margin-top: 1rem;">
                             <h3 class="result-box-header" style="margin-bottom: 1.5rem; font-size: 1.1rem;"><span class="step-circle">1</span>Vật liệu ván</h3>
                             <div class="grid-2-col" style="gap: 0.5rem 1.25rem;">
                                 <div>
@@ -562,9 +580,14 @@
                 </div>
 
                 <div class="card" style="margin-top: 2rem;">
-                    <h2 class="card-header">Quản lý Nhóm Chi tiết (Cụm)</h2>
+                    <h2 class="card-header">
+                        Quản lý Nhóm Chi tiết (Cụm)
+                        <span class="tooltip-icon-wrapper">
+                            <i class="fas fa-question-circle tooltip-icon"></i>
+                            <span class="tooltip-text">Tạo các cụm chi tiết có thể tái sử dụng, ví dụ như "Cụm hộc kéo", để thêm nhanh vào các dự án.</span>
+                        </span>
+                    </h2>
                     <div class="content-wrapper config-form-content">
-                        <p class="settings-intro">Tạo các cụm chi tiết có thể tái sử dụng, ví dụ như "Cụm hộc kéo" hoặc "Bộ cánh cửa", để thêm nhanh vào các dự án trong Trình Báo Giá.</p>
                         <div class="config-layout">
                             <!-- Left: List of Component Groups -->
                             <div class="config-list-panel">
@@ -638,9 +661,14 @@
                             </div>
                              <div class="grid-2-col" style="margin-top: 1rem;">
                                 <div>
-                                    <label for="component-length-formula" class="form-label">Công thức tính Chiều Dài</label>
+                                    <label for="component-length-formula" class="form-label">
+                                        Công thức tính Chiều Dài
+                                        <span class="tooltip-icon-wrapper">
+                                            <i class="fas fa-question-circle tooltip-icon"></i>
+                                            <span class="tooltip-text">Biến: L, W, H, t (Dài, Rộng, Cao, Dày ván)</span>
+                                        </span>
+                                    </label>
                                     <input type="text" id="component-length-formula" class="input-style" placeholder="Vd: L - 2*t">
-                                    <p class="form-text">Biến: L, W, H, t (Dài, Rộng, Cao, Dày ván)</p>
                                 </div>
                                 <div>
                                     <label for="component-width-formula" class="form-label">Công thức tính Chiều Rộng</label>
@@ -648,8 +676,13 @@
                                 </div>
                             </div>
                             <div class="form-group" style="margin-top: 1rem;">
-                                <label class="form-label">Quy tắc dán cạnh mặc định</label>
-                                <p class="form-text" style="margin-top:-0.25rem; margin-bottom: 0.75rem;">Xác định các cạnh sẽ được tính chi phí nẹp tự động. D1/D2 là 2 cạnh dài, R1/R2 là 2 cạnh rộng của chi tiết.</p>
+                                <label class="form-label">
+                                    Quy tắc dán cạnh mặc định
+                                    <span class="tooltip-icon-wrapper">
+                                        <i class="fas fa-question-circle tooltip-icon"></i>
+                                        <span class="tooltip-text">Xác định các cạnh sẽ được tính chi phí nẹp tự động. D1/D2 là 2 cạnh dài, R1/R2 là 2 cạnh rộng của chi tiết.</span>
+                                    </span>
+                                </label>
                                 <div class="edge-banding-rules">
                                     <label><input type="checkbox" id="component-edge-1"> Cạnh dài 1</label>
                                     <label><input type="checkbox" id="component-edge-2"> Cạnh dài 2</label>
