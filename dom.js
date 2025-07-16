@@ -134,6 +134,10 @@ export const cgComponentsList = document.getElementById('cg-components-list');
 // --- Saved Projects Tab ---
 export const savedItemsTableBody = document.getElementById('saved-items-table-body');
 export const savedItemsFilterInput = document.getElementById('saved-items-filter-input');
+export const savedItemsPaginationControls = document.getElementById('saved-items-pagination-controls');
+export const siPageInfo = document.getElementById('si-page-info');
+export const siPrevPageBtn = document.getElementById('si-prev-page-btn');
+export const siNextPageBtn = document.getElementById('si-next-page-btn');
 
 // --- Modals ---
 export const loginModal = document.getElementById('login-modal');

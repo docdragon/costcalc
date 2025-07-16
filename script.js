@@ -50,6 +50,8 @@ let currentPage = 1;
 const itemsPerPage = 10;
 let cnCurrentPage = 1;
 const cnItemsPerPage = 10;
+let siCurrentPage = 1;
+const siItemsPerPage = 5; // Projects are taller, so fewer per page
 
 
 // --- Sample Data for New Users ---
@@ -929,8 +931,34 @@ function displaySavedItems() {
         });
     }
 
-    renderSavedItems(itemsToProcess);
+    // Sort the entire filtered list by creation date
+    itemsToProcess.sort((a, b) => (b.createdAt?.toMillis ? b.createdAt.toMillis() : 0) - (a.createdAt?.toMillis ? a.createdAt.toMillis() : 0));
+
+    // Pagination
+    const totalItems = itemsToProcess.length;
+    const totalPages = Math.ceil(totalItems / siItemsPerPage) || 1;
+    if (siCurrentPage > totalPages) siCurrentPage = totalPages;
+
+    const startIndex = (siCurrentPage - 1) * siItemsPerPage;
+    const paginatedItems = itemsToProcess.slice(startIndex, startIndex + siItemsPerPage);
+
+    renderSavedItems(paginatedItems);
+    updateSavedItemsPaginationControls(totalPages);
 }
+
+function updateSavedItemsPaginationControls(totalPages) {
+    if (!DOM.savedItemsPaginationControls) return;
+    DOM.savedItemsPaginationControls.dataset.totalPages = totalPages;
+    if (totalPages <= 1) {
+        DOM.savedItemsPaginationControls.classList.add('hidden');
+        return;
+    }
+    DOM.savedItemsPaginationControls.classList.remove('hidden');
+    DOM.siPageInfo.textContent = `Trang ${siCurrentPage} / ${totalPages}`;
+    DOM.siPrevPageBtn.disabled = siCurrentPage === 1;
+    DOM.siNextPageBtn.disabled = siCurrentPage === totalPages;
+}
+
 
 function renderSavedItems(items) {
     DOM.savedItemsTableBody.innerHTML = '';
@@ -938,7 +966,6 @@ function renderSavedItems(items) {
         DOM.savedItemsTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 1rem; color: var(--text-light);">Không tìm thấy dự án nào.</td></tr>`;
         return;
     }
-    items.sort((a, b) => (b.createdAt?.toMillis ? b.createdAt.toMillis() : 0) - (a.createdAt?.toMillis ? a.createdAt.toMillis() : 0));
 
     items.forEach(item => {
         const tr = document.createElement('tr');
@@ -1175,7 +1202,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     if (DOM.savedItemsFilterInput) {
-        DOM.savedItemsFilterInput.addEventListener('input', debounce(displaySavedItems, 300));
+        DOM.savedItemsFilterInput.addEventListener('input', debounce(() => {
+            siCurrentPage = 1;
+            displaySavedItems();
+        }, 300));
+    }
+
+    if (DOM.siPrevPageBtn) {
+        DOM.siPrevPageBtn.addEventListener('click', () => {
+            if (siCurrentPage > 1) {
+                siCurrentPage--;
+                displaySavedItems();
+            }
+        });
+    }
+
+    if (DOM.siNextPageBtn) {
+        DOM.siNextPageBtn.addEventListener('click', () => {
+            const totalPages = parseInt(DOM.savedItemsPaginationControls.dataset.totalPages, 10) || 1;
+            if (siCurrentPage < totalPages) {
+                siCurrentPage++;
+                displaySavedItems();
+            }
+        });
     }
 
     // Component Name pagination and filter listeners
