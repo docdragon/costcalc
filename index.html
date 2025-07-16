@@ -72,23 +72,23 @@
                             <!-- Step 1: Product Info -->
                             <div class="form-section" style="border-top: none; padding-top: 0; margin-top: 0;">
                                 <h3 class="form-section-header"><span class="step-circle">1</span>Thông tin & Kích thước Sản phẩm</h3>
-                                <div class="form-group">
-                                    <label for="item-name" class="form-label">Tên sản phẩm / dự án</label>
-                                    <input type="text" id="item-name" class="input-style" placeholder="Vd: Tủ bếp dưới chân sắt">
+                                <div class="grid-2-col">
+                                    <div class="form-group" style="margin-top:0;">
+                                        <label for="item-name" class="form-label">Tên sản phẩm / dự án</label>
+                                        <input type="text" id="item-name" class="input-style" placeholder="Vd: Tủ bếp dưới chân sắt">
+                                    </div>
+                                    <div class="form-group" style="margin-top:0;">
+                                         <label for="item-type-input" class="form-label">Loại sản phẩm</label>
+                                         <div id="item-type-combobox" class="combobox-container">
+                                             <input type="text" id="item-type-input" class="input-style combobox-input" placeholder="Tìm hoặc chọn loại sản phẩm...">
+                                             <input type="hidden" id="item-type" class="combobox-value">
+                                             <div class="combobox-options-wrapper">
+                                                 <ul class="combobox-options"></ul>
+                                             </div>
+                                         </div>
+                                    </div>
                                 </div>
-                                 <div class="grid-2-col">
-                                     <div class="form-group" style="margin-top:0;">
-                                        <label for="item-type" class="form-label">Loại sản phẩm</label>
-                                        <select id="item-type" class="input-style">
-                                            <!-- Dynamically populated by JS -->
-                                        </select>
-                                     </div>
-                                     <div class="form-group" style="margin-top:0;">
-                                         <label for="item-quantity" class="form-label">Số lượng Sản phẩm</label>
-                                         <input type="text" inputmode="decimal" id="item-quantity" class="input-style" value="1" min="1">
-                                     </div>
-                                 </div>
-                                <div class="grid-3-col">
+                                <div class="grid-3-col" style="margin-top: 1.25rem;">
                                     <div><label for="item-length" class="form-label">Dài (mm)</label><input type="text" inputmode="decimal" id="item-length" class="input-style" placeholder="Vd: 2000"></div>
                                     <div><label for="item-width" class="form-label">Rộng (mm)</label><input type="text" inputmode="decimal" id="item-width" class="input-style" placeholder="Vd: 600"></div>
                                     <div><label for="item-height" class="form-label">Cao (mm)</label><input type="text" inputmode="decimal" id="item-height" class="input-style" placeholder="Vd: 850"></div>
@@ -680,7 +680,7 @@
                                 <table class="data-table">
                                     <thead>
                                         <tr>
-                                            <th class="th-style" style="width: 25%;">Tên</th>
+                                            <th class="th-style" style="width: 25%;">Tên & Ghi chú</th>
                                             <th class="th-style">CT Dài</th>
                                             <th class="th-style">CT Rộng</th>
                                             <th class="th-style text-center" colspan="4">Dán cạnh (D1-D2-R1-R2)</th>
@@ -748,19 +748,22 @@
 
     <!-- Modals -->
     <div id="login-modal" class="modal-overlay hidden">
-        <div class="modal-content">
+        <div class="modal-content login-modal-content">
             <button class="modal-close-btn">&times;</button>
-            <h3 class="modal-title">Đăng nhập</h3>
-            <p class="form-text" style="text-align: center; margin-top: -1.25rem; margin-bottom: 1.5rem;">Lưu trữ và quản lý mọi dự án của bạn ở một nơi.</p>
+            <div class="login-modal-header">
+                <i class="fas fa-drafting-compass logo-icon"></i>
+                <h3 class="modal-title">Chào mừng tới CostCraft AI</h3>
+            </div>
+            <p class="modal-subtitle">Đăng nhập để lưu trữ, quản lý và tối ưu hóa các dự án của bạn một cách chuyên nghiệp.</p>
             <div id="login-error" class="error-message"></div>
+            <button id="google-login-btn" class="google-btn">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" height="18">
+                <span>Đăng nhập với Google</span>
+            </button>
             <div class="remember-me-container">
                 <input type="checkbox" id="remember-me-checkbox" checked>
                 <label for="remember-me-checkbox">Duy trì đăng nhập</label>
             </div>
-            <button id="google-login-btn" class="google-btn">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18" height="18">
-                Đăng nhập với Google
-            </button>
         </div>
     </div>
     

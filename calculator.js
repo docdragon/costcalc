@@ -86,7 +86,7 @@ function updateComponentCalculationsAndRender() {
     runFullCalculation();
 }
 
-function loadComponentsByProductType(productTypeId) {
+export function loadComponentsByProductType(productTypeId) {
     const productType = localProductTypes.find(pt => pt.id === productTypeId);
     productComponents = [];
     if (productType && productType.components) {
@@ -374,7 +374,7 @@ async function runAICuttingOptimization() {
 
     const productInfoForAI = {
         name: DOM.itemNameInput.value,
-        type: DOM.itemTypeSelect.options[DOM.itemTypeSelect.selectedIndex]?.text,
+        type: DOM.itemTypeCombobox.querySelector('.combobox-input').value,
         length: DOM.itemLengthInput.value,
         width: DOM.itemWidthInput.value,
         height: DOM.itemHeightInput.value,
@@ -443,7 +443,6 @@ async function runAICuttingOptimization() {
 function calculateAndDisplayFinalPrice() {
     const costBreakdownItems = [];
     let baseMaterialCost = 0;
-    const productQuantity = parseInt(DOM.itemQuantityInput.value) || 1;
 
     // --- NEW: Calculate wood panel costs based on material groups ---
     const materialUsage = new Map();
@@ -533,13 +532,9 @@ function calculateAndDisplayFinalPrice() {
     const suggestedPrice = totalCost * (1 + profitMargin / 100);
     const estimatedProfit = suggestedPrice - totalCost;
     
-    const finalTotalCost = totalCost * productQuantity;
-    const finalSuggestedPrice = suggestedPrice * productQuantity;
-    const finalEstimatedProfit = estimatedProfit * productQuantity;
-    
-    DOM.totalCostValue.textContent = finalTotalCost.toLocaleString('vi-VN') + 'đ';
-    DOM.suggestedPriceValue.textContent = finalSuggestedPrice.toLocaleString('vi-VN') + 'đ';
-    DOM.estimatedProfitValue.textContent = finalEstimatedProfit.toLocaleString('vi-VN') + 'đ';
+    DOM.totalCostValue.textContent = totalCost.toLocaleString('vi-VN') + 'đ';
+    DOM.suggestedPriceValue.textContent = suggestedPrice.toLocaleString('vi-VN') + 'đ';
+    DOM.estimatedProfitValue.textContent = estimatedProfit.toLocaleString('vi-VN') + 'đ';
     DOM.priceSummaryContainer.classList.remove('hidden');
 
     renderCostBreakdown(costBreakdownItems, DOM.costBreakdownContainer);
@@ -561,10 +556,9 @@ export function clearCalculatorInputs() {
     DOM.itemWidthInput.value = '';
     DOM.itemHeightInput.value = '';
     DOM.itemNameInput.value = '';
-    DOM.itemQuantityInput.value = '1';
     DOM.profitMarginInput.value = '50';
     DOM.laborCostInput.value = '0';
-    DOM.itemTypeSelect.value = '';
+    if (DOM.itemTypeCombobox.setValue) DOM.itemTypeCombobox.setValue('');
     
     addedAccessories = [];
     renderAccessories();
@@ -594,8 +588,7 @@ export function loadItemIntoForm(item) {
     DOM.itemWidthInput.value = inputs.width || '';
     DOM.itemHeightInput.value = inputs.height || '';
     DOM.itemNameInput.value = inputs.name || '';
-    DOM.itemQuantityInput.value = inputs.quantity || '1';
-    DOM.itemTypeSelect.value = inputs.productTypeId || '';
+    if (DOM.itemTypeCombobox.setValue) DOM.itemTypeCombobox.setValue(inputs.productTypeId || '');
     DOM.profitMarginInput.value = inputs.profitMargin || '50';
     DOM.laborCostInput.value = inputs.laborCost || '0';
 
@@ -653,7 +646,6 @@ export function getCalculatorStateForSave() {
     return {
         inputs: {
             name: DOM.itemNameInput.value,
-            quantity: DOM.itemQuantityInput.value,
             length: DOM.itemLengthInput.value,
             width: DOM.itemWidthInput.value,
             height: DOM.itemHeightInput.value,
@@ -676,10 +668,8 @@ export function getCalculatorStateForSave() {
 // --- Initialization ---
 
 export function initializeCalculator() {
-    // Event Listeners for main calculator
-    DOM.itemTypeSelect.addEventListener('change', (e) => loadComponentsByProductType(e.target.value));
     
-    [DOM.itemLengthInput, DOM.itemWidthInput, DOM.itemHeightInput, DOM.itemQuantityInput].forEach(input => input.addEventListener('input', debounce(updateComponentCalculationsAndRender, 300)));
+    [DOM.itemLengthInput, DOM.itemWidthInput, DOM.itemHeightInput].forEach(input => input.addEventListener('input', debounce(updateComponentCalculationsAndRender, 300)));
     [DOM.laborCostInput, DOM.profitMarginInput].forEach(input => input.addEventListener('input', runFullCalculation));
     
     DOM.mainMaterialWoodCombobox.addEventListener('change', updateComponentCalculationsAndRender);

@@ -719,6 +719,48 @@ td button { transition: color 0.2s; }
     accent-color: var(--primary-color);
     cursor: pointer;
 }
+.login-modal-content {
+    padding: 2.5rem;
+    text-align: center;
+}
+.login-modal-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+.login-modal-header .logo-icon {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    margin-right: 0;
+}
+.login-modal-content .modal-title {
+    margin-bottom: 0;
+    font-size: 1.375rem;
+}
+.modal-subtitle {
+    color: var(--text-light);
+    margin-top: 0;
+    margin-bottom: 2rem;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+.login-modal-content .google-btn {
+    width: 100%;
+    margin-bottom: 1rem;
+    padding: 0.75rem 1.2rem;
+    font-size: 0.95rem;
+}
+.login-modal-content .google-btn span {
+    flex-grow: 1;
+    text-align: center;
+}
+.login-modal-content .remember-me-container {
+    justify-content: center;
+    margin-top: 1.5rem;
+    margin-bottom: 0;
+}
 
 /* --- Project Details Modal Grid --- */
 .modal-details-grid {

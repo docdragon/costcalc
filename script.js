@@ -14,7 +14,8 @@ import { initializeQuickCalc, updateQuickCalcMaterials } from './quick-calc.js';
 import * as DOM from './dom.js';
 import { 
     initializeCalculator, updateCalculatorData, setUploadedImage,
-    loadItemIntoForm, clearCalculatorInputs, getCalculatorStateForSave
+    loadItemIntoForm, clearCalculatorInputs, getCalculatorStateForSave,
+    loadComponentsByProductType
 } from './calculator.js';
 import { getSheetArea, getBoardThickness } from './utils.js';
 
@@ -417,7 +418,10 @@ function renderComponentNames(names) {
     names.forEach(cn => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td data-label="Tên">${cn.name}</td>
+            <td data-label="Tên & Ghi chú">
+                <div>${cn.name}</div>
+                ${cn.notes ? `<small class="form-text" style="margin: 0; display: block;">${cn.notes}</small>` : ''}
+            </td>
             <td data-label="CT Dài">${cn.lengthFormula || '-'}</td>
             <td data-label="CT Rộng">${cn.widthFormula || '-'}</td>
             <td data-label="D1" class="text-center"><div class="edge-banding-icon ${cn.edge1 ? 'on' : 'off'}"><i class="fas fa-check"></i></div></td>
@@ -885,13 +889,9 @@ DOM.cgComponentsList.addEventListener('click', async e => {
 
 // --- Populate Dropdowns ---
 function populateProductTypeDropdown() {
-    DOM.itemTypeSelect.innerHTML = '<option value="">-- Chọn loại sản phẩm --</option>';
-    localProductTypes.forEach(pt => {
-        const option = document.createElement('option');
-        option.value = pt.id;
-        option.textContent = pt.name;
-        DOM.itemTypeSelect.appendChild(option);
-    });
+    if (DOM.itemTypeCombobox?.updateComboboxData) {
+        DOM.itemTypeCombobox.updateComboboxData(localProductTypes);
+    }
 }
 
 function populateComboboxes() {
@@ -926,24 +926,16 @@ function renderSavedItems(items) {
         const tr = document.createElement('tr');
         const itemName = item?.inputs?.name || 'Dự án không tên';
         const createdAt = item?.createdAt ? new Date(item.createdAt.toDate()).toLocaleString('vi-VN') : 'Không rõ';
-        const quantity = item?.inputs?.quantity || 1;
 
-        const singleItemPrice = item.finalPrices?.suggestedPrice || 0;
-        const singleItemCost = item.finalPrices?.totalCost || 0;
-        const singleItemProfit = item.finalPrices?.estimatedProfit || 0;
-
-        const totalSuggestedPrice = singleItemPrice * quantity;
-        const totalCost = singleItemCost * quantity;
-        const totalProfit = singleItemProfit * quantity;
+        const suggestedPrice = item.finalPrices?.suggestedPrice || 0;
+        const totalCost = item.finalPrices?.totalCost || 0;
+        const estimatedProfit = item.finalPrices?.estimatedProfit || 0;
 
         tr.innerHTML = `
-            <td data-label="Tên dự án">
-                ${itemName}
-                ${quantity > 1 ? `<span class="tag-type" style="margin-left: 0.5rem;">SL: ${quantity}</span>` : ''}
-            </td>
-            <td data-label="Giá Bán" class="font-semibold">${totalSuggestedPrice.toLocaleString('vi-VN')}đ</td>
+            <td data-label="Tên dự án">${itemName}</td>
+            <td data-label="Giá Bán" class="font-semibold">${suggestedPrice.toLocaleString('vi-VN')}đ</td>
             <td data-label="Chi Phí">${totalCost.toLocaleString('vi-VN')}đ</td>
-            <td data-label="Lợi Nhuận">${totalProfit.toLocaleString('vi-VN')}đ</td>
+            <td data-label="Lợi Nhuận">${estimatedProfit.toLocaleString('vi-VN')}đ</td>
             <td data-label="Ngày tạo">${createdAt}</td>
             <td data-label="Thao tác" class="text-center">
                 <button class="load-btn text-green-500 hover:text-green-700 mr-2" data-id="${item.id}" title="Tải lại dự án này"><i class="fas fa-upload"></i></button>
@@ -961,11 +953,10 @@ function renderItemDetailsToModal(itemId) {
 
     const { inputs = {}, finalPrices = {}, cuttingLayout = {} } = item;
     const costBreakdown = finalPrices.costBreakdown || [];
-    const quantity = parseInt(inputs.quantity) || 1;
     
-    const finalSuggestedPrice = (finalPrices.suggestedPrice || 0) * quantity;
-    const finalTotalCost = (finalPrices.totalCost || 0) * quantity;
-    const finalEstimatedProfit = (finalPrices.estimatedProfit || 0) * quantity;
+    const suggestedPrice = finalPrices.suggestedPrice || 0;
+    const totalCost = finalPrices.totalCost || 0;
+    const estimatedProfit = finalPrices.estimatedProfit || 0;
 
     DOM.viewItemTitle.textContent = `Chi tiết dự án: ${inputs.name || 'Không tên'}`;
     const mainWood = allLocalMaterials.find(m => m.id === inputs.mainWoodId)?.name || 'Không rõ';
@@ -1023,31 +1014,31 @@ function renderItemDetailsToModal(itemId) {
     DOM.viewItemContent.innerHTML = `
         <div class="final-price-recommendation">
             <div class="final-price-main">
-                <div class="final-price-label">Giá Bán Đề Xuất (Tổng cho ${quantity} sản phẩm)</div>
-                <div class="final-price-value">${finalSuggestedPrice.toLocaleString('vi-VN')}đ</div>
+                <div class="final-price-label">Giá Bán Đề Xuất</div>
+                <div class="final-price-value">${suggestedPrice.toLocaleString('vi-VN')}đ</div>
             </div>
             <div class="final-price-breakdown">
-                <div><span class="breakdown-label">Tổng Chi Phí</span><span class="breakdown-value">${finalTotalCost.toLocaleString('vi-VN')}đ</span></div>
-                <div><span class="breakdown-label">Lợi Nhuận</span><span class="breakdown-value">${finalEstimatedProfit.toLocaleString('vi-VN')}đ</span></div>
+                <div><span class="breakdown-label">Tổng Chi Phí</span><span class="breakdown-value">${totalCost.toLocaleString('vi-VN')}đ</span></div>
+                <div><span class="breakdown-label">Lợi Nhuận</span><span class="breakdown-value">${estimatedProfit.toLocaleString('vi-VN')}đ</span></div>
                 <div><span class="breakdown-label">Biên Lợi Nhuận</span><span class="breakdown-value">${inputs.profitMargin || 'N/A'}%</span></div>
             </div>
         </div>
         <div class="modal-details-grid">
             <div class="modal-details-col">
-                <h4><i class="fas fa-ruler-combined"></i>Thông số & Vật tư chính (1 sản phẩm)</h4>
+                <h4><i class="fas fa-ruler-combined"></i>Thông số & Vật tư chính</h4>
                 <ul>
                     <li><strong>Kích thước (D x R x C):</strong> ${inputs.length || 'N/A'} x ${inputs.width || 'N/A'} x ${inputs.height || 'N/A'} mm</li>
                     <li><strong>Ván chính:</strong> ${mainWood}</li>
                     <li><strong>Ván hậu:</strong> ${backPanel}</li>
                     <li><strong>Chi phí nhân công:</strong> ${(Number(inputs.laborCost) || 0).toLocaleString('vi-VN')}đ</li>
                 </ul>
-                <h4><i class="fas fa-cogs"></i>Phụ kiện & Vật tư khác (1 sản phẩm)</h4>
+                <h4><i class="fas fa-cogs"></i>Phụ kiện & Vật tư khác</h4>
                 ${accessoriesHtml}
             </div>
             <div class="modal-details-col">
                 ${breakdownHtml}
                 <div class="result-box">
-                    <h3 class="result-box-header"><i class="fas fa-th-large"></i> Sơ đồ Cắt ván Gợi ý (1 sản phẩm)</h3>
+                    <h3 class="result-box-header"><i class="fas fa-th-large"></i> Sơ đồ Cắt ván Gợi ý</h3>
                     ${layoutHtml}
                 </div>
             </div>
@@ -1071,6 +1062,11 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeQuickCalc(localMaterials, showToast);
 
     // Main form Comboboxes
+    if (DOM.itemTypeCombobox) {
+        initializeCombobox(DOM.itemTypeCombobox, [], (selectedId) => {
+            loadComponentsByProductType(selectedId);
+        }, { placeholder: "Tìm hoặc chọn loại sản phẩm...", allowEmpty: true, emptyOptionText: '-- Chọn loại sản phẩm --' });
+    }
     initializeCombobox(DOM.mainMaterialWoodCombobox, [], null, { placeholder: "Tìm hoặc chọn ván chính..." });
     initializeCombobox(DOM.mainMaterialBackPanelCombobox, [], null, { placeholder: "Tìm ván hậu...", allowEmpty: true, emptyOptionText: 'Dùng chung ván chính' });
     initializeCombobox(DOM.edgeMaterialCombobox, [], null, { placeholder: "Tìm hoặc chọn loại nẹp..." });
