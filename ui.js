@@ -295,25 +295,34 @@ export function initializeCombobox(container, optionsData, onSelect, config = {}
 }
 
 /**
- * Safely evaluates a mathematical expression string.
+ * Safely evaluates a mathematical expression string, supporting Vietnamese number formats.
  */
 function evaluateMathExpression(expr) {
-    if (/[^0-9\s.()+\-*/]/.test(expr)) {
+    if (typeof expr !== 'string') return null;
+    // Before evaluation, standardize the expression for the JS engine.
+    // 1. Remove thousand separators (dots).
+    // 2. Convert comma decimal separator to a dot.
+    const standardExpr = expr.replace(/\./g, '').replace(/,/g, '.');
+    if (/[^0-9\s.()+\-*/]/.test(standardExpr)) {
         return null;
     }
     try {
-        const result = new Function(`return ${expr}`)();
+        // Use the Function constructor for safe evaluation of the sanitized string.
+        const result = new Function(`return ${standardExpr}`)();
         if (typeof result === 'number' && isFinite(result)) {
             return result;
         }
         return null;
     } catch (e) {
+        // Errors in evaluation (e.g., syntax error) will be caught.
         return null;
     }
 }
 
+
 /**
- * Initializes number inputs to evaluate math expressions on Enter.
+ * Initializes number inputs to evaluate math expressions on Enter,
+ * handling and formatting with Vietnamese conventions.
  */
 export function initializeMathInput(selector) {
     document.body.addEventListener('keydown', e => {
@@ -324,12 +333,19 @@ export function initializeMathInput(selector) {
             const result = evaluateMathExpression(expression);
 
             if (result !== null) {
-                input.value = Number(result.toFixed(4)); 
+                // toFixed handles floating point issues & limits decimals.
+                // parseFloat(...).toString() removes trailing zeros (e.g., 5.5000 -> "5.5").
+                const resultString = parseFloat(result.toFixed(4)).toString();
+                // Format the result back to using a comma for the decimal separator.
+                input.value = resultString.replace('.', ',');
+                
+                // Dispatch the 'input' event to trigger calculations and other formatting.
                 input.dispatchEvent(new Event('input', { bubbles: true }));
             }
         }
     });
 }
+
 
 /**
  * Creates a debounced function that delays invoking func until after wait milliseconds have elapsed since the last time the debounced function was invoked.

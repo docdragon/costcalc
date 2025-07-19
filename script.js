@@ -927,7 +927,7 @@ function displaySavedItems() {
     if (filterText) {
         itemsToProcess = itemsToProcess.filter(item => {
             const inputs = item.inputs || {};
-            
+
             // 1. Check project name and description
             const name = (inputs.name || '').toLowerCase();
             const description = (inputs.description || '').toLowerCase();
@@ -935,7 +935,7 @@ function displaySavedItems() {
                 return true;
             }
 
-            // 2. Check material names AND notes
+            // 2. Check all materials used in the project
             const usedMaterialIds = new Set();
             if (inputs.mainWoodId) usedMaterialIds.add(inputs.mainWoodId);
             if (inputs.backPanelId) usedMaterialIds.add(inputs.backPanelId);
@@ -953,7 +953,7 @@ function displaySavedItems() {
                 });
             }
             
-            // Now check if any of these materials' names or notes match the filter
+            // Check if any of these materials' names or notes match the filter
             for (const materialId of usedMaterialIds) {
                 const material = allLocalMaterials.find(m => m.id === materialId);
                 if (material) {
