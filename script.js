@@ -925,9 +925,41 @@ function displaySavedItems() {
     if (filterText) {
         itemsToProcess = itemsToProcess.filter(item => {
             const inputs = item.inputs || {};
+            
+            // 1. Check project name and description
             const name = (inputs.name || '').toLowerCase();
             const description = (inputs.description || '').toLowerCase();
-            return name.includes(filterText) || description.includes(filterText);
+            if (name.includes(filterText) || description.includes(filterText)) {
+                return true;
+            }
+
+            // 2. Check material names
+            const usedMaterialIds = new Set();
+            if (inputs.mainWoodId) usedMaterialIds.add(inputs.mainWoodId);
+            if (inputs.backPanelId) usedMaterialIds.add(inputs.backPanelId);
+            if (inputs.edgeMaterialId) usedMaterialIds.add(inputs.edgeMaterialId);
+            
+            if (inputs.accessories && Array.isArray(inputs.accessories)) {
+                inputs.accessories.forEach(acc => {
+                    if (acc.id) usedMaterialIds.add(acc.id);
+                });
+            }
+
+            if (inputs.components && Array.isArray(inputs.components)) {
+                inputs.components.forEach(comp => {
+                    if (comp.materialId) usedMaterialIds.add(comp.materialId);
+                });
+            }
+            
+            // Now check if any of these materials' names match the filter
+            for (const materialId of usedMaterialIds) {
+                const material = allLocalMaterials.find(m => m.id === materialId);
+                if (material && material.name.toLowerCase().includes(filterText)) {
+                    return true;
+                }
+            }
+
+            return false;
         });
     }
 
