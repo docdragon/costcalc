@@ -349,6 +349,30 @@ export function debounce(func, wait) {
     };
 }
 
+/**
+ * Initializes automatic currency formatting for specified input fields.
+ * @param {string} selector - A CSS selector for the input fields.
+ */
+export function initializeCurrencyInputFormatting(selector) {
+    const formatAndSet = (input) => {
+        // Get raw number string
+        let value = input.value.replace(/[^0-9]/g, '');
+        if (value) {
+            const numberValue = parseInt(value, 10);
+            // Format and set
+            input.value = numberValue.toLocaleString('vi-VN');
+        } else {
+            input.value = '';
+        }
+    };
+    
+    document.body.addEventListener('input', (e) => {
+        if (e.target.matches(selector)) {
+            formatAndSet(e.target);
+        }
+    });
+}
+
 
 // --- Modal & Auth Button Listeners ---
 async function handleGoogleLogin() {

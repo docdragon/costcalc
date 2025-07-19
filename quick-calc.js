@@ -140,9 +140,9 @@ export function initializeQuickCalc(initialLocalMaterials, showToast) {
         const estimatedProfit = suggestedPrice - totalCost;
 
         // 6. Display results
-        DOM.qcTotalCostValue.textContent = totalCost.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + 'đ';
-        DOM.qcSuggestedPriceValue.textContent = suggestedPrice.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + 'đ';
-        DOM.qcEstimatedProfitValue.textContent = estimatedProfit.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + 'đ';
+        DOM.qcTotalCostValue.textContent = Math.round(totalCost).toLocaleString('vi-VN') + 'đ';
+        DOM.qcSuggestedPriceValue.textContent = Math.round(suggestedPrice).toLocaleString('vi-VN') + 'đ';
+        DOM.qcEstimatedProfitValue.textContent = Math.round(estimatedProfit).toLocaleString('vi-VN') + 'đ';
     }
 
     // --- Event Listeners & Initialization ---

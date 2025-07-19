@@ -234,7 +234,7 @@ function renderCostBreakdown(breakdown, container) {
         breakdownHtml += `
             <li>
                 <span class="cost-item-name">${item.name}</span>
-                <span class="cost-item-value">${(item.cost || 0).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}đ</span>
+                <span class="cost-item-value">${(Math.round(item.cost || 0)).toLocaleString('vi-VN')}đ</span>
                 ${item.reason ? `<p class="cost-item-reason">${item.reason}</p>` : ''}
             </li>
         `;
@@ -341,10 +341,14 @@ function calculateAndDisplayFinalPrice() {
     const totalCost = baseMaterialCost + laborCost;
     const suggestedPrice = totalCost * (1 + profitMargin / 100);
     const estimatedProfit = suggestedPrice - totalCost;
+
+    const roundedTotalCost = Math.round(totalCost);
+    const roundedSuggestedPrice = Math.round(suggestedPrice);
+    const roundedEstimatedProfit = Math.round(estimatedProfit);
     
-    DOM.totalCostValue.textContent = totalCost.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + 'đ';
-    DOM.suggestedPriceValue.textContent = suggestedPrice.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + 'đ';
-    DOM.estimatedProfitValue.textContent = estimatedProfit.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + 'đ';
+    DOM.totalCostValue.textContent = roundedTotalCost.toLocaleString('vi-VN') + 'đ';
+    DOM.suggestedPriceValue.textContent = roundedSuggestedPrice.toLocaleString('vi-VN') + 'đ';
+    DOM.estimatedProfitValue.textContent = roundedEstimatedProfit.toLocaleString('vi-VN') + 'đ';
     DOM.priceSummaryContainer.classList.remove('hidden');
 
     renderCostBreakdown(costBreakdownItems, DOM.costBreakdownContainer);
@@ -354,7 +358,12 @@ function calculateAndDisplayFinalPrice() {
         DOM.resultsContent.classList.remove('hidden');
         DOM.saveItemBtn.disabled = false;
         DOM.updateItemBtn.disabled = false;
-        lastCalculationResult = { totalCost, suggestedPrice, estimatedProfit, costBreakdown: costBreakdownItems };
+        lastCalculationResult = { 
+            totalCost: roundedTotalCost, 
+            suggestedPrice: roundedSuggestedPrice, 
+            estimatedProfit: roundedEstimatedProfit, 
+            costBreakdown: costBreakdownItems 
+        };
     } else {
         DOM.saveItemBtn.disabled = true;
         DOM.updateItemBtn.disabled = true;
@@ -404,6 +413,9 @@ export function loadItemIntoForm(item) {
     if (DOM.itemTypeCombobox.setValue) DOM.itemTypeCombobox.setValue(inputs.productTypeId || '');
     DOM.profitMarginInput.value = inputs.profitMargin || '50';
     DOM.laborCostInput.value = inputs.laborCost || '0';
+    // Manually trigger formatting for currency inputs after loading data
+    if(DOM.laborCostInput.value) DOM.laborCostInput.dispatchEvent(new Event('input'));
+
 
     if (DOM.mainMaterialWoodCombobox.setValue) DOM.mainMaterialWoodCombobox.setValue(inputs.mainWoodId || '');
     if (DOM.mainMaterialBackPanelCombobox.setValue) DOM.mainMaterialBackPanelCombobox.setValue(inputs.backPanelId || '');

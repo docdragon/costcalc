@@ -8,7 +8,7 @@ import {
 import { 
     openModal, closeModal, showConfirm, showToast, updateUIVisibility, 
     initializeImageUploader, initializeTabs, initializeModals, initializeMathInput,
-    initializeCombobox, debounce
+    initializeCombobox, debounce, initializeCurrencyInputFormatting
 } from './ui.js';
 import { initializeQuickCalc, updateQuickCalcMaterials } from './quick-calc.js';
 import * as DOM from './dom.js';
@@ -331,6 +331,8 @@ DOM.materialsTableBody.addEventListener('click', async e => {
             DOM.materialForm['material-notes'].value = material.notes;
             DOM.materialForm.querySelector('button[type="submit"]').textContent = 'Cập nhật Vật tư';
             DOM.cancelEditBtn.classList.remove('hidden');
+            // Manually trigger formatting for currency input
+            if(DOM.materialForm['material-price'].value) DOM.materialForm['material-price'].dispatchEvent(new Event('input'));
         }
     } else if (deleteBtn) {
         const id = deleteBtn.dataset.id;
@@ -1024,9 +1026,9 @@ function renderSavedItems(items) {
                 </div>
                 ${descriptionHtml}
             </td>
-            <td data-label="Giá Bán" class="font-semibold">${suggestedPrice.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}đ</td>
-            <td data-label="Chi Phí">${totalCost.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}đ</td>
-            <td data-label="Lợi Nhuận">${estimatedProfit.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}đ</td>
+            <td data-label="Giá Bán" class="font-semibold">${suggestedPrice.toLocaleString('vi-VN')}đ</td>
+            <td data-label="Chi Phí">${totalCost.toLocaleString('vi-VN')}đ</td>
+            <td data-label="Lợi Nhuận">${estimatedProfit.toLocaleString('vi-VN')}đ</td>
             <td data-label="Ngày tạo">${createdAt}</td>
             <td data-label="Thao tác" class="text-center">
                 <button class="load-btn text-green-500 hover:text-green-700 mr-2" data-id="${item.id}" title="Tải lại dự án này"><i class="fas fa-upload"></i></button>
@@ -1064,7 +1066,7 @@ function renderItemDetailsToModal(itemId) {
             breakdownHtml += `
                 <li>
                     <span class="cost-item-name">${item.name}</span>
-                    <span class="cost-item-value">${(item.cost || 0).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}đ</span>
+                    <span class="cost-item-value">${(Math.round(item.cost || 0)).toLocaleString('vi-VN')}đ</span>
                     ${item.reason ? `<p class="cost-item-reason">${item.reason}</p>` : ''}
                 </li>
             `;
@@ -1078,11 +1080,11 @@ function renderItemDetailsToModal(itemId) {
         <div class="final-price-recommendation">
             <div class="final-price-main">
                 <div class="final-price-label">Giá Bán Đề Xuất</div>
-                <div class="final-price-value">${suggestedPrice.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}đ</div>
+                <div class="final-price-value">${suggestedPrice.toLocaleString('vi-VN')}đ</div>
             </div>
             <div class="final-price-breakdown">
-                <div><span class="breakdown-label">Tổng Chi Phí</span><span class="breakdown-value">${totalCost.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}đ</span></div>
-                <div><span class="breakdown-label">Lợi Nhuận</span><span class="breakdown-value">${estimatedProfit.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}đ</span></div>
+                <div><span class="breakdown-label">Tổng Chi Phí</span><span class="breakdown-value">${totalCost.toLocaleString('vi-VN')}đ</span></div>
+                <div><span class="breakdown-label">Lợi Nhuận</span><span class="breakdown-value">${estimatedProfit.toLocaleString('vi-VN')}đ</span></div>
                 <div><span class="breakdown-label">Biên Lợi Nhuận</span><span class="breakdown-value">${inputs.profitMargin || 'N/A'}%</span></div>
             </div>
         </div>
@@ -1116,6 +1118,7 @@ document.addEventListener('DOMContentLoaded', () => {
         () => { setUploadedImage(null); }
     );
     initializeMathInput('.input-style[type="text"][inputmode="decimal"]');
+    initializeCurrencyInputFormatting('#labor-cost, #material-price, #qc-install-cost');
     
     // Initialize all modules
     initializeCalculator();
