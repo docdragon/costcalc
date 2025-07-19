@@ -195,10 +195,10 @@ function renderProductComponents() {
             const row = rows[index];
             if (row) {
                 const lengthInput = row.querySelector('input[data-field="length"]');
-                if (lengthInput) lengthInput.value = comp.length;
+                if (lengthInput) lengthInput.value = comp.length.toString().replace('.',',');
 
                 const widthInput = row.querySelector('input[data-field="width"]');
-                if (widthInput) widthInput.value = comp.width;
+                if (widthInput) widthInput.value = comp.width.toString().replace('.',',');
             }
         });
     }
@@ -213,7 +213,7 @@ function renderAccessories() {
         li.dataset.id = acc.id;
         li.innerHTML = `
             <span class="flex-grow">${acc.name} <span class="tag-type" style="font-size: 0.65rem; padding: 0.1rem 0.4rem; vertical-align: middle;">${acc.type}</span></span>
-            <input type="text" inputmode="decimal" value="${acc.quantity}" min="1" class="input-style accessory-list-qty" data-id="${acc.id}">
+            <input type="text" inputmode="decimal" value="${String(acc.quantity).replace('.',',')}" min="1" class="input-style accessory-list-qty" data-id="${acc.id}">
             <span class="accessory-unit">${acc.unit}</span>
             <button class="remove-acc-btn" data-id="${acc.id}">&times;</button>
         `;
@@ -413,8 +413,11 @@ export function loadItemIntoForm(item) {
     if (DOM.itemTypeCombobox.setValue) DOM.itemTypeCombobox.setValue(inputs.productTypeId || '');
     DOM.profitMarginInput.value = inputs.profitMargin || '50';
     DOM.laborCostInput.value = inputs.laborCost || '0';
-    // Manually trigger formatting for currency inputs after loading data
-    if(DOM.laborCostInput.value) DOM.laborCostInput.dispatchEvent(new Event('input'));
+    
+    // Manually trigger formatting for inputs after loading data
+    document.querySelectorAll('input[inputmode="decimal"]').forEach(input => {
+        if(input.value) input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
 
 
     if (DOM.mainMaterialWoodCombobox.setValue) DOM.mainMaterialWoodCombobox.setValue(inputs.mainWoodId || '');

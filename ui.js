@@ -366,23 +366,62 @@ export function debounce(func, wait) {
 }
 
 /**
- * Initializes automatic currency formatting for specified input fields.
+ * Initializes automatic number formatting for specified input fields using Vietnamese conventions.
+ * This function adds thousand separators ('.') as the user types.
  * @param {string} selector - A CSS selector for the input fields.
  */
-export function initializeCurrencyInputFormatting(selector) {
+export function initializeNumberInputFormatting(selector) {
     const formatAndSet = (input) => {
-        // Get raw number string
-        let value = input.value.replace(/[^0-9]/g, '');
-        if (value) {
-            const numberValue = parseInt(value, 10);
-            // Format and set
-            input.value = numberValue.toLocaleString('vi-VN');
+        const originalValue = input.value;
+        if (originalValue === '') return;
+        
+        const selectionStart = input.selectionStart;
+        const lengthBefore = originalValue.length;
+
+        // 1. Standardize the number string for parsing
+        // Remove thousand separators (dots), then replace the first decimal comma with a dot
+        let rawValue = originalValue.replace(/\./g, '');
+        const commaIndex = rawValue.indexOf(',');
+        if (commaIndex !== -1) {
+            const intPart = rawValue.substring(0, commaIndex);
+            const decPart = rawValue.substring(commaIndex + 1).replace(/,/g, '');
+            rawValue = `${intPart}.${decPart}`;
+        }
+        rawValue = rawValue.replace(/[^0-9.]/g, ''); // Remove any remaining non-numeric/non-dot chars
+
+        const parts = rawValue.split('.');
+        const integerPartStr = parts[0];
+        const decimalPartStr = parts[1];
+
+        // 2. Format the integer part
+        let formattedValue;
+        if (integerPartStr) {
+            formattedValue = parseInt(integerPartStr, 10).toLocaleString('vi-VN');
         } else {
-            input.value = '';
+            formattedValue = '';
+        }
+
+        // 3. Append decimal part
+        if (decimalPartStr !== undefined) {
+            // Handle cases where user types "," first, or deletes all integer digits.
+            if (formattedValue === '') {
+                formattedValue = '0';
+            }
+            formattedValue += ',' + decimalPartStr;
+        }
+
+        // 4. Update the input field if the value has changed
+        if (originalValue !== formattedValue) {
+            input.value = formattedValue;
+            
+            // 5. Attempt to restore cursor position by tracking length change
+            const lengthAfter = formattedValue.length;
+            const newCursorPos = selectionStart + (lengthAfter - lengthBefore);
+            input.setSelectionRange(newCursorPos, newCursorPos);
         }
     };
-    
-    document.body.addEventListener('input', (e) => {
+
+    document.body.addEventListener('input', e => {
         if (e.target.matches(selector)) {
             formatAndSet(e.target);
         }

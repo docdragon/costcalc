@@ -8,7 +8,7 @@ import {
 import { 
     openModal, closeModal, showConfirm, showToast, updateUIVisibility, 
     initializeImageUploader, initializeTabs, initializeModals, initializeMathInput,
-    initializeCombobox, debounce, initializeCurrencyInputFormatting
+    initializeCombobox, debounce, initializeNumberInputFormatting
 } from './ui.js';
 import { initializeQuickCalc, updateQuickCalcMaterials } from './quick-calc.js';
 import * as DOM from './dom.js';
@@ -326,7 +326,7 @@ DOM.materialsTableBody.addEventListener('click', async e => {
             DOM.materialForm['material-id'].value = id;
             DOM.materialForm['material-name'].value = material.name;
             DOM.materialForm['material-type'].value = material.type;
-            DOM.materialForm['material-price'].value = material.price;
+            DOM.materialForm['material-price'].value = material.price.toString().replace('.', ',');
             DOM.materialForm['material-unit'].value = material.unit;
             DOM.materialForm['material-notes'].value = material.notes;
             DOM.materialForm.querySelector('button[type="submit"]').textContent = 'Cập nhật Vật tư';
@@ -1122,7 +1122,7 @@ document.addEventListener('DOMContentLoaded', () => {
         () => { setUploadedImage(null); }
     );
     initializeMathInput('.input-style[type="text"][inputmode="decimal"]');
-    initializeCurrencyInputFormatting('#labor-cost, #material-price, #qc-install-cost');
+    initializeNumberInputFormatting('input[inputmode="decimal"]');
     
     // Initialize all modules
     initializeCalculator();
