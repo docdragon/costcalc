@@ -1,7 +1,7 @@
 // calculator.js
 import * as DOM from './dom.js';
 import { showToast, initializeCombobox, debounce } from './ui.js';
-import { getSheetArea, getBoardThickness } from './utils.js';
+import { getSheetArea, getBoardThickness, parseNumber } from './utils.js';
 
 // --- Module-level state ---
 let localComponentNames = [];
@@ -56,9 +56,9 @@ function evaluateFormula(formula, context) {
 const runFullCalculation = debounce(calculateAndDisplayFinalPrice, 400);
 
 function updateComponentCalculationsAndRender() {
-    const L = parseFloat(DOM.itemLengthInput.value) || 0;
-    const W = parseFloat(DOM.itemWidthInput.value) || 0;
-    const H = parseFloat(DOM.itemHeightInput.value) || 0;
+    const L = parseNumber(DOM.itemLengthInput.value) || 0;
+    const W = parseNumber(DOM.itemWidthInput.value) || 0;
+    const H = parseNumber(DOM.itemHeightInput.value) || 0;
     const mainWoodId = DOM.mainMaterialWoodCombobox.querySelector('.combobox-value').value;
     const mainWoodMaterial = localMaterials['Ván'].find(m => m.id === mainWoodId);
     const t = getBoardThickness(mainWoodMaterial);
@@ -234,7 +234,7 @@ function renderCostBreakdown(breakdown, container) {
         breakdownHtml += `
             <li>
                 <span class="cost-item-name">${item.name}</span>
-                <span class="cost-item-value">${(item.cost || 0).toLocaleString('vi-VN')}đ</span>
+                <span class="cost-item-value">${(item.cost || 0).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}đ</span>
                 ${item.reason ? `<p class="cost-item-reason">${item.reason}</p>` : ''}
             </li>
         `;
@@ -335,16 +335,16 @@ function calculateAndDisplayFinalPrice() {
         }
     });
 
-    const laborCost = parseFloat(DOM.laborCostInput.value) || 0;
-    const profitMargin = parseFloat(DOM.profitMarginInput.value) || 0;
+    const laborCost = parseNumber(DOM.laborCostInput.value) || 0;
+    const profitMargin = parseNumber(DOM.profitMarginInput.value) || 0;
     
     const totalCost = baseMaterialCost + laborCost;
     const suggestedPrice = totalCost * (1 + profitMargin / 100);
     const estimatedProfit = suggestedPrice - totalCost;
     
-    DOM.totalCostValue.textContent = totalCost.toLocaleString('vi-VN') + 'đ';
-    DOM.suggestedPriceValue.textContent = suggestedPrice.toLocaleString('vi-VN') + 'đ';
-    DOM.estimatedProfitValue.textContent = estimatedProfit.toLocaleString('vi-VN') + 'đ';
+    DOM.totalCostValue.textContent = totalCost.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + 'đ';
+    DOM.suggestedPriceValue.textContent = suggestedPrice.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + 'đ';
+    DOM.estimatedProfitValue.textContent = estimatedProfit.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + 'đ';
     DOM.priceSummaryContainer.classList.remove('hidden');
 
     renderCostBreakdown(costBreakdownItems, DOM.costBreakdownContainer);
@@ -479,7 +479,7 @@ export function initializeCalculator() {
             const value = e.target.value;
             const component = productComponents.find(p => p.id === id);
             if (component) {
-                component[field] = (field === 'name') ? value : parseFloat(value) || 0;
+                component[field] = (field === 'name') ? value : parseNumber(value) || 0;
                 if (field === 'length' || field === 'width') {
                     component.isDefault = false; 
                 }
@@ -504,7 +504,7 @@ export function initializeCalculator() {
 
     DOM.addGroupBtn.addEventListener('click', () => {
         const groupId = DOM.addGroupCombobox.querySelector('.combobox-value').value;
-        const groupInstanceQty = parseInt(DOM.addGroupQuantityInput.value) || 1;
+        const groupInstanceQty = parseNumber(DOM.addGroupQuantityInput.value) || 1;
         if (!groupId) { showToast('Vui lòng chọn một cụm để thêm.', 'error'); return; }
 
         const group = localComponentGroups.find(g => g.id === groupId);
@@ -532,7 +532,7 @@ export function initializeCalculator() {
 
     DOM.addAccessoryBtn.addEventListener('click', () => {
         const selectedId = DOM.mainMaterialAccessoriesCombobox.querySelector('.combobox-value').value;
-        const quantity = parseFloat(DOM.accessoryQuantityInput.value);
+        const quantity = parseNumber(DOM.accessoryQuantityInput.value);
         if (!selectedId || !quantity || quantity <= 0) {
             showToast('Vui lòng chọn vật tư và nhập số lượng hợp lệ.', 'error'); return;
         }
@@ -558,7 +558,7 @@ export function initializeCalculator() {
     DOM.accessoriesList.addEventListener('change', e => {
         if (e.target.classList.contains('accessory-list-qty')) {
             const id = e.target.dataset.id;
-            const newQuantity = parseInt(e.target.value);
+            const newQuantity = parseNumber(e.target.value);
             const accessory = addedAccessories.find(a => a.id === id);
             if (accessory && newQuantity > 0) accessory.quantity = newQuantity;
             else if (accessory) e.target.value = accessory.quantity;

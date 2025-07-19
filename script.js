@@ -17,7 +17,7 @@ import {
     loadItemIntoForm, clearCalculatorInputs, getCalculatorStateForSave,
     loadComponentsByProductType
 } from './calculator.js';
-import { getSheetArea, getBoardThickness } from './utils.js';
+import { getSheetArea, getBoardThickness, parseNumber } from './utils.js';
 
 
 // --- Global State ---
@@ -296,7 +296,7 @@ DOM.materialForm.addEventListener('submit', async e => {
     const materialData = {
         name: DOM.materialForm['material-name'].value,
         type: DOM.materialForm['material-type'].value,
-        price: Number(DOM.materialForm['material-price'].value),
+        price: parseNumber(DOM.materialForm['material-price'].value),
         unit: DOM.materialForm['material-unit'].value,
         notes: DOM.materialForm['material-notes'].value
     };
@@ -1024,9 +1024,9 @@ function renderSavedItems(items) {
                 </div>
                 ${descriptionHtml}
             </td>
-            <td data-label="Giá Bán" class="font-semibold">${suggestedPrice.toLocaleString('vi-VN')}đ</td>
-            <td data-label="Chi Phí">${totalCost.toLocaleString('vi-VN')}đ</td>
-            <td data-label="Lợi Nhuận">${estimatedProfit.toLocaleString('vi-VN')}đ</td>
+            <td data-label="Giá Bán" class="font-semibold">${suggestedPrice.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}đ</td>
+            <td data-label="Chi Phí">${totalCost.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}đ</td>
+            <td data-label="Lợi Nhuận">${estimatedProfit.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}đ</td>
             <td data-label="Ngày tạo">${createdAt}</td>
             <td data-label="Thao tác" class="text-center">
                 <button class="load-btn text-green-500 hover:text-green-700 mr-2" data-id="${item.id}" title="Tải lại dự án này"><i class="fas fa-upload"></i></button>
@@ -1064,7 +1064,7 @@ function renderItemDetailsToModal(itemId) {
             breakdownHtml += `
                 <li>
                     <span class="cost-item-name">${item.name}</span>
-                    <span class="cost-item-value">${(item.cost || 0).toLocaleString('vi-VN')}đ</span>
+                    <span class="cost-item-value">${(item.cost || 0).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}đ</span>
                     ${item.reason ? `<p class="cost-item-reason">${item.reason}</p>` : ''}
                 </li>
             `;
@@ -1078,11 +1078,11 @@ function renderItemDetailsToModal(itemId) {
         <div class="final-price-recommendation">
             <div class="final-price-main">
                 <div class="final-price-label">Giá Bán Đề Xuất</div>
-                <div class="final-price-value">${suggestedPrice.toLocaleString('vi-VN')}đ</div>
+                <div class="final-price-value">${suggestedPrice.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}đ</div>
             </div>
             <div class="final-price-breakdown">
-                <div><span class="breakdown-label">Tổng Chi Phí</span><span class="breakdown-value">${totalCost.toLocaleString('vi-VN')}đ</span></div>
-                <div><span class="breakdown-label">Lợi Nhuận</span><span class="breakdown-value">${estimatedProfit.toLocaleString('vi-VN')}đ</span></div>
+                <div><span class="breakdown-label">Tổng Chi Phí</span><span class="breakdown-value">${totalCost.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}đ</span></div>
+                <div><span class="breakdown-label">Lợi Nhuận</span><span class="breakdown-value">${estimatedProfit.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}đ</span></div>
                 <div><span class="breakdown-label">Biên Lợi Nhuận</span><span class="breakdown-value">${inputs.profitMargin || 'N/A'}%</span></div>
             </div>
         </div>
@@ -1094,7 +1094,7 @@ function renderItemDetailsToModal(itemId) {
                     <li><strong>Kích thước (D x R x C):</strong> ${inputs.length || 'N/A'} x ${inputs.width || 'N/A'} x ${inputs.height || 'N/A'} mm</li>
                     <li><strong>Ván chính:</strong> ${mainWood}</li>
                     <li><strong>Ván hậu:</strong> ${backPanel}</li>
-                    <li><strong>Chi phí nhân công:</strong> ${(Number(inputs.laborCost) || 0).toLocaleString('vi-VN')}đ</li>
+                    <li><strong>Chi phí nhân công:</strong> ${(parseNumber(inputs.laborCost) || 0).toLocaleString('vi-VN')}đ</li>
                 </ul>
                 <h4><i class="fas fa-cogs"></i>Phụ kiện & Vật tư khác</h4>
                 ${accessoriesHtml}

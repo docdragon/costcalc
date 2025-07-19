@@ -28,3 +28,15 @@ export function getBoardThickness(material) {
     const match = combinedText.match(/(\d+)\s*(mm|ly|li)/i);
     return match && match[1] ? parseInt(match[1], 10) : DEFAULT_THICKNESS;
 }
+
+/**
+ * Parses a number string that may use Vietnamese formatting (dots for thousands, comma for decimal).
+ * @param {string} str The string to parse.
+ * @returns {number} The parsed number.
+ */
+export function parseNumber(str) {
+    if (typeof str !== 'string' || !str) return 0;
+    // Remove all dots (thousand separators) and replace comma (decimal separator) with a dot.
+    const cleanStr = String(str).replace(/\./g, '').replace(/,/g, '.');
+    return parseFloat(cleanStr) || 0;
+}

@@ -1,6 +1,7 @@
 // quick-calc.js
 import { initializeCombobox, debounce } from './ui.js';
 import * as DOM from './dom.js';
+import { parseNumber } from './utils.js';
 
 // --- Module-level state and initialization flag ---
 let localMaterialsStore = {}; // This will hold the up-to-date materials.
@@ -92,7 +93,7 @@ export function initializeQuickCalc(initialLocalMaterials, showToast) {
      * @returns {number} The calculated cost for this wood type.
      */
     function calculateSheetCost(areaInput, woodCombobox, displayEl) {
-        const area = parseFloat(areaInput.value) || 0;
+        const area = parseNumber(areaInput.value) || 0;
         const woodId = woodCombobox.querySelector('.combobox-value').value;
         let cost = 0;
         const woodMaterials = localMaterialsStore['Ván'] || []; // Use the module's store
@@ -128,8 +129,8 @@ export function initializeQuickCalc(initialLocalMaterials, showToast) {
         }, 0);
 
         // 3. Get other costs
-        const installCost = parseFloat(DOM.qcInstallCostInput.value) || 0;
-        const profitMargin = parseFloat(DOM.qcProfitMarginInput.value) || 0;
+        const installCost = parseNumber(DOM.qcInstallCostInput.value) || 0;
+        const profitMargin = parseNumber(DOM.qcProfitMarginInput.value) || 0;
 
         // 4. Sum up total cost
         const totalCost = totalWoodCost + totalAccessoryCost + installCost;
@@ -139,9 +140,9 @@ export function initializeQuickCalc(initialLocalMaterials, showToast) {
         const estimatedProfit = suggestedPrice - totalCost;
 
         // 6. Display results
-        DOM.qcTotalCostValue.textContent = totalCost.toLocaleString('vi-VN') + 'đ';
-        DOM.qcSuggestedPriceValue.textContent = suggestedPrice.toLocaleString('vi-VN') + 'đ';
-        DOM.qcEstimatedProfitValue.textContent = estimatedProfit.toLocaleString('vi-VN') + 'đ';
+        DOM.qcTotalCostValue.textContent = totalCost.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + 'đ';
+        DOM.qcSuggestedPriceValue.textContent = suggestedPrice.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + 'đ';
+        DOM.qcEstimatedProfitValue.textContent = estimatedProfit.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + 'đ';
     }
 
     // --- Event Listeners & Initialization ---
@@ -175,7 +176,7 @@ export function initializeQuickCalc(initialLocalMaterials, showToast) {
         DOM.qcAddAccessoryBtn.addEventListener('click', () => {
             const selectedId = DOM.qcMaterialAccessoriesCombobox.querySelector('.combobox-value').value;
             const inputField = DOM.qcMaterialAccessoriesCombobox.querySelector('.combobox-input');
-            const quantity = parseFloat(DOM.qcAccessoryQtyInput.value) || 0;
+            const quantity = parseNumber(DOM.qcAccessoryQtyInput.value) || 0;
     
             if (!selectedId) {
                 showToast('Vui lòng chọn một vật tư từ danh sách.', 'error');
@@ -222,7 +223,7 @@ export function initializeQuickCalc(initialLocalMaterials, showToast) {
         DOM.qcAccessoriesList.addEventListener('change', e => {
             if (e.target.classList.contains('accessory-list-qty')) {
                 const id = e.target.dataset.id;
-                const newQuantity = parseFloat(e.target.value) || 0;
+                const newQuantity = parseNumber(e.target.value) || 0;
                 const accessory = qcAddedAccessories.find(a => a.id === id);
                 
                 if (accessory && newQuantity >= 0) {
