@@ -375,6 +375,11 @@ export function initializeNumberInputFormatting(selector) {
         const originalValue = input.value;
         if (originalValue === '') return;
         
+        // If the value looks like a formula, don't format it. Let the math evaluator handle it on Enter.
+        if (/[+\-*/()]/.test(originalValue)) {
+            return;
+        }
+        
         const selectionStart = input.selectionStart;
         const lengthBefore = originalValue.length;
 
