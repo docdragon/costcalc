@@ -935,7 +935,7 @@ function displaySavedItems() {
                 return true;
             }
 
-            // 2. Check material names
+            // 2. Check material names AND notes
             const usedMaterialIds = new Set();
             if (inputs.mainWoodId) usedMaterialIds.add(inputs.mainWoodId);
             if (inputs.backPanelId) usedMaterialIds.add(inputs.backPanelId);
@@ -953,11 +953,15 @@ function displaySavedItems() {
                 });
             }
             
-            // Now check if any of these materials' names match the filter
+            // Now check if any of these materials' names or notes match the filter
             for (const materialId of usedMaterialIds) {
                 const material = allLocalMaterials.find(m => m.id === materialId);
-                if (material && material.name.toLowerCase().includes(filterText)) {
-                    return true;
+                if (material) {
+                    const materialName = (material.name || '').toLowerCase();
+                    const materialNotes = (material.notes || '').toLowerCase();
+                    if (materialName.includes(filterText) || materialNotes.includes(filterText)) {
+                        return true;
+                    }
                 }
             }
 
