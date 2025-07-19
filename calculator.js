@@ -53,7 +53,7 @@ function evaluateFormula(formula, context) {
 
 
 // --- Component & Calculation Logic ---
-const runFullCalculation = debounce(calculateAndDisplayFinalPrice, 400);
+const runFullCalculation = debounce(calculateAndDisplayFinalPrice, 300);
 
 function updateComponentCalculationsAndRender() {
     const L = parseNumber(DOM.itemLengthInput.value) || 0;
