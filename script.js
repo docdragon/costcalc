@@ -4,7 +4,6 @@ import {
     deleteDoc, serverTimestamp, getDocs, query, limit, onAuthStateChanged, 
     signOut, setDoc
 } from './firebase.js';
-import { GoogleGenAI, Type } from "@google/genai";
 
 import { 
     openModal, closeModal, showConfirm, showToast, updateUIVisibility, 
@@ -45,9 +44,6 @@ let localComponentGroups = [];
 let currentEditingProductTypeId = null;
 let currentEditingComponentGroupId = null;
 let currentEditingItemId = null;
-
-// UI State
-let currentWizardStep = 1;
 
 // Pagination state
 let currentPage = 1;
@@ -1018,10 +1014,6 @@ function renderSavedItems(items) {
         const suggestedPrice = finalPrices.suggestedPrice || 0;
         const totalCost = finalPrices.totalCost || 0;
         const estimatedProfit = finalPrices.estimatedProfit || 0;
-        
-        const imageSrc = inputs.uploadedImage 
-            ? `data:${inputs.uploadedImage.mimeType};base64,${inputs.uploadedImage.data}`
-            : `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23e2e8f0'/%3E%3Ctext x='50' y='55' font-family='sans-serif' font-size='14' fill='%2394a3b8' text-anchor='middle'%3ENo Image%3C/text%3E%3C/svg%3E`;
 
         const dims = (inputs.length && inputs.width && inputs.height) 
             ? `${inputs.length} x ${inputs.width} x ${inputs.height} mm` 
@@ -1031,9 +1023,6 @@ function renderSavedItems(items) {
 
         tr.innerHTML = `
             <td data-label="Tên & Chi tiết Dự án">
-                 <div class="project-card-image-wrapper">
-                    <img src="${imageSrc}" alt="${itemName}" class="project-card-image" loading="lazy">
-                </div>
                 <div class="project-name-main">${itemName}</div>
                 <div class="project-details-list">
                     <span class="project-detail-item"><i class="fas fa-fw fa-ruler-combined"></i> ${dims}</span>
@@ -1124,171 +1113,6 @@ function renderItemDetailsToModal(itemId) {
     openModal(DOM.viewItemModal);
 }
 
-// --- Wizard Form Logic ---
-function initializeWizard() {
-    const steps = DOM.wizardContent.querySelectorAll('.wizard-step');
-    const indicators = DOM.wizardIndicator.querySelectorAll('.step');
-
-    const showStep = (stepNum) => {
-        steps.forEach((step, index) => {
-            step.classList.toggle('active', index + 1 === stepNum);
-            step.classList.toggle('hidden', index + 1 !== stepNum);
-        });
-        indicators.forEach((indicator, index) => {
-            indicator.classList.toggle('active', index + 1 === stepNum);
-            if (index < stepNum) {
-                indicator.classList.add('completed');
-            } else {
-                indicator.classList.remove('completed');
-            }
-        });
-
-        DOM.wizardPrevBtn.disabled = stepNum === 1;
-        DOM.wizardNextBtn.textContent = stepNum === 3 ? 'Hoàn tất' : 'Tiếp theo';
-        DOM.mainActionsGroup.style.visibility = stepNum === 3 ? 'visible' : 'hidden';
-
-        currentWizardStep = stepNum;
-    };
-    
-    DOM.wizardNextBtn.addEventListener('click', () => {
-        if (currentWizardStep < 3) {
-            showStep(currentWizardStep + 1);
-        } else {
-            // "Finish" button logic: maybe just scroll to results
-             DOM.resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    });
-
-    DOM.wizardPrevBtn.addEventListener('click', () => {
-        if (currentWizardStep > 1) {
-            showStep(currentWizardStep - 1);
-        }
-    });
-
-    // Initialize first step
-    showStep(1);
-}
-
-// --- AI Analysis Logic ---
-async function handleAIAnalysis() {
-    if (!process.env.API_KEY) {
-        showToast("Khóa API chưa được cấu hình.", "error");
-        return;
-    }
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const projectData = getCalculatorStateForSave();
-
-    if (!projectData) {
-        showToast("Không có dữ liệu dự án để phân tích.", "error");
-        return;
-    }
-
-    // Show loader, hide guide
-    DOM.aiAnalysisLoader.classList.remove('hidden');
-    DOM.aiAnalysisContainer.classList.add('hidden');
-    DOM.guideDetails.classList.add('hidden');
-    DOM.aiAnalysisBtn.disabled = true;
-
-    // Build a detailed prompt string
-    const { inputs } = projectData;
-    const mainWood = allLocalMaterials.find(m => m.id === inputs.mainWoodId)?.name || 'Không rõ';
-    let prompt = `Bạn là một chuyên gia sản xuất nội thất giàu kinh nghiệm. Dựa vào thông tin dự án sau đây, hãy đưa ra những gợi ý ngắn gọn, hữu ích cho người thợ mộc:\n`;
-    prompt += `- Tên sản phẩm: ${inputs.name || 'Chưa đặt tên'}\n`;
-    prompt += `- Kích thước (Dài x Rộng x Cao): ${inputs.length}x${inputs.width}x${inputs.height} mm\n`;
-    prompt += `- Mô tả: ${inputs.description || 'Không có'}\n`;
-    prompt += `- Vật liệu ván chính: ${mainWood}\n`;
-    prompt += `- Chi phí nhân công: ${inputs.laborCost}đ\n`;
-    prompt += `- Lợi nhuận mong muốn: ${inputs.profitMargin}%\n`;
-    prompt += `- Các chi tiết: ${inputs.components.map(c => `${c.name} (SL: ${c.qty})`).join(', ')}\n`;
-    prompt += `- Phụ kiện: ${inputs.accessories.map(a => `${a.name} (SL: ${a.quantity})`).join(', ')}\n\n`;
-    prompt += "Hãy cung cấp 3 loại gợi ý: (1) Tối ưu chi phí, (2) Cải tiến kết cấu/công năng, và (3) Cơ hội bán thêm/nâng cấp. Mỗi loại chỉ cần 1-2 gợi ý quan trọng nhất.";
-
-    const schema = {
-        type: Type.OBJECT,
-        properties: {
-            costSaving: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Gợi ý để tiết kiệm chi phí vật tư hoặc sản xuất." },
-            structural: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Gợi ý để cải thiện độ bền, sự ổn định hoặc công năng của sản phẩm." },
-            upsell: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Gợi ý để đề xuất với khách hàng các nâng cấp, phụ kiện xịn hơn để tăng giá trị và giá bán." }
-        }
-    };
-    
-    try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: {
-                responseMimeType: 'application/json',
-                responseSchema: schema
-            }
-        });
-        
-        const jsonText = response.text.trim();
-        const analysis = JSON.parse(jsonText);
-        renderAIAnalysis(analysis);
-
-    } catch (error) {
-        console.error("AI Analysis Error:", error);
-        showToast("Lỗi khi phân tích bằng AI. Vui lòng thử lại.", "error");
-        // Hide loader and show guide again on error
-        DOM.guideDetails.classList.remove('hidden');
-    } finally {
-        DOM.aiAnalysisLoader.classList.add('hidden');
-        DOM.aiAnalysisBtn.disabled = false;
-    }
-}
-
-function renderAIAnalysis(analysis) {
-    if (!analysis || (!analysis.costSaving && !analysis.structural && !analysis.upsell)) {
-        DOM.aiAnalysisContainer.innerHTML = '<p>AI không có gợi ý nào cho dự án này.</p>';
-        DOM.aiAnalysisContainer.classList.remove('hidden');
-        return;
-    }
-
-    let html = `
-        <h4 class="form-section-header" style="margin:0 0 1rem 0;"><i class="fas fa-lightbulb" style="color: #f59e0b;"></i> Gợi ý từ AI</h4>
-        <div class="ai-suggestion-list">
-    `;
-
-    if (analysis.costSaving && analysis.costSaving.length > 0) {
-        html += analysis.costSaving.map(text => `
-            <div class="ai-suggestion-item">
-                <div class="ai-suggestion-icon icon-cost"><i class="fas fa-dollar-sign"></i></div>
-                <div class="ai-suggestion-content">
-                    <h5>Tối ưu Chi phí</h5>
-                    <p>${text}</p>
-                </div>
-            </div>
-        `).join('');
-    }
-    if (analysis.structural && analysis.structural.length > 0) {
-        html += analysis.structural.map(text => `
-            <div class="ai-suggestion-item">
-                <div class="ai-suggestion-icon icon-structural"><i class="fas fa-tools"></i></div>
-                <div class="ai-suggestion-content">
-                    <h5>Cải tiến Kết cấu</h5>
-                    <p>${text}</p>
-                </div>
-            </div>
-        `).join('');
-    }
-    if (analysis.upsell && analysis.upsell.length > 0) {
-        html += analysis.upsell.map(text => `
-            <div class="ai-suggestion-item">
-                <div class="ai-suggestion-icon icon-upsell"><i class="fas fa-arrow-up"></i></div>
-                <div class="ai-suggestion-content">
-                    <h5>Cơ hội Bán thêm</h5>
-                    <p>${text}</p>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    html += `</div>`;
-    DOM.aiAnalysisContainer.innerHTML = html;
-    DOM.aiAnalysisContainer.classList.remove('hidden');
-}
-
-
 // --- App Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
     initializeTabs();
@@ -1303,7 +1127,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize all modules
     initializeCalculator();
     initializeQuickCalc(localMaterials, showToast);
-    initializeWizard();
     updateCalculatorActionButtons();
 
     // Main form Comboboxes
@@ -1361,7 +1184,6 @@ document.addEventListener('DOMContentLoaded', () => {
         clearCalculatorInputs();
         currentEditingItemId = null;
         updateCalculatorActionButtons();
-        showStep(1); // Reset wizard to first step
         showToast('Đã xóa biểu mẫu. Sẵn sàng cho dự án mới.', 'info');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
@@ -1442,11 +1264,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 displaySavedItems();
             }
         });
-    }
-    
-    // AI analysis button listener
-    if (DOM.aiAnalysisBtn) {
-        DOM.aiAnalysisBtn.addEventListener('click', handleAIAnalysis);
     }
 
     // Component Name pagination and filter listeners
