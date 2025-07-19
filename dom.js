@@ -13,6 +13,13 @@ export const tabs = document.getElementById('tabs');
 export const tabContent = document.getElementById('tab-content');
 
 // --- Main Calculator Tab ---
+// Wizard
+export const wizardIndicator = document.getElementById('wizard-indicator');
+export const wizardContent = document.getElementById('wizard-content');
+export const wizardNav = document.getElementById('wizard-nav');
+export const wizardPrevBtn = document.getElementById('wizard-prev');
+export const wizardNextBtn = document.getElementById('wizard-next');
+
 // Product Info
 export const itemNameInput = document.getElementById('item-name');
 export const itemDescriptionInput = document.getElementById('item-description');
@@ -43,6 +50,7 @@ export const addAccessoryBtn = document.getElementById('add-accessory-btn');
 export const accessoriesList = document.getElementById('accessories-list');
 
 // Actions & Results
+export const mainActionsGroup = document.getElementById('main-actions-group');
 export const saveItemBtn = document.getElementById('save-item-btn');
 export const updateItemBtn = document.getElementById('update-item-btn');
 export const clearFormBtn = document.getElementById('clear-form-btn');
@@ -61,6 +69,11 @@ export const sidebarImagePreview = document.getElementById('sidebar-image-previe
 export const sidebarImagePlaceholder = document.getElementById('sidebar-image-placeholder');
 export const sidebarRemoveImageBtn = document.getElementById('sidebar-remove-image-btn');
 
+// AI Analysis
+export const aiAnalysisBtn = document.getElementById('ai-analysis-btn');
+export const aiAnalysisLoader = document.getElementById('ai-analysis-loader');
+export const aiAnalysisContainer = document.getElementById('ai-analysis-container');
+export const guideDetails = document.getElementById('guide-details');
 
 // --- Quick Calculator Tab ---
 export const qcAreaInput = document.getElementById('qc-area');
