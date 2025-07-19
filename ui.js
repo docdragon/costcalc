@@ -8,6 +8,7 @@ import {
     browserLocalPersistence
 } from './firebase.js';
 import * as DOM from './dom.js';
+import { h, parseNumber } from './utils.js';
 
 // --- State for UI ---
 let onImageUploadedCallback = null;
@@ -192,7 +193,7 @@ export function initializeCombobox(container, optionsData, onSelect, config = {}
             optionsList.appendChild(emptyOption);
         }
 
-        if (filteredOptions.length === 0 && !allowEmpty) {
+        if (filteredOptions.length === 0 && !allowEmpty && !allowCustom) {
             optionsList.innerHTML = `<li class="combobox-option no-results">Không tìm thấy kết quả</li>`;
         } else {
             filteredOptions.forEach(option => {
@@ -239,6 +240,9 @@ export function initializeCombobox(container, optionsData, onSelect, config = {}
         } else {
             input.value = '';
         }
+        const changeEvent = new Event('change', { bubbles: true });
+        valueInput.dispatchEvent(changeEvent);
+        input.dispatchEvent(changeEvent);
     };
     
     input.addEventListener('focus', () => {
@@ -275,9 +279,9 @@ export function initializeCombobox(container, optionsData, onSelect, config = {}
         const optionEl = e.target.closest('.combobox-option');
         if (optionEl && !optionEl.classList.contains('no-results')) {
             const selectedId = optionEl.dataset.id;
-            const selectedItem = currentOptionsData.find(o => o.id === selectedId);
             
             valueInput.value = selectedId;
+            const selectedItem = currentOptionsData.find(o => o.id === selectedId);
             input.value = selectedItem ? selectedItem.name : (allowEmpty && !selectedId ? '' : optionEl.textContent);
             
             closeDropdown();
@@ -286,13 +290,151 @@ export function initializeCombobox(container, optionsData, onSelect, config = {}
                 onSelect(selectedId);
             }
             // Trigger change event to ensure other listeners pick up the update
-            input.dispatchEvent(new Event('change', { bubbles: true }));
+            const changeEvent = new Event('change', { bubbles: true });
+            valueInput.dispatchEvent(changeEvent);
+            input.dispatchEvent(changeEvent);
         }
     });
 
     container.dataset.comboboxInitialized = 'true';
     renderOptions();
 }
+
+/**
+ * Creates a paginator instance to manage pagination state and controls.
+ */
+export function createPaginator({ controlsEl, pageInfoEl, prevBtn, nextBtn, itemsPerPage, onPageChange }) {
+    let currentPage = 1;
+    let totalPages = 1;
+
+    function updateControls() {
+        if (!controlsEl) return;
+        if (totalPages <= 1) {
+            controlsEl.classList.add('hidden');
+            return;
+        }
+        controlsEl.classList.remove('hidden');
+        if (pageInfoEl) pageInfoEl.textContent = `Trang ${currentPage} / ${totalPages}`;
+        if (prevBtn) prevBtn.disabled = currentPage === 1;
+        if (nextBtn) nextBtn.disabled = currentPage === totalPages;
+    }
+
+    prevBtn?.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            updateControls();
+            onPageChange(currentPage);
+        }
+    });
+
+    nextBtn?.addEventListener('click', () => {
+        if (currentPage < totalPages) {
+            currentPage++;
+            updateControls();
+            onPageChange(currentPage);
+        }
+    });
+
+    return {
+        update: (totalItems) => {
+            totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+            updateControls();
+        },
+        reset: () => {
+            currentPage = 1;
+        },
+        getCurrentPage: () => currentPage,
+    };
+}
+
+
+/**
+ * Creates an accessory manager to handle adding, removing, and updating accessories.
+ */
+export function createAccessoryManager({ listEl, addBtn, quantityInput, materialCombobox, onUpdate, showToast, comboboxPlaceholder = "Tìm vật tư..." }) {
+    let accessories = [];
+    let allMaterials = [];
+
+    function render() {
+        listEl.innerHTML = '';
+        accessories.forEach(acc => {
+            const li = h('li', { dataset: { id: acc.id } },
+                h('span', { className: 'flex-grow' },
+                    `${acc.name} `,
+                    h('span', { className: 'tag-type', style: 'font-size: 0.65rem; padding: 0.1rem 0.4rem; vertical-align: middle;' }, acc.type)
+                ),
+                h('input', { type: 'text', inputMode: 'decimal', value: String(acc.quantity).replace('.',','), min: '1', className: 'input-style accessory-list-qty', dataset: { id: acc.id } }),
+                h('span', { className: 'accessory-unit' }, acc.unit),
+                h('button', { className: 'remove-acc-btn', dataset: { id: acc.id } }, '×')
+            );
+            listEl.appendChild(li);
+        });
+    }
+
+    addBtn.addEventListener('click', () => {
+        const selectedId = materialCombobox.querySelector('.combobox-value').value;
+        const quantity = parseNumber(quantityInput.value);
+        if (!selectedId || !quantity || quantity <= 0) {
+            showToast('Vui lòng chọn vật tư và nhập số lượng hợp lệ.', 'error');
+            return;
+        }
+        const material = allMaterials.find(a => a.id === selectedId);
+        if (!material) {
+            showToast('Lỗi: Không tìm thấy vật tư đã chọn.', 'error');
+            return;
+        }
+        const existing = accessories.find(a => a.id === selectedId);
+        if (existing) {
+            existing.quantity += quantity;
+        } else {
+            accessories.push({ ...material, quantity });
+        }
+        render();
+        quantityInput.value = '1';
+        if (materialCombobox.setValue) materialCombobox.setValue('');
+        onUpdate(accessories);
+    });
+
+    listEl.addEventListener('click', e => {
+        if (e.target.classList.contains('remove-acc-btn')) {
+            accessories = accessories.filter(a => a.id !== e.target.dataset.id);
+            render();
+            onUpdate(accessories);
+        }
+    });
+
+    listEl.addEventListener('change', e => {
+        if (e.target.classList.contains('accessory-list-qty')) {
+            const id = e.target.dataset.id;
+            const newQuantity = parseNumber(e.target.value);
+            const accessory = accessories.find(a => a.id === id);
+            if (accessory && newQuantity > 0) {
+                accessory.quantity = newQuantity;
+            } else if (accessory) {
+                e.target.value = accessory.quantity; // Revert to old value
+            }
+            onUpdate(accessories);
+        }
+    });
+
+    initializeCombobox(materialCombobox, [], null, { placeholder: comboboxPlaceholder });
+
+    return {
+        updateMaterials: (newMaterials) => {
+            allMaterials = newMaterials;
+            if (materialCombobox.updateComboboxData) {
+                materialCombobox.updateComboboxData(allMaterials);
+            }
+        },
+        setAccessories: (newAccessories) => {
+            accessories = newAccessories;
+            render();
+            onUpdate(accessories);
+        }
+    };
+}
+
 
 /**
  * Safely evaluates a mathematical expression string, supporting Vietnamese number formats.
@@ -401,7 +543,8 @@ export function initializeNumberInputFormatting(selector) {
         // 2. Format the integer part
         let formattedValue;
         if (integerPartStr) {
-            formattedValue = parseInt(integerPartStr, 10).toLocaleString('vi-VN');
+            // Use Intl.NumberFormat for robust formatting
+            formattedValue = new Intl.NumberFormat('vi-VN').format(integerPartStr);
         } else {
             formattedValue = '';
         }
@@ -422,7 +565,11 @@ export function initializeNumberInputFormatting(selector) {
             // 5. Attempt to restore cursor position by tracking length change
             const lengthAfter = formattedValue.length;
             const newCursorPos = selectionStart + (lengthAfter - lengthBefore);
-            input.setSelectionRange(newCursorPos, newCursorPos);
+            try {
+                input.setSelectionRange(newCursorPos, newCursorPos);
+            } catch (e) {
+                // Ignore errors that can happen if the cursor position is out of bounds
+            }
         }
     };
 

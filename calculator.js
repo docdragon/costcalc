@@ -1,20 +1,21 @@
 // calculator.js
 import * as DOM from './dom.js';
-import { showToast, initializeCombobox, debounce } from './ui.js';
-import { getSheetArea, getBoardThickness, parseNumber } from './utils.js';
+import { showToast, initializeCombobox, debounce, createAccessoryManager } from './ui.js';
+import { getSheetArea, getBoardThickness, parseNumber, h } from './utils.js';
 
 // --- Module-level state ---
 let localComponentNames = [];
 let localProductTypes = [];
 let localComponentGroups = [];
 let localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [], 'Gia Công': [] };
-let allLocalMaterials = [];
 let currentUserId = null;
 
 let lastCalculationResult = null;
 let addedAccessories = [];
 let productComponents = [];
 let uploadedImage = null;
+let accessoryManager;
+
 
 // --- Data Updaters ---
 export function updateCalculatorData(data) {
@@ -22,7 +23,10 @@ export function updateCalculatorData(data) {
     if (data.productTypes) localProductTypes = data.productTypes;
     if (data.componentGroups) localComponentGroups = data.componentGroups;
     if (data.materials) localMaterials = data.materials;
-    if (data.allMaterials) allLocalMaterials = data.allMaterials;
+    if (data.allMaterials && accessoryManager) {
+         const allAccessoryMaterials = [ ...data.materials['Phụ kiện'], ...data.materials['Gia Công'], ...data.materials['Cạnh'] ];
+         accessoryManager.updateMaterials(allAccessoryMaterials);
+    }
     if (data.userId) currentUserId = data.userId;
 }
 
@@ -108,118 +112,80 @@ export function loadComponentsByProductType(productTypeId) {
 }
 
 function renderProductComponents() {
-    const rows = DOM.componentsTableBody.children;
-    const needsFullReRender = rows.length !== productComponents.length || (rows.length === 0 && productComponents.length > 0);
+    DOM.componentsTableBody.innerHTML = ''; // Clear previous content
 
-    if (needsFullReRender) {
-        DOM.componentsTableBody.innerHTML = '';
-        if (productComponents.length === 0) {
-            DOM.componentsTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 1rem; color: var(--text-light);">Chọn "Loại sản phẩm" hoặc thêm chi tiết tùy chỉnh.</td></tr>';
-            return;
-        }
-
-        productComponents.forEach(comp => {
-            const tr = document.createElement('tr');
-            tr.dataset.id = comp.id;
-            tr.innerHTML = `
-                <td data-label="Tên Chi tiết">
-                    <div id="comp-name-combobox-${comp.id}" class="combobox-container component-combobox">
-                        <input type="text" class="input-style combobox-input component-input" data-field="name" placeholder="Chọn hoặc nhập..." value="${comp.name}">
-                        <input type="hidden" class="combobox-value">
-                        <div class="combobox-options-wrapper"><ul class="combobox-options"></ul></div>
-                    </div>
-                </td>
-                <td data-label="Vật liệu">
-                    <div id="comp-material-combobox-${comp.id}" class="combobox-container component-combobox">
-                        <input type="text" class="input-style combobox-input" placeholder="Dùng ván chính...">
-                        <input type="hidden" class="combobox-value">
-                        <div class="combobox-options-wrapper"><ul class="combobox-options"></ul></div>
-                    </div>
-                </td>
-                <td data-label="Dài"><input type="text" inputmode="decimal" class="input-style component-input" data-field="length" value="${comp.length}"></td>
-                <td data-label="Rộng"><input type="text" inputmode="decimal" class="input-style component-input" data-field="width" value="${comp.width}"></td>
-                <td data-label="SL"><input type="text" inputmode="decimal" class="input-style component-input" data-field="qty" value="${comp.qty}" style="max-width: 60px; text-align: center;"></td>
-                <td data-label="Xóa" class="text-center">
-                    <button class="remove-component-btn" data-id="${comp.id}"><i class="fas fa-trash"></i></button>
-                </td>
-            `;
-            DOM.componentsTableBody.appendChild(tr);
-
-            // Initialize Name Combobox
-            const nameComboboxContainer = tr.querySelector(`#comp-name-combobox-${comp.id}`);
-            if (nameComboboxContainer) {
-                initializeCombobox(
-                    nameComboboxContainer,
-                    localComponentNames.map(c => ({ id: c.id, name: c.name, price: '', unit: '' })),
-                    (selectedId) => {
-                        const selectedName = localComponentNames.find(c => c.id === selectedId)?.name;
-                        const component = productComponents.find(p => p.id === comp.id);
-                        if (component && selectedName) {
-                            component.name = selectedName;
-                            component.componentNameId = selectedId;
-                            component.isDefault = true;
-                            updateComponentCalculationsAndRender();
-                        }
-                    },
-                    { placeholder: 'Chọn tên...', allowCustom: true }
-                );
-            }
-
-            // Initialize Material Combobox
-            const materialComboboxContainer = tr.querySelector(`#comp-material-combobox-${comp.id}`);
-            if (materialComboboxContainer) {
-                initializeCombobox(
-                    materialComboboxContainer,
-                    localMaterials['Ván'],
-                    (selectedId) => {
-                        const component = productComponents.find(p => p.id === comp.id);
-                        if (component) {
-                            component.materialId = selectedId || null;
-                            runFullCalculation();
-                        }
-                    },
-                    {
-                        placeholder: 'Dùng ván chính',
-                        allowEmpty: true,
-                        emptyOptionText: '--- Dùng ván chính ---'
-                    }
-                );
-                if (comp.materialId && materialComboboxContainer.setValue) {
-                    materialComboboxContainer.setValue(comp.materialId);
-                }
-            }
-        });
-    } else {
-        // Just update values if the structure is the same
-        productComponents.forEach((comp, index) => {
-            const row = rows[index];
-            if (row) {
-                const lengthInput = row.querySelector('input[data-field="length"]');
-                if (lengthInput) lengthInput.value = comp.length.toString().replace('.',',');
-
-                const widthInput = row.querySelector('input[data-field="width"]');
-                if (widthInput) widthInput.value = comp.width.toString().replace('.',',');
-            }
-        });
+    if (productComponents.length === 0) {
+        DOM.componentsTableBody.appendChild(
+            h('tr', {}, 
+                h('td', { colSpan: 6, style: 'text-align: center; padding: 1rem; color: var(--text-light);' }, 
+                    'Chọn "Loại sản phẩm" hoặc thêm chi tiết tùy chỉnh.'
+                )
+            )
+        );
+        return;
     }
-}
 
+    productComponents.forEach(comp => {
+        const nameComboboxContainer = h('div', { id: `comp-name-combobox-${comp.id}`, className: 'combobox-container component-combobox' },
+            h('input', { type: 'text', className: 'input-style combobox-input component-input', dataset: { field: 'name' }, placeholder: 'Chọn hoặc nhập...', value: comp.name }),
+            h('input', { type: 'hidden', className: 'combobox-value' }),
+            h('div', { className: 'combobox-options-wrapper' }, h('ul', { className: 'combobox-options' }))
+        );
 
-// --- Accessory Management ---
-function renderAccessories() {
-    DOM.accessoriesList.innerHTML = '';
-    addedAccessories.forEach(acc => {
-        const li = document.createElement('li');
-        li.dataset.id = acc.id;
-        li.innerHTML = `
-            <span class="flex-grow">${acc.name} <span class="tag-type" style="font-size: 0.65rem; padding: 0.1rem 0.4rem; vertical-align: middle;">${acc.type}</span></span>
-            <input type="text" inputmode="decimal" value="${String(acc.quantity).replace('.',',')}" min="1" class="input-style accessory-list-qty" data-id="${acc.id}">
-            <span class="accessory-unit">${acc.unit}</span>
-            <button class="remove-acc-btn" data-id="${acc.id}">&times;</button>
-        `;
-        DOM.accessoriesList.appendChild(li);
+        const materialComboboxContainer = h('div', { id: `comp-material-combobox-${comp.id}`, className: 'combobox-container component-combobox' },
+            h('input', { type: 'text', className: 'input-style combobox-input', placeholder: 'Dùng ván chính...' }),
+            h('input', { type: 'hidden', className: 'combobox-value' }),
+            h('div', { className: 'combobox-options-wrapper' }, h('ul', { className: 'combobox-options' }))
+        );
+
+        const tr = h('tr', { dataset: { id: comp.id } },
+            h('td', { dataset: { label: 'Tên Chi tiết' } }, nameComboboxContainer),
+            h('td', { dataset: { label: 'Vật liệu' } }, materialComboboxContainer),
+            h('td', { dataset: { label: 'Dài' } }, h('input', { type: 'text', inputMode: 'decimal', className: 'input-style component-input', dataset: { field: 'length' }, value: comp.length })),
+            h('td', { dataset: { label: 'Rộng' } }, h('input', { type: 'text', inputMode: 'decimal', className: 'input-style component-input', dataset: { field: 'width' }, value: comp.width })),
+            h('td', { dataset: { label: 'SL' } }, h('input', { type: 'text', inputMode: 'decimal', className: 'input-style component-input', dataset: { field: 'qty' }, value: comp.qty, style: 'max-width: 60px; text-align: center;' })),
+            h('td', { dataset: { label: 'Xóa' }, className: 'text-center' },
+                h('button', { className: 'remove-component-btn', dataset: { id: comp.id } }, h('i', { className: 'fas fa-trash' }))
+            )
+        );
+        DOM.componentsTableBody.appendChild(tr);
+
+        // Initialize Name Combobox
+        initializeCombobox(
+            nameComboboxContainer,
+            localComponentNames.map(c => ({ id: c.id, name: c.name, price: '', unit: '' })),
+            (selectedId) => {
+                const selectedName = localComponentNames.find(c => c.id === selectedId)?.name;
+                const component = productComponents.find(p => p.id === comp.id);
+                if (component && selectedName) {
+                    component.name = selectedName;
+                    component.componentNameId = selectedId;
+                    component.isDefault = true;
+                    updateComponentCalculationsAndRender();
+                }
+            },
+            { placeholder: 'Chọn tên...', allowCustom: true }
+        );
+
+        // Initialize Material Combobox
+        initializeCombobox(
+            materialComboboxContainer,
+            localMaterials['Ván'],
+            (selectedId) => {
+                const component = productComponents.find(p => p.id === comp.id);
+                if (component) {
+                    component.materialId = selectedId || null;
+                    runFullCalculation();
+                }
+            },
+            { placeholder: 'Dùng ván chính', allowEmpty: true, emptyOptionText: '--- Dùng ván chính ---' }
+        );
+        if (comp.materialId && materialComboboxContainer.setValue) {
+            materialComboboxContainer.setValue(comp.materialId);
+        }
     });
 }
+
 
 // --- Price Calculation ---
 
@@ -229,18 +195,22 @@ function renderCostBreakdown(breakdown, container) {
         container.classList.add('hidden');
         return;
     }
-    let breakdownHtml = '<h3 class="result-box-header"><i class="fas fa-file-invoice-dollar"></i> Phân tích Chi phí Vật tư</h3><ul class="cost-list">';
-    breakdown.forEach(item => {
-        breakdownHtml += `
-            <li>
-                <span class="cost-item-name">${item.name}</span>
-                <span class="cost-item-value">${(Math.round(item.cost || 0)).toLocaleString('vi-VN')}đ</span>
-                ${item.reason ? `<p class="cost-item-reason">${item.reason}</p>` : ''}
-            </li>
-        `;
-    });
-    breakdownHtml += '</ul>';
-    container.innerHTML = breakdownHtml;
+    
+    const listItems = breakdown.map(item =>
+        h('li', {},
+            h('span', { className: 'cost-item-name' }, item.name),
+            h('span', { className: 'cost-item-value' }, `${(Math.round(item.cost || 0)).toLocaleString('vi-VN')}đ`),
+            item.reason ? h('p', { className: 'cost-item-reason' }, item.reason) : null
+        )
+    );
+
+    const breakdownContent = [
+        h('h3', { className: 'result-box-header' }, h('i', { className: 'fas fa-file-invoice-dollar' }), ' Phân tích Chi phí Vật tư'),
+        h('ul', { className: 'cost-list' }, ...listItems)
+    ];
+
+    container.innerHTML = '';
+    breakdownContent.forEach(el => container.appendChild(el));
     container.classList.remove('hidden');
 }
 
@@ -249,10 +219,10 @@ function calculateEdgeBanding() {
     productComponents.forEach(comp => {
         const rules = localComponentNames.find(cn => cn.id === comp.componentNameId);
         if (rules) {
-            if (rules.edge1) totalLength += comp.length;
-            if (rules.edge2) totalLength += comp.length;
-            if (rules.edge3) totalLength += comp.width;
-            if (rules.edge4) totalLength += comp.width;
+            if (rules.edge1) totalLength += comp.length * comp.qty;
+            if (rules.edge2) totalLength += comp.length * comp.qty;
+            if (rules.edge3) totalLength += comp.width * comp.qty;
+            if (rules.edge4) totalLength += comp.width * comp.qty;
         }
     });
     return totalLength;
@@ -386,7 +356,7 @@ export function clearCalculatorInputs() {
     if (DOM.itemTypeCombobox.setValue) DOM.itemTypeCombobox.setValue('');
     
     addedAccessories = [];
-    renderAccessories();
+    if(accessoryManager) accessoryManager.setAccessories([]);
     
     productComponents = [];
     renderProductComponents();
@@ -448,7 +418,7 @@ export function loadItemIntoForm(item) {
     }
     
     addedAccessories = inputs.accessories ? JSON.parse(JSON.stringify(inputs.accessories)) : [];
-    renderAccessories();
+    if(accessoryManager) accessoryManager.setAccessories(addedAccessories);
     
     productComponents = inputs.components ? JSON.parse(JSON.stringify(inputs.components)) : [];
     renderProductComponents();
@@ -497,6 +467,9 @@ export function initializeCalculator() {
     [DOM.laborCostInput, DOM.profitMarginInput].forEach(input => input.addEventListener('input', runFullCalculation));
     
     DOM.mainMaterialWoodCombobox.addEventListener('change', updateComponentCalculationsAndRender);
+    DOM.edgeMaterialCombobox.addEventListener('change', runFullCalculation);
+    DOM.mainMaterialBackPanelCombobox.addEventListener('change', runFullCalculation);
+
 
     DOM.componentsTableBody.addEventListener('input', e => {
         if (e.target.classList.contains('component-input')) {
@@ -505,8 +478,13 @@ export function initializeCalculator() {
             const value = e.target.value;
             const component = productComponents.find(p => p.id === id);
             if (component) {
-                component[field] = (field === 'name') ? value : parseNumber(value) || 0;
-                if (field === 'length' || field === 'width') {
+                if (field === 'name') {
+                     component.name = value;
+                } else {
+                    component[field] = parseNumber(value) || 0;
+                }
+                
+                if (field === 'length' || field === 'width' || field === 'qty') {
                     component.isDefault = false; 
                 }
                 runFullCalculation();
@@ -556,39 +534,15 @@ export function initializeCalculator() {
         }
     });
 
-    DOM.addAccessoryBtn.addEventListener('click', () => {
-        const selectedId = DOM.mainMaterialAccessoriesCombobox.querySelector('.combobox-value').value;
-        const quantity = parseNumber(DOM.accessoryQuantityInput.value);
-        if (!selectedId || !quantity || quantity <= 0) {
-            showToast('Vui lòng chọn vật tư và nhập số lượng hợp lệ.', 'error'); return;
-        }
-        const material = allLocalMaterials.find(a => a.id === selectedId);
-        if (!material) { showToast('Lỗi: Không tìm thấy vật tư đã chọn.', 'error'); return; }
-        const existing = addedAccessories.find(a => a.id === selectedId);
-        if (existing) existing.quantity += quantity;
-        else addedAccessories.push({ ...material, quantity });
-        renderAccessories();
-        DOM.accessoryQuantityInput.value = '1';
-        if (DOM.mainMaterialAccessoriesCombobox.setValue) DOM.mainMaterialAccessoriesCombobox.setValue('');
-        runFullCalculation();
-    });
-
-    DOM.accessoriesList.addEventListener('click', e => {
-        if (e.target.classList.contains('remove-acc-btn')) {
-            addedAccessories = addedAccessories.filter(a => a.id !== e.target.dataset.id);
-            renderAccessories();
+    accessoryManager = createAccessoryManager({
+        listEl: DOM.accessoriesList,
+        addBtn: DOM.addAccessoryBtn,
+        quantityInput: DOM.accessoryQuantityInput,
+        materialCombobox: DOM.mainMaterialAccessoriesCombobox,
+        onUpdate: (newAccessories) => {
+            addedAccessories = newAccessories;
             runFullCalculation();
-        }
-    });
-
-    DOM.accessoriesList.addEventListener('change', e => {
-        if (e.target.classList.contains('accessory-list-qty')) {
-            const id = e.target.dataset.id;
-            const newQuantity = parseNumber(e.target.value);
-            const accessory = addedAccessories.find(a => a.id === id);
-            if (accessory && newQuantity > 0) accessory.quantity = newQuantity;
-            else if (accessory) e.target.value = accessory.quantity;
-            runFullCalculation();
-        }
+        },
+        showToast,
     });
 }

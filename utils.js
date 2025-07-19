@@ -1,6 +1,58 @@
 // utils.js
 
 /**
+ * Creates an HTML element.
+ * @param {string} tag The HTML tag name.
+ * @param {object} [props={}] Properties to set on the element. Special keys: `dataset`, `on...` for event listeners.
+ * @param {...(Node|string|number)} children Child elements to append.
+ * @returns {HTMLElement} The created element.
+ */
+export function h(tag, props = {}, ...children) {
+    const el = document.createElement(tag);
+    Object.entries(props).forEach(([key, value]) => {
+        if (key.startsWith('on') && typeof value === 'function') {
+            el.addEventListener(key.substring(2).toLowerCase(), value);
+        } else if (key === 'dataset') {
+            Object.assign(el.dataset, value);
+        } else if (key in el) {
+            try {
+                el[key] = value;
+            } catch (e) {
+                el.setAttribute(key, value);
+            }
+        } else {
+             el.setAttribute(key, value);
+        }
+    });
+    children.flat().forEach(child => {
+        if (child instanceof Node) {
+            el.appendChild(child);
+        } else if (child !== null && child !== undefined) {
+            el.appendChild(document.createTextNode(String(child)));
+        }
+    });
+    return el;
+}
+
+
+/**
+ * Formats a Date object into a locale-string for display.
+ * @param {Date} date The date to format.
+ * @returns {string} The formatted date string.
+ */
+export function formatDate(date) {
+    if (!(date instanceof Date)) return '';
+    return new Intl.DateTimeFormat('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    }).format(date);
+}
+
+/**
  * Parses sheet dimensions from material notes (e.g., "Khổ 1220x2440mm")
  * and returns the area in square meters.
  * @param {object} material The material object.
