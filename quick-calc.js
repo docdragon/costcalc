@@ -1,7 +1,7 @@
 // quick-calc.js
 import { initializeCombobox, debounce, createAccessoryManager } from './ui.js';
 import * as DOM from './dom.js';
-import { parseNumber } from './utils.js';
+import { parseNumber, getSheetArea } from './utils.js';
 
 // --- Module-level state and initialization flag ---
 let localMaterialsStore = {}; // This will hold the up-to-date materials.
@@ -9,27 +9,6 @@ let isQuickCalcInitialized = false;
 let qcAddedAccessories = [];
 let allAccessoryMaterials = []; // Combined list of accessories and edges
 let qcAccessoryManager;
-
-// Standard sheet area as a fallback, in m^2
-const STANDARD_SHEET_AREA = 1.22 * 2.44;
-
-/**
- * Parses sheet dimensions from material notes (e.g., "Khổ 1220x2440mm").
- * @param {object} material The material object.
- * @returns {number} The area of the sheet in square meters.
- */
-function parseSheetDimensions(material) {
-    if (!material || !material.notes) return STANDARD_SHEET_AREA;
-    // Regex to find dimensions like 1220x2440 or 1220 x 2440
-    const match = material.notes.match(/(\d+)\s*x\s*(\d+)/);
-    if (match && match[1] && match[2]) {
-        const widthMM = parseInt(match[1], 10);
-        const heightMM = parseInt(match[2], 10);
-        // Convert from mm^2 to m^2
-        return (widthMM * heightMM) / 1000000;
-    }
-    return STANDARD_SHEET_AREA;
-}
 
 /**
  * Updates the data sources for the comboboxes and the internal material store.
@@ -85,7 +64,7 @@ export function initializeQuickCalc(initialLocalMaterials, showToast) {
         if (area > 0 && woodId) {
             const woodMaterial = woodMaterials.find(m => m.id === woodId);
             if (woodMaterial) {
-                const sheetArea = parseSheetDimensions(woodMaterial);
+                const sheetArea = getSheetArea(woodMaterial);
                 const numSheets = Math.ceil(area / sheetArea);
                 cost = numSheets * (woodMaterial.price || 0);
                 displayEl.textContent = `(Ước tính: ${numSheets} tấm)`;

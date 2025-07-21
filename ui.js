@@ -141,15 +141,25 @@ export function initializeImageUploader(uploadedCallback, removedCallback) {
 // --- Tab Navigation ---
 export function initializeTabs() {
     DOM.tabs.addEventListener('click', (e) => {
-        const button = e.target.closest('button');
+        const button = e.target.closest('button[role="tab"]');
         if (button) {
-            const tabName = button.dataset.tab;
-            const currentActive = DOM.tabs.querySelector('.active');
-            if(currentActive) currentActive.classList.remove('active');
-            button.classList.add('active');
+            // Deactivate all tabs in the list
+            DOM.tabs.querySelectorAll('[role="tab"]').forEach(tab => {
+                tab.classList.remove('active');
+                tab.setAttribute('aria-selected', 'false');
+            });
             
-            for (let pane of DOM.tabContent.children) {
-                pane.classList.toggle('hidden', pane.id !== `${tabName}-tab`);
+            // Activate the clicked tab
+            button.classList.add('active');
+            button.setAttribute('aria-selected', 'true');
+            
+            // Hide all panes and show the one controlled by the clicked tab
+            if (DOM.tabContent) {
+                 for (let pane of DOM.tabContent.children) {
+                    if (pane.getAttribute('role') === 'tabpanel') {
+                         pane.classList.toggle('hidden', pane.id !== button.getAttribute('aria-controls'));
+                    }
+                }
             }
         }
     });
@@ -181,6 +191,16 @@ export function initializeCombobox(container, optionsData, onSelect, config = {}
         input.placeholder = placeholder;
     }
 
+    // Accessibility setup
+    container.setAttribute('role', 'combobox');
+    container.setAttribute('aria-haspopup', 'listbox');
+    container.setAttribute('aria-expanded', 'false');
+    input.setAttribute('aria-autocomplete', 'list');
+    const optionsListId = `combobox-options-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    optionsList.id = optionsListId;
+    optionsList.setAttribute('role', 'listbox');
+    input.setAttribute('aria-controls', optionsListId);
+
     const renderOptions = (filterText = '') => {
         optionsList.innerHTML = '';
         let filteredOptions = currentOptionsData.filter(o => o.name.toLowerCase().includes(filterText.toLowerCase()));
@@ -189,6 +209,7 @@ export function initializeCombobox(container, optionsData, onSelect, config = {}
             const emptyOption = document.createElement('li');
             emptyOption.className = 'combobox-option';
             emptyOption.dataset.id = '';
+            emptyOption.setAttribute('role', 'option');
             emptyOption.textContent = emptyOptionText;
             optionsList.appendChild(emptyOption);
         }
@@ -200,6 +221,7 @@ export function initializeCombobox(container, optionsData, onSelect, config = {}
                 const li = document.createElement('li');
                 li.className = 'combobox-option';
                 li.dataset.id = option.id;
+                li.setAttribute('role', 'option');
                 
                 let displayText = option.name;
                 if(option.price && option.unit) {
@@ -215,6 +237,7 @@ export function initializeCombobox(container, optionsData, onSelect, config = {}
     const closeDropdown = () => {
         if (optionsWrapper.classList.contains('show')) {
             optionsWrapper.classList.remove('show');
+            container.setAttribute('aria-expanded', 'false');
             document.removeEventListener('click', handleClickOutside, true);
         }
     };
@@ -248,6 +271,7 @@ export function initializeCombobox(container, optionsData, onSelect, config = {}
     input.addEventListener('focus', () => {
         renderOptions(input.value);
         optionsWrapper.classList.add('show');
+        container.setAttribute('aria-expanded', 'true');
         document.addEventListener('click', handleClickOutside, true);
     });
 
@@ -259,6 +283,7 @@ export function initializeCombobox(container, optionsData, onSelect, config = {}
         renderOptions(input.value);
         if (!optionsWrapper.classList.contains('show')) {
             optionsWrapper.classList.add('show');
+            container.setAttribute('aria-expanded', 'true');
         }
     });
 

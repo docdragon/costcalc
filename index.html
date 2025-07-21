@@ -52,25 +52,25 @@
 
         <!-- Tab Navigation -->
         <div class="tabs-container">
-            <nav id="tabs" class="tabs-nav">
-                <button data-tab="calculator" class="tab-btn active"><i class="fas fa-magic"></i>Trình Tính Giá</button>
-                <button data-tab="quick-calc" class="tab-btn"><i class="fas fa-calculator"></i>Tính Nhanh</button>
-                <button data-tab="materials" class="tab-btn"><i class="fas fa-boxes"></i>Kho Vật Tư</button>
-                <button data-tab="config" class="tab-btn"><i class="fas fa-cogs"></i>Cấu hình</button>
-                <button data-tab="saved" class="tab-btn"><i class="fas fa-folder-open"></i>Dự Án</button>
+            <nav id="tabs" class="tabs-nav" role="tablist" aria-label="Main navigation">
+                <button role="tab" id="tab-btn-calculator" aria-selected="true" aria-controls="calculator-tab" data-tab="calculator" class="tab-btn active"><i class="fas fa-magic"></i>Trình Tính Giá</button>
+                <button role="tab" id="tab-btn-quick-calc" aria-selected="false" aria-controls="quick-calc-tab" data-tab="quick-calc" class="tab-btn"><i class="fas fa-calculator"></i>Tính Nhanh</button>
+                <button role="tab" id="tab-btn-materials" aria-selected="false" aria-controls="materials-tab" data-tab="materials" class="tab-btn"><i class="fas fa-boxes"></i>Kho Vật Tư</button>
+                <button role="tab" id="tab-btn-config" aria-selected="false" aria-controls="config-tab" data-tab="config" class="tab-btn"><i class="fas fa-cogs"></i>Cấu hình</button>
+                <button role="tab" id="tab-btn-saved" aria-selected="false" aria-controls="saved-tab" data-tab="saved" class="tab-btn"><i class="fas fa-folder-open"></i>Dự Án</button>
             </nav>
         </div>
 
         <!-- Tab Content -->
         <main id="tab-content">
             <!-- Tab 1: Trình Báo Giá -->
-            <div id="calculator-tab" class="tab-pane active">
+            <div id="calculator-tab" role="tabpanel" aria-labelledby="tab-btn-calculator" class="tab-pane active">
                 <div class="grid-layout">
                     <div class="card main-card">
                         <h2 class="card-header">Tạo Dự Án Mới</h2>
                         <div class="content-wrapper calculator-form-content">
                             <!-- Step 1: Product Info -->
-                            <div class="form-section" style="border-top: none; padding-top: 0; margin-top: 0;">
+                            <div class="form-section no-top-border">
                                 <h3 class="form-section-header"><span class="step-circle">1</span>Thông tin & Kích thước Sản phẩm</h3>
                                 <div class="grid-2-col">
                                     <div class="form-group" style="margin-top:0;">
@@ -306,7 +306,7 @@
             </div>
 
             <!-- Tab: Quick Calculator -->
-            <div id="quick-calc-tab" class="tab-pane hidden">
+            <div id="quick-calc-tab" role="tabpanel" aria-labelledby="tab-btn-quick-calc" class="tab-pane hidden">
                 <div class="card">
                     <h2 class="card-header">
                         <i class="fas fa-calculator" style="margin-right: 0.75rem;"></i>Tính Giá Nhanh
@@ -419,7 +419,7 @@
             </div>
 
             <!-- Tab 2: Quản lý Vật tư -->
-            <div id="materials-tab" class="tab-pane hidden">
+            <div id="materials-tab" role="tabpanel" aria-labelledby="tab-btn-materials" class="tab-pane hidden">
                 <div class="card">
                     <h2 class="card-header">Quản lý Kho Vật tư</h2>
                     <div class="content-wrapper materials-form-content">
@@ -508,7 +508,7 @@
             </div>
 
             <!-- Tab: Configuration -->
-            <div id="config-tab" class="tab-pane hidden">
+            <div id="config-tab" role="tabpanel" aria-labelledby="tab-btn-config" class="tab-pane hidden">
                 <div class="card">
                     <h2 class="card-header">Quản lý Loại Sản Phẩm</h2>
                     <div class="content-wrapper config-form-content">
@@ -733,7 +733,7 @@
 
 
             <!-- Tab 4: Dự án đã lưu -->
-            <div id="saved-tab" class="tab-pane hidden">
+            <div id="saved-tab" role="tabpanel" aria-labelledby="tab-btn-saved" class="tab-pane hidden">
                  <div class="card">
                     <h2 class="card-header">Các Dự án Đã Lưu</h2>
                     <div class="content-wrapper saved-items-content">
@@ -782,12 +782,12 @@
     </div>
 
     <!-- Modals -->
-    <div id="login-modal" class="modal-overlay hidden">
+    <div id="login-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="login-modal-title">
         <div class="modal-content login-modal-content">
-            <button class="modal-close-btn">&times;</button>
+            <button class="modal-close-btn" aria-label="Đóng modal">&times;</button>
             <div class="login-modal-header">
                 <i class="fas fa-drafting-compass logo-icon"></i>
-                <h3 class="modal-title">Chào mừng tới CostCraft AI</h3>
+                <h3 id="login-modal-title" class="modal-title">Chào mừng tới CostCraft AI</h3>
             </div>
             <p class="modal-subtitle">Đăng nhập để lưu trữ, quản lý và tối ưu hóa các dự án của bạn một cách chuyên nghiệp.</p>
             <div id="login-error" class="error-message"></div>
@@ -802,17 +802,17 @@
         </div>
     </div>
     
-    <div id="view-item-modal" class="modal-overlay hidden">
+    <div id="view-item-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="view-item-title">
         <div class="modal-content modal-lg">
-            <button class="modal-close-btn">&times;</button>
+            <button class="modal-close-btn" aria-label="Đóng modal">&times;</button>
             <h3 id="view-item-title" class="modal-title" style="text-align: left;"></h3>
             <div id="view-item-content" class="modal-body"></div>
         </div>
     </div>
 
-    <div id="confirm-modal" class="modal-overlay hidden">
+    <div id="confirm-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
         <div class="modal-content">
-            <h3 class="modal-title-sm">Xác nhận</h3>
+            <h3 id="confirm-modal-title" class="modal-title-sm">Xác nhận</h3>
             <p id="confirm-message" class="confirm-text"></p>
             <div class="confirm-actions">
                 <button id="confirm-cancel-btn" class="btn btn-secondary">Hủy</button>
