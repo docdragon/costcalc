@@ -83,12 +83,13 @@ export function getBoardThickness(material) {
 
 /**
  * Parses a number string that may use Vietnamese formatting (dots for thousands, comma for decimal).
+ * Returns NaN for invalid strings.
  * @param {string} str The string to parse.
- * @returns {number} The parsed number.
+ * @returns {number} The parsed number or NaN.
  */
 export function parseNumber(str) {
-    if (typeof str !== 'string' || !str) return 0;
+    if (typeof str !== 'string' || !str) return NaN;
     // Remove all dots (thousand separators) and replace comma (decimal separator) with a dot.
     const cleanStr = String(str).replace(/\./g, '').replace(/,/g, '.');
-    return parseFloat(cleanStr) || 0;
+    return parseFloat(cleanStr);
 }

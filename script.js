@@ -2,13 +2,13 @@
 import { 
     db, auth, collection, onSnapshot, addDoc, doc, updateDoc, 
     deleteDoc, serverTimestamp, getDocs, query, limit, onAuthStateChanged, 
-    signOut, setDoc
+    signOut
 } from './firebase.js';
 
 import { 
     openModal, closeModal, showConfirm, showToast, updateUIVisibility, 
-    initializeImageUploader, initializeTabs, initializeModals, initializeMathInput,
-    initializeCombobox, debounce, initializeNumberInputFormatting, createPaginator
+    initializeImageUploader, initializeTabs, initializeModals, 
+    initializeNumberInputFormatting, createPaginator, debounce
 } from './ui.js';
 import { initializeQuickCalc, updateQuickCalcMaterials } from './quick-calc.js';
 import * as DOM from './dom.js';
@@ -17,31 +17,30 @@ import {
     loadItemIntoForm, clearCalculatorInputs, getCalculatorStateForSave,
     loadComponentsByProductType
 } from './calculator.js';
+import { initializeConfigurationTab, stopConfigurationListeners } from './config-manager.js';
 import { parseNumber, h, formatDate } from './utils.js';
 
 
 // --- Global State ---
-let currentUserId = null;
-let materialsCollectionRef = null;
-let savedItemsCollectionRef = null;
-let componentNamesCollectionRef = null;
-let productTypesCollectionRef = null;
-let componentGroupsCollectionRef = null;
+const appState = {
+    currentUserId: null,
+    materialsCollectionRef: null,
+    savedItemsCollectionRef: null,
+    
+    unsubscribeMaterials: null, 
+    unsubscribeSavedItems: null,
 
-let unsubscribeMaterials = null; 
-let unsubscribeSavedItems = null;
-let unsubscribeComponentNames = null;
-let unsubscribeProductTypes = null;
-let unsubscribeComponentGroups = null;
+    // Local data stores
+    localMaterials: { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [], 'Gia Công': [] },
+    allLocalMaterials: [],
+    localSavedItems: [],
+    localComponentNames: [],
+    localProductTypes: [],
+    localComponentGroups: [],
+    
+    currentEditingItemId: null
+};
 
-// Local data stores
-let localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [], 'Gia Công': [] };
-let allLocalMaterials = [];
-let localSavedItems = [];
-let localComponentNames = [];
-let localProductTypes = [];
-let localComponentGroups = [];
-let currentEditingItemId = null;
 
 // --- Sample Data for New Users ---
 const sampleMaterials = [
@@ -124,24 +123,39 @@ async function checkAndAddSampleData(userId) {
 onAuthStateChanged(auth, async (user) => {
     const loggedIn = !!user;
     if (loggedIn) {
-        currentUserId = user.uid;
-        materialsCollectionRef = collection(db, `users/${currentUserId}/materials`);
-        savedItemsCollectionRef = collection(db, `users/${currentUserId}/savedItems`);
-        componentNamesCollectionRef = collection(db, `users/${currentUserId}/componentNames`);
-        productTypesCollectionRef = collection(db, `users/${currentUserId}/productTypes`);
-        componentGroupsCollectionRef = collection(db, `users/${currentUserId}/componentGroups`);
+        appState.currentUserId = user.uid;
+        appState.materialsCollectionRef = collection(db, `users/${appState.currentUserId}/materials`);
+        appState.savedItemsCollectionRef = collection(db, `users/${appState.currentUserId}/savedItems`);
         
-        const dataForCalc = { userId: currentUserId };
+        const dataForCalc = { userId: appState.currentUserId };
         updateCalculatorData(dataForCalc);
-        await checkAndAddSampleData(currentUserId);
+        await checkAndAddSampleData(appState.currentUserId);
+        
+        initializeConfigurationTab(appState.currentUserId, (updates) => {
+            if (updates.componentNames) {
+                appState.localComponentNames = updates.componentNames;
+                updateCalculatorData({ componentNames: appState.localComponentNames });
+            }
+            if (updates.productTypes) {
+                appState.localProductTypes = updates.productTypes;
+                updateCalculatorData({ productTypes: appState.localProductTypes });
+                populateProductTypeDropdown();
+            }
+            if (updates.componentGroups) {
+                appState.localComponentGroups = updates.componentGroups;
+                updateCalculatorData({ componentGroups: appState.localComponentGroups });
+                if (DOM.addGroupCombobox?.updateComboboxData) {
+                    DOM.addGroupCombobox.updateComboboxData(appState.localComponentGroups);
+                }
+            }
+        });
+        
         listenForData();
     } else {
-        currentUserId = null;
-        if (unsubscribeMaterials) unsubscribeMaterials();
-        if (unsubscribeSavedItems) unsubscribeSavedItems();
-        if (unsubscribeComponentNames) unsubscribeComponentNames();
-        if (unsubscribeProductTypes) unsubscribeProductTypes();
-        if (unsubscribeComponentGroups) unsubscribeComponentGroups();
+        appState.currentUserId = null;
+        if (appState.unsubscribeMaterials) appState.unsubscribeMaterials();
+        if (appState.unsubscribeSavedItems) appState.unsubscribeSavedItems();
+        stopConfigurationListeners();
         clearLocalData();
         updateCalculatorData({ userId: null });
     }
@@ -153,25 +167,19 @@ onAuthStateChanged(auth, async (user) => {
 function listenForData() {
     listenForMaterials();
     listenForSavedItems();
-    listenForComponentNames();
-    listenForProductTypes();
-    listenForComponentGroups();
 }
 
 function clearLocalData() {
-    localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [], 'Gia Công': [] };
-    allLocalMaterials = [];
-    localSavedItems = [];
-    localComponentNames = [];
-    localProductTypes = [];
-    localComponentGroups = [];
+    appState.localMaterials = { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [], 'Gia Công': [] };
+    appState.allLocalMaterials = [];
+    appState.localSavedItems = [];
+    appState.localComponentNames = [];
+    appState.localProductTypes = [];
+    appState.localComponentGroups = [];
     displayMaterials();
     displaySavedItems();
-    displayComponentNames();
-    if (renderProductTypes) renderProductTypes([]);
-    if (renderComponentGroups) renderComponentGroups([]);
     populateComboboxes();
-    updateQuickCalcMaterials(localMaterials);
+    updateQuickCalcMaterials(appState.localMaterials);
 }
 
 DOM.logoutBtn.addEventListener('click', () => signOut(auth));
@@ -181,31 +189,31 @@ DOM.logoutBtn.addEventListener('click', () => signOut(auth));
 let materialsPaginator;
 
 function listenForMaterials() {
-    if (unsubscribeMaterials) unsubscribeMaterials(); 
-    unsubscribeMaterials = onSnapshot(materialsCollectionRef, snapshot => {
-        localMaterials['Ván'] = [];
-        localMaterials['Cạnh'] = [];
-        localMaterials['Phụ kiện'] = [];
-        localMaterials['Gia Công'] = [];
+    if (appState.unsubscribeMaterials) appState.unsubscribeMaterials(); 
+    appState.unsubscribeMaterials = onSnapshot(appState.materialsCollectionRef, snapshot => {
+        appState.localMaterials['Ván'] = [];
+        appState.localMaterials['Cạnh'] = [];
+        appState.localMaterials['Phụ kiện'] = [];
+        appState.localMaterials['Gia Công'] = [];
         
         snapshot.docs.forEach(doc => {
             const material = { id: doc.id, ...doc.data() };
-            if (localMaterials[material.type]) {
-                localMaterials[material.type].push(material);
+            if (appState.localMaterials[material.type]) {
+                appState.localMaterials[material.type].push(material);
             }
         });
 
-        allLocalMaterials = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        appState.allLocalMaterials = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        updateCalculatorData({ materials: localMaterials, allMaterials: allLocalMaterials });
+        updateCalculatorData({ materials: appState.localMaterials, allMaterials: appState.allLocalMaterials });
         displayMaterials(); 
         populateComboboxes();
-        updateQuickCalcMaterials(localMaterials);
+        updateQuickCalcMaterials(appState.localMaterials);
     }, console.error);
 }
 
 function getFilteredAndSortedMaterials() {
-    let materialsToProcess = [...allLocalMaterials];
+    let materialsToProcess = [...appState.allLocalMaterials];
     const filterText = DOM.materialFilterInput.value.toLowerCase().trim();
     const sortBy = DOM.materialSortSelect.value;
 
@@ -271,21 +279,28 @@ function initializeMaterialsManagement() {
 
     DOM.materialForm.addEventListener('submit', async e => {
         e.preventDefault();
-        if (!currentUserId) return;
+        if (!appState.currentUserId) return;
+        
+        const price = parseNumber(DOM.materialForm['material-price'].value);
+        if (isNaN(price)) {
+            showToast('Giá tiền không hợp lệ. Vui lòng nhập một số.', 'error');
+            return;
+        }
+
         const materialData = {
             name: DOM.materialForm['material-name'].value,
             type: DOM.materialForm['material-type'].value,
-            price: parseNumber(DOM.materialForm['material-price'].value),
+            price: price,
             unit: DOM.materialForm['material-unit'].value,
             notes: DOM.materialForm['material-notes'].value
         };
         const id = DOM.materialForm['material-id'].value;
         try {
             if (id) {
-                await updateDoc(doc(db, `users/${currentUserId}/materials`, id), materialData);
+                await updateDoc(doc(db, `users/${appState.currentUserId}/materials`, id), materialData);
                 showToast('Cập nhật vật tư thành công!', 'success');
             } else {
-                await addDoc(materialsCollectionRef, materialData);
+                await addDoc(appState.materialsCollectionRef, materialData);
                 showToast('Thêm vật tư thành công!', 'success');
             }
             resetMaterialForm();
@@ -300,7 +315,7 @@ function initializeMaterialsManagement() {
         const deleteBtn = e.target.closest('.delete-btn');
         if (editBtn) {
             const id = editBtn.dataset.id;
-            const material = allLocalMaterials.find(m => m.id === id);
+            const material = appState.allLocalMaterials.find(m => m.id === id);
             if (material) {
                 DOM.materialForm['material-id'].value = id;
                 DOM.materialForm['material-name'].value = material.name;
@@ -317,7 +332,7 @@ function initializeMaterialsManagement() {
             const confirmed = await showConfirm('Bạn có chắc chắn muốn xóa vật tư này?');
             if (confirmed) {
                 try {
-                    await deleteDoc(doc(db, `users/${currentUserId}/materials`, id));
+                    await deleteDoc(doc(db, `users/${appState.currentUserId}/materials`, id));
                     showToast('Xóa vật tư thành công.', 'success');
                 } catch (error) {
                     showToast('Lỗi khi xóa vật tư.', 'error');
@@ -337,387 +352,9 @@ function initializeMaterialsManagement() {
 }
 
 
-// --- Component Name Management (Configuration Tab) ---
-let cnPaginator;
-
-function listenForComponentNames() {
-    if (unsubscribeComponentNames) unsubscribeComponentNames();
-    unsubscribeComponentNames = onSnapshot(componentNamesCollectionRef, snapshot => {
-        localComponentNames = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        localComponentNames.sort((a,b) => a.name.localeCompare(b.name, 'vi'));
-        
-        updateCalculatorData({ componentNames: localComponentNames });
-        displayComponentNames();
-
-        const componentNameOptions = localComponentNames.map(c => ({ id: c.id, name: c.name }));
-        if (DOM.ptComponentAddCombobox?.updateComboboxData) DOM.ptComponentAddCombobox.updateComboboxData(componentNameOptions);
-        if (DOM.cgComponentAddCombobox?.updateComboboxData) DOM.cgComponentAddCombobox.updateComboboxData(componentNameOptions);
-
-    }, console.error);
-}
-
-function getFilteredComponentNames() {
-    let namesToProcess = [...localComponentNames];
-    const filterText = DOM.cnFilterInput ? DOM.cnFilterInput.value.toLowerCase().trim() : '';
-    if (filterText) {
-        namesToProcess = namesToProcess.filter(cn => cn.name.toLowerCase().includes(filterText));
-    }
-    return namesToProcess;
-}
-
-function displayComponentNames(currentPage = 1) {
-    const filtered = getFilteredComponentNames();
-    const startIndex = (currentPage - 1) * 10;
-    const paginatedItems = filtered.slice(startIndex, startIndex + 10);
-    renderComponentNames(paginatedItems);
-    if(cnPaginator) cnPaginator.update(filtered.length);
-}
-
-function renderComponentNames(names) {
-    DOM.componentNamesTableBody.innerHTML = '';
-    if (names.length === 0) {
-        DOM.componentNamesTableBody.appendChild(h('tr', {}, h('td', { colSpan: 8, style: 'text-align: center; padding: 1rem; color: var(--text-light);' }, 'Không tìm thấy tên chi tiết nào.')));
-        return;
-    }
-    names.forEach(cn => {
-        const tr = h('tr', {},
-            h('td', { dataset: { label: 'Tên' } }, cn.name),
-            h('td', { dataset: { label: 'CT Dài' } }, cn.lengthFormula || '-'),
-            h('td', { dataset: { label: 'CT Rộng' } }, cn.widthFormula || '-'),
-            h('td', { dataset: { label: 'D1' }, className: 'text-center' }, h('div', { className: `edge-banding-icon ${cn.edge1 ? 'on' : 'off'}` }, h('i', { className: 'fas fa-check' }))),
-            h('td', { dataset: { label: 'D2' }, className: 'text-center' }, h('div', { className: `edge-banding-icon ${cn.edge2 ? 'on' : 'off'}` }, h('i', { className: 'fas fa-check' }))),
-            h('td', { dataset: { label: 'R1' }, className: 'text-center' }, h('div', { className: `edge-banding-icon ${cn.edge3 ? 'on' : 'off'}` }, h('i', { className: 'fas fa-check' }))),
-            h('td', { dataset: { label: 'R2' }, className: 'text-center' }, h('div', { className: `edge-banding-icon ${cn.edge4 ? 'on' : 'off'}` }, h('i', { className: 'fas fa-check' }))),
-            h('td', { dataset: { label: 'Thao tác' }, className: 'text-center' },
-                h('button', { className: 'edit-cn-btn text-blue-500 hover:text-blue-700 mr-2', dataset: { id: cn.id } }, h('i', { className: 'fas fa-edit' })),
-                h('button', { className: 'delete-cn-btn text-red-500 hover:text-red-700', dataset: { id: cn.id } }, h('i', { className: 'fas fa-trash' }))
-            )
-        );
-        DOM.componentNamesTableBody.appendChild(tr);
-    });
-}
-
-function initializeComponentNameManagement() {
-    cnPaginator = createPaginator({
-        controlsEl: DOM.cnPaginationControls,
-        pageInfoEl: DOM.cnPageInfo,
-        prevBtn: DOM.cnPrevPageBtn,
-        nextBtn: DOM.cnNextPageBtn,
-        itemsPerPage: 10,
-        onPageChange: page => displayComponentNames(page)
-    });
-
-    if (DOM.cnFilterInput) {
-        DOM.cnFilterInput.addEventListener('input', debounce(() => {
-            cnPaginator.reset();
-            displayComponentNames(1);
-        }, 300));
-    }
-
-    DOM.componentNameForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (!currentUserId) return;
-        const nameData = {
-            name: DOM.componentNameForm['component-name-input'].value,
-            lengthFormula: DOM.componentLengthFormulaInput.value.trim(),
-            widthFormula: DOM.componentWidthFormulaInput.value.trim(),
-            edge1: DOM.componentNameForm['component-edge-1'].checked,
-            edge2: DOM.componentNameForm['component-edge-2'].checked,
-            edge3: DOM.componentNameForm['component-edge-3'].checked,
-            edge4: DOM.componentNameForm['component-edge-4'].checked,
-        };
-        const id = DOM.componentNameForm['component-name-id'].value;
-        try {
-            if (id) {
-                await updateDoc(doc(db, `users/${currentUserId}/componentNames`, id), nameData);
-                showToast('Cập nhật tên thành công!', 'success');
-            } else {
-                await addDoc(componentNamesCollectionRef, nameData);
-                showToast('Thêm tên thành công!', 'success');
-            }
-            resetComponentNameForm();
-        } catch (error) {
-            showToast('Đã có lỗi xảy ra.', 'error');
-            console.error("Error adding/updating component name:", error);
-        }
-    });
-
-    DOM.componentNamesTableBody.addEventListener('click', async (e) => {
-        const editBtn = e.target.closest('.edit-cn-btn');
-        const deleteBtn = e.target.closest('.delete-cn-btn');
-        if (editBtn) {
-            const id = editBtn.dataset.id;
-            const cn = localComponentNames.find(c => c.id === id);
-            if (cn) {
-                DOM.componentNameForm['component-name-id'].value = id;
-                DOM.componentNameForm['component-name-input'].value = cn.name;
-                DOM.componentLengthFormulaInput.value = cn.lengthFormula || '';
-                DOM.componentWidthFormulaInput.value = cn.widthFormula || '';
-                DOM.componentNameForm['component-edge-1'].checked = !!cn.edge1;
-                DOM.componentNameForm['component-edge-2'].checked = !!cn.edge2;
-                DOM.componentNameForm['component-edge-3'].checked = !!cn.edge3;
-                DOM.componentNameForm['component-edge-4'].checked = !!cn.edge4;
-                DOM.componentNameForm.querySelector('button[type="submit"]').textContent = 'Cập nhật Tên';
-                DOM.cancelComponentNameEditBtn.classList.remove('hidden');
-            }
-        } else if (deleteBtn) {
-            const id = deleteBtn.dataset.id;
-            const confirmed = await showConfirm('Bạn có chắc chắn muốn xóa tên chi tiết này?');
-            if (confirmed) {
-                try {
-                    await deleteDoc(doc(db, `users/${currentUserId}/componentNames`, id));
-                    showToast('Xóa tên thành công.', 'success');
-                } catch (error) {
-                    showToast('Lỗi khi xóa.', 'error');
-                }
-            }
-        }
-    });
-
-    DOM.cancelComponentNameEditBtn.addEventListener('click', resetComponentNameForm);
-
-    function resetComponentNameForm() {
-        DOM.componentNameForm.reset();
-        DOM.componentNameForm['component-name-id'].value = '';
-        DOM.componentLengthFormulaInput.value = '';
-        DOM.componentWidthFormulaInput.value = '';
-        DOM.componentNameForm.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-plus mr-2"></i> Thêm Tên';
-        DOM.cancelComponentNameEditBtn.classList.add('hidden');
-    }
-}
-
-
-// --- Configuration Tab: Product Types & Component Groups (Refactored) ---
-function createConfigManager(config) {
-    let currentEditingId = null;
-    let localItems = [];
-
-    const {
-        collectionRef, formEl, idInput, nameInput, cancelBtn, listEl, editorEl, editorTitleEl,
-        itemTypeName, componentAddCombobox, componentAddQtyInput, componentAddBtn, componentsListEl
-    } = config;
-
-    function renderList() {
-        listEl.innerHTML = '';
-        if (localItems.length === 0) {
-            listEl.appendChild(h('p', { className: 'form-text' }, `Chưa có ${itemTypeName} nào.`));
-            return;
-        }
-        localItems.forEach(item => {
-            const itemEl = h('div', {
-                className: `config-list-item ${item.id === currentEditingId ? 'active' : ''}`,
-                dataset: { id: item.id }
-            },
-                h('span', {}, item.name),
-                h('div', { className: 'config-list-item-actions' },
-                    h('button', {
-                        className: 'delete-btn',
-                        dataset: { id: item.id },
-                        title: `Xóa ${itemTypeName}`
-                    }, h('i', { className: 'fas fa-trash' }))
-                )
-            );
-            listEl.appendChild(itemEl);
-        });
-    }
-    
-    function renderEditor() {
-        const item = localItems.find(i => i.id === currentEditingId);
-        if (!item) {
-            editorEl.classList.add('hidden');
-            return;
-        }
-        editorEl.classList.remove('hidden');
-        editorTitleEl.textContent = `Chỉnh sửa chi tiết cho: ${item.name}`;
-        
-        componentsListEl.innerHTML = '';
-        const components = item.components || [];
-        if (components.length > 0) {
-            components.forEach(c => {
-                const componentName = localComponentNames.find(cn => cn.id === c.componentNameId)?.name || 'Không rõ';
-                const tr = h('tr', { dataset: { cnid: c.componentNameId } },
-                    h('td', { dataset: { label: 'Tên' } }, componentName),
-                    h('td', { dataset: { label: 'Số lượng' }, className: 'text-center' }, c.qty),
-                    h('td', { dataset: { label: 'Xóa' }, className: 'text-center' },
-                        h('button', { className: 'remove-component-btn', dataset: { cnid: c.componentNameId } }, h('i', { className: 'fas fa-trash' }))
-                    )
-                );
-                componentsListEl.appendChild(tr);
-            });
-        } else {
-            componentsListEl.appendChild(h('tr', {}, h('td', { colSpan: 3, className: 'text-center', style: 'padding: 1rem; color: var(--text-light)' }, 'Chưa có chi tiết nào.')));
-        }
-    }
-
-    function resetForm() {
-        formEl.reset();
-        idInput.value = '';
-        formEl.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-plus mr-2"></i> Thêm Mới';
-        cancelBtn.classList.add('hidden');
-    }
-
-    function attachListeners() {
-        formEl.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = nameInput.value.trim();
-            if (!name || !currentUserId) return;
-            const id = idInput.value;
-            try {
-                if (id) {
-                    await updateDoc(doc(collectionRef, id), { name });
-                    showToast(`Cập nhật ${itemTypeName} thành công!`, 'success');
-                } else {
-                    const docRef = await addDoc(collectionRef, { name, components: [] });
-                    showToast(`Thêm ${itemTypeName} thành công!`, 'success');
-                    currentEditingId = docRef.id;
-                }
-                resetForm();
-                renderList();
-                renderEditor();
-            } catch (error) { showToast('Đã có lỗi xảy ra.', 'error'); }
-        });
-
-        listEl.addEventListener('click', async e => {
-            const itemEl = e.target.closest('.config-list-item');
-            const deleteBtn = e.target.closest('.delete-btn');
-            if (deleteBtn) {
-                e.stopPropagation();
-                const id = deleteBtn.dataset.id;
-                const item = localItems.find(i => i.id === id);
-                const confirmed = await showConfirm(`Bạn có chắc muốn xóa ${itemTypeName} "${item.name}"?`);
-                if (confirmed) {
-                    await deleteDoc(doc(collectionRef, id));
-                    if (currentEditingId === id) {
-                        currentEditingId = null;
-                        editorEl.classList.add('hidden');
-                    }
-                    showToast("Xóa thành công", "success");
-                }
-            } else if (itemEl) {
-                currentEditingId = itemEl.dataset.id;
-                const item = localItems.find(i => i.id === currentEditingId);
-                if (item) {
-                    idInput.value = item.id;
-                    nameInput.value = item.name;
-                    formEl.querySelector('button[type="submit"]').textContent = 'Cập nhật';
-                    cancelBtn.classList.remove('hidden');
-                }
-                renderList();
-                renderEditor();
-            }
-        });
-
-        cancelBtn.addEventListener('click', () => {
-            resetForm();
-            currentEditingId = null;
-            renderList();
-            editorEl.classList.add('hidden');
-        });
-
-        componentAddBtn.addEventListener('click', async () => {
-            const item = localItems.find(i => i.id === currentEditingId);
-            if (!item) return;
-            const componentNameId = componentAddCombobox.querySelector('.combobox-value').value;
-            const qty = parseInt(componentAddQtyInput.value);
-            if (!componentNameId || !qty || qty < 1) {
-                showToast('Vui lòng chọn chi tiết và nhập số lượng hợp lệ.', 'error');
-                return;
-            }
-            const newComponents = JSON.parse(JSON.stringify(item.components || []));
-            const existing = newComponents.find(c => c.componentNameId === componentNameId);
-            if (existing) existing.qty = qty;
-            else newComponents.push({ componentNameId, qty });
-            
-            await updateDoc(doc(collectionRef, item.id), { components: newComponents });
-            showToast('Đã thêm/cập nhật chi tiết.', 'success');
-            componentAddQtyInput.value = '1';
-            if (componentAddCombobox.setValue) componentAddCombobox.setValue('');
-        });
-
-        componentsListEl.addEventListener('click', async e => {
-            const deleteBtn = e.target.closest('.remove-component-btn');
-            if (deleteBtn) {
-                const item = localItems.find(i => i.id === currentEditingId);
-                if (!item) return;
-                const componentNameIdToRemove = deleteBtn.dataset.cnid;
-                const newComponents = (item.components || []).filter(c => c.componentNameId !== componentNameIdToRemove);
-                await updateDoc(doc(collectionRef, item.id), { components: newComponents });
-                showToast('Đã xóa chi tiết.', 'success');
-            }
-        });
-    }
-    
-    attachListeners();
-
-    return (newItems) => {
-        localItems = (newItems || []).sort((a, b) => a.name.localeCompare(b.name, 'vi'));
-        renderList();
-        if (currentEditingId) renderEditor();
-    };
-}
-
-let renderProductTypes, renderComponentGroups;
-
-function listenForProductTypes() {
-    if (unsubscribeProductTypes) unsubscribeProductTypes();
-    unsubscribeProductTypes = onSnapshot(productTypesCollectionRef, snapshot => {
-        localProductTypes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        updateCalculatorData({ productTypes: localProductTypes });
-        if(renderProductTypes) renderProductTypes(localProductTypes);
-        populateProductTypeDropdown();
-    }, console.error);
-}
-
-function listenForComponentGroups() {
-    if (unsubscribeComponentGroups) unsubscribeComponentGroups();
-    unsubscribeComponentGroups = onSnapshot(componentGroupsCollectionRef, snapshot => {
-        localComponentGroups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        updateCalculatorData({ componentGroups: localComponentGroups });
-        if(renderComponentGroups) renderComponentGroups(localComponentGroups);
-        if (DOM.addGroupCombobox?.updateComboboxData) {
-            DOM.addGroupCombobox.updateComboboxData(localComponentGroups);
-        }
-    }, console.error);
-}
-
-function initializeConfigTabManagement() {
-     renderProductTypes = createConfigManager({
-        collectionRef: productTypesCollectionRef,
-        formEl: DOM.productTypeForm,
-        idInput: DOM.productTypeIdInput,
-        nameInput: DOM.productTypeNameInput,
-        cancelBtn: DOM.cancelProductTypeEditBtn,
-        listEl: DOM.productTypesList,
-        editorEl: DOM.productTypeEditor,
-        editorTitleEl: DOM.productTypeEditorTitle,
-        itemTypeName: 'loại sản phẩm',
-        componentAddCombobox: DOM.ptComponentAddCombobox,
-        componentAddQtyInput: DOM.ptComponentAddQtyInput,
-        componentAddBtn: DOM.ptComponentAddBtn,
-        componentsListEl: DOM.ptComponentsList,
-    });
-    
-    renderComponentGroups = createConfigManager({
-        collectionRef: componentGroupsCollectionRef,
-        formEl: DOM.componentGroupForm,
-        idInput: DOM.componentGroupIdInput,
-        nameInput: DOM.componentGroupNameInput,
-        cancelBtn: DOM.cancelComponentGroupEditBtn,
-        listEl: DOM.componentGroupsList,
-        editorEl: DOM.componentGroupEditor,
-        editorTitleEl: DOM.componentGroupEditorTitle,
-        itemTypeName: 'nhóm chi tiết',
-        componentAddCombobox: DOM.cgComponentAddCombobox,
-        componentAddQtyInput: DOM.cgComponentAddQtyInput,
-        componentAddBtn: DOM.cgComponentAddBtn,
-        componentsListEl: DOM.cgComponentsList,
-    });
-}
-
-
 // --- Calculator Action Buttons ---
 function updateCalculatorActionButtons() {
-    const isEditing = !!currentEditingItemId;
+    const isEditing = !!appState.currentEditingItemId;
     DOM.saveItemBtn.classList.toggle('hidden', isEditing);
     DOM.updateItemBtn.classList.toggle('hidden', !isEditing);
 }
@@ -726,16 +363,16 @@ function updateCalculatorActionButtons() {
 // --- Populate Dropdowns ---
 function populateProductTypeDropdown() {
     if (DOM.itemTypeCombobox?.updateComboboxData) {
-        DOM.itemTypeCombobox.updateComboboxData(localProductTypes);
+        DOM.itemTypeCombobox.updateComboboxData(appState.localProductTypes);
     }
 }
 
 function populateComboboxes() {
-    const allAccessoryMaterials = [ ...localMaterials['Phụ kiện'], ...localMaterials['Gia Công'], ...localMaterials['Cạnh'] ];
+    const allAccessoryMaterials = [ ...appState.localMaterials['Phụ kiện'], ...appState.localMaterials['Gia Công'], ...appState.localMaterials['Cạnh'] ];
 
-    if (DOM.mainMaterialWoodCombobox?.updateComboboxData) DOM.mainMaterialWoodCombobox.updateComboboxData(localMaterials['Ván']);
-    if (DOM.mainMaterialBackPanelCombobox?.updateComboboxData) DOM.mainMaterialBackPanelCombobox.updateComboboxData(localMaterials['Ván']);
-    if (DOM.addGroupCombobox?.updateComboboxData) DOM.addGroupCombobox.updateComboboxData(localComponentGroups);
+    if (DOM.mainMaterialWoodCombobox?.updateComboboxData) DOM.mainMaterialWoodCombobox.updateComboboxData(appState.localMaterials['Ván']);
+    if (DOM.mainMaterialBackPanelCombobox?.updateComboboxData) DOM.mainMaterialBackPanelCombobox.updateComboboxData(appState.localMaterials['Ván']);
+    if (DOM.addGroupCombobox?.updateComboboxData) DOM.addGroupCombobox.updateComboboxData(appState.localComponentGroups);
 }
 
 
@@ -743,15 +380,15 @@ function populateComboboxes() {
 let savedItemsPaginator;
 
 function listenForSavedItems() {
-    if (unsubscribeSavedItems) unsubscribeSavedItems();
-    unsubscribeSavedItems = onSnapshot(savedItemsCollectionRef, snapshot => {
-        localSavedItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    if (appState.unsubscribeSavedItems) appState.unsubscribeSavedItems();
+    appState.unsubscribeSavedItems = onSnapshot(appState.savedItemsCollectionRef, snapshot => {
+        appState.localSavedItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         displaySavedItems();
     }, console.error);
 }
 
 function getFilteredSavedItems() {
-     let itemsToProcess = [...localSavedItems];
+     let itemsToProcess = [...appState.localSavedItems];
     const filterText = DOM.savedItemsFilterInput ? DOM.savedItemsFilterInput.value.toLowerCase().trim() : '';
     if (filterText) {
         itemsToProcess = itemsToProcess.filter(item => {
@@ -767,7 +404,7 @@ function getFilteredSavedItems() {
             ].filter(Boolean));
 
             return [...usedMaterialIds].some(id => {
-                const material = allLocalMaterials.find(m => m.id === id);
+                const material = appState.allLocalMaterials.find(m => m.id === id);
                 return material && (
                     (material.name || '').toLowerCase().includes(filterText) ||
                     (material.notes || '').toLowerCase().includes(filterText)
@@ -800,7 +437,7 @@ function renderSavedItems(items) {
         const { suggestedPrice = 0, totalCost = 0, estimatedProfit = 0 } = finalPrices;
 
         const dims = (inputs.length && inputs.width && inputs.height) ? `${inputs.length} x ${inputs.width} x ${inputs.height} mm` : 'Không rõ kích thước';
-        const mainWoodName = allLocalMaterials.find(m => m.id === inputs.mainWoodId)?.name || 'Chưa chọn ván';
+        const mainWoodName = appState.allLocalMaterials.find(m => m.id === inputs.mainWoodId)?.name || 'Chưa chọn ván';
 
         const tr = h('tr', {},
             h('td', { dataset: { label: 'Tên & Chi tiết Dự án' } },
@@ -827,15 +464,15 @@ function renderSavedItems(items) {
 }
 
 function renderItemDetailsToModal(itemId) {
-    const item = localSavedItems.find(i => i.id === itemId);
+    const item = appState.localSavedItems.find(i => i.id === itemId);
     if (!item) return;
 
     const { inputs = {}, finalPrices = {} } = item;
     const { costBreakdown = [], suggestedPrice = 0, totalCost = 0, estimatedProfit = 0 } = finalPrices;
     
     DOM.viewItemTitle.textContent = `Chi tiết dự án: ${inputs.name || 'Không tên'}`;
-    const mainWood = allLocalMaterials.find(m => m.id === inputs.mainWoodId)?.name || 'Không rõ';
-    const backPanel = allLocalMaterials.find(m => m.id === inputs.backPanelId)?.name || 'Dùng ván chính';
+    const mainWood = appState.allLocalMaterials.find(m => m.id === inputs.mainWoodId)?.name || 'Không rõ';
+    const backPanel = appState.allLocalMaterials.find(m => m.id === inputs.backPanelId)?.name || 'Dùng ván chính';
     
     const accessoriesList = (inputs.accessories && inputs.accessories.length > 0)
         ? h('ul', {}, ...inputs.accessories.map(a => h('li', {}, `${a.name} (SL: ${a.quantity} ${a.unit})`)))
@@ -909,9 +546,9 @@ function initializeSavedItemsManagement() {
         const copyBtn = e.target.closest('.copy-btn');
     
         if (loadBtn) {
-            const itemToLoad = localSavedItems.find(i => i.id === loadBtn.dataset.id);
+            const itemToLoad = appState.localSavedItems.find(i => i.id === loadBtn.dataset.id);
             if (itemToLoad) {
-                currentEditingItemId = itemToLoad.id;
+                appState.currentEditingItemId = itemToLoad.id;
                 loadItemIntoForm(itemToLoad);
                 updateCalculatorActionButtons();
             }
@@ -919,7 +556,7 @@ function initializeSavedItemsManagement() {
             renderItemDetailsToModal(viewBtn.dataset.id);
         } else if (copyBtn) {
             const id = copyBtn.dataset.id;
-            const itemToCopy = localSavedItems.find(i => i.id === id);
+            const itemToCopy = appState.localSavedItems.find(i => i.id === id);
             if (itemToCopy) {
                 try {
                     const newInputs = JSON.parse(JSON.stringify(itemToCopy.inputs || {}));
@@ -931,7 +568,7 @@ function initializeSavedItemsManagement() {
                         createdAt: serverTimestamp()
                     };
     
-                    await addDoc(savedItemsCollectionRef, newItemData);
+                    await addDoc(appState.savedItemsCollectionRef, newItemData);
                     showToast('Sao chép dự án thành công!', 'success');
                 } catch (error) {
                     showToast('Lỗi khi sao chép dự án.', 'error');
@@ -942,7 +579,7 @@ function initializeSavedItemsManagement() {
             const confirmed = await showConfirm('Bạn có chắc chắn muốn xóa dự án này?');
             if (confirmed) {
                 try {
-                    await deleteDoc(doc(db, `users/${currentUserId}/savedItems`, id));
+                    await deleteDoc(doc(db, `users/${appState.currentUserId}/savedItems`, id));
                     showToast('Xóa dự án thành công.', 'success');
                 } catch(error) {
                     showToast('Lỗi khi xoá dự án.', 'error');
@@ -961,33 +598,14 @@ document.addEventListener('DOMContentLoaded', () => {
         (imageData, imageSrc) => { setUploadedImage(imageData); },
         () => { setUploadedImage(null); }
     );
-    initializeMathInput('.input-style[type="text"][inputmode="decimal"]');
     initializeNumberInputFormatting('input[inputmode="decimal"]');
     
     // Initialize all modules
     initializeCalculator();
-    initializeQuickCalc(localMaterials, showToast);
+    initializeQuickCalc(appState.localMaterials, showToast);
     initializeMaterialsManagement();
-    initializeComponentNameManagement();
-    initializeConfigTabManagement();
     initializeSavedItemsManagement();
     updateCalculatorActionButtons();
-
-    // Main form Comboboxes
-    if (DOM.itemTypeCombobox) {
-        initializeCombobox(DOM.itemTypeCombobox, [], (selectedId) => {
-            loadComponentsByProductType(selectedId);
-        }, { placeholder: "Tìm hoặc chọn loại sản phẩm...", allowEmpty: true, emptyOptionText: '-- Chọn loại sản phẩm --' });
-    }
-    initializeCombobox(DOM.mainMaterialWoodCombobox, [], null, { placeholder: "Tìm hoặc chọn ván chính..." });
-    initializeCombobox(DOM.mainMaterialBackPanelCombobox, [], null, { placeholder: "Tìm ván hậu...", allowEmpty: true, emptyOptionText: 'Dùng chung ván chính' });
-    initializeCombobox(DOM.edgeMaterialCombobox, [], null, { placeholder: "Tìm hoặc chọn loại nẹp..." });
-    
-    initializeCombobox(DOM.addGroupCombobox, [], null, { placeholder: "Tìm một cụm chi tiết..." });
-
-    // Config tab Comboboxes
-    initializeCombobox(DOM.ptComponentAddCombobox, [], null, { placeholder: "Tìm chi tiết để thêm..." });
-    initializeCombobox(DOM.cgComponentAddCombobox, [], null, { placeholder: "Tìm chi tiết để thêm..." });
 
     // Event Listeners for actions that cross module boundaries
     DOM.saveItemBtn.addEventListener('click', async () => {
@@ -996,7 +614,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const itemData = { ...itemDataToSave, createdAt: serverTimestamp() };
         try {
-            await addDoc(savedItemsCollectionRef, itemData);
+            await addDoc(appState.savedItemsCollectionRef, itemData);
             showToast('Lưu dự án thành công!', 'success');
             DOM.clearFormBtn.click();
         } catch (error) {
@@ -1005,7 +623,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     DOM.updateItemBtn.addEventListener('click', async () => {
-        if (!currentEditingItemId) {
+        if (!appState.currentEditingItemId) {
             showToast('Không có dự án nào đang được chỉnh sửa để cập nhật.', 'error');
             return;
         }
@@ -1014,7 +632,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const itemData = { ...itemDataToSave, updatedAt: serverTimestamp() };
         try {
-            const itemRef = doc(db, `users/${currentUserId}/savedItems`, currentEditingItemId);
+            const itemRef = doc(db, `users/${appState.currentUserId}/savedItems`, appState.currentEditingItemId);
             await updateDoc(itemRef, itemData);
             showToast('Cập nhật dự án thành công!', 'success');
         } catch (error) {
@@ -1024,7 +642,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     DOM.clearFormBtn.addEventListener('click', () => {
         clearCalculatorInputs();
-        currentEditingItemId = null;
+        appState.currentEditingItemId = null;
         updateCalculatorActionButtons();
         showToast('Đã xóa biểu mẫu. Sẵn sàng cho dự án mới.', 'info');
         window.scrollTo({ top: 0, behavior: 'smooth' });
