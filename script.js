@@ -7,13 +7,13 @@ import {
 
 import { 
     openModal, closeModal, showConfirm, showToast, updateUIVisibility, 
-    initializeImageUploader, initializeTabs, initializeModals, 
+    initializeTabs, initializeModals, 
     initializeNumberInputFormatting, createPaginator, debounce, initializeMathInput
 } from './ui.js';
 import { initializeQuickCalc, updateQuickCalcMaterials } from './quick-calc.js';
 import * as DOM from './dom.js';
 import { 
-    initializeCalculator, updateCalculatorData, setUploadedImage,
+    initializeCalculator, updateCalculatorData,
     loadItemIntoForm, clearCalculatorInputs, getCalculatorStateForSave,
     loadComponentsByProductType
 } from './calculator.js';
@@ -594,10 +594,6 @@ function initializeSavedItemsManagement() {
 document.addEventListener('DOMContentLoaded', () => {
     initializeTabs();
     initializeModals();
-    initializeImageUploader(
-        (imageData, imageSrc) => { setUploadedImage(imageData); },
-        () => { setUploadedImage(null); }
-    );
     initializeNumberInputFormatting('input[inputmode="decimal"]');
     initializeMathInput('input[inputmode="decimal"]');
     

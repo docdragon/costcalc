@@ -13,7 +13,6 @@ let currentUserId = null;
 let lastCalculationResult = null;
 let addedAccessories = [];
 let productComponents = [];
-let uploadedImage = null;
 let accessoryManager;
 
 
@@ -28,10 +27,6 @@ export function updateCalculatorData(data) {
          accessoryManager.updateMaterials(allAccessoryMaterials);
     }
     if (data.userId) currentUserId = data.userId;
-}
-
-export function setUploadedImage(image) {
-    uploadedImage = image;
 }
 
 // --- Formula Evaluation ---
@@ -59,6 +54,54 @@ function evaluateFormula(formula, context) {
 // --- Component & Calculation Logic ---
 const runFullCalculation = debounce(calculateAndDisplayFinalPrice, 300);
 
+function renderVisualConfigurator() {
+    if (!DOM.cabinetBox) return;
+
+    const L = parseNumber(DOM.itemLengthInput.value) || 0;
+    const W = parseNumber(DOM.itemWidthInput.value) || 0; // This is Depth
+    const H = parseNumber(DOM.itemHeightInput.value) || 0;
+
+    // Create a scaling factor to keep the visualization a reasonable size
+    const maxDim = Math.max(L, W, H, 1);
+    const scaleFactor = 300 / maxDim;
+
+    const vizWidth = L > 0 ? L * scaleFactor : 0;
+    const vizHeight = H > 0 ? H * scaleFactor : 0;
+    const vizDepth = W > 0 ? W * scaleFactor : 0;
+
+    DOM.cabinetBox.style.setProperty('--cabinet-width', `${vizWidth}px`);
+    DOM.cabinetBox.style.setProperty('--cabinet-height', `${vizHeight}px`);
+    DOM.cabinetBox.style.setProperty('--cabinet-depth', `${vizDepth}px`);
+
+    // Render internals
+    if (DOM.cabinetInternals) {
+        DOM.cabinetInternals.innerHTML = '';
+        
+        const shelves = productComponents.filter(c => c.name.toLowerCase().includes('đợt'));
+        const dividers = productComponents.filter(c => c.name.toLowerCase().includes('vách'));
+
+        // Basic positioning for shelves
+        const shelfCount = shelves.reduce((sum, s) => sum + (s.qty || 0), 0);
+        if (shelfCount > 0) {
+            const spacing = 100 / (shelfCount + 1);
+            for(let i=1; i <= shelfCount; i++) {
+                const shelfEl = h('div', { className: 'cabinet-shelf', style: `top: ${i * spacing}%;`});
+                DOM.cabinetInternals.appendChild(shelfEl);
+            }
+        }
+
+        // Basic positioning for dividers
+        const dividerCount = dividers.reduce((sum, d) => sum + (d.qty || 0), 0);
+        if (dividerCount > 0) {
+            const spacing = 100 / (dividerCount + 1);
+            for(let i=1; i <= dividerCount; i++) {
+                const dividerEl = h('div', { className: 'cabinet-divider', style: `left: ${i * spacing}%;`});
+                DOM.cabinetInternals.appendChild(dividerEl);
+            }
+        }
+    }
+}
+
 function updateComponentCalculationsAndRender() {
     const L = parseNumber(DOM.itemLengthInput.value) || 0;
     const W = parseNumber(DOM.itemWidthInput.value) || 0;
@@ -85,6 +128,7 @@ function updateComponentCalculationsAndRender() {
     }
 
     renderProductComponents();
+    renderVisualConfigurator();
     runFullCalculation();
 }
 
@@ -360,9 +404,9 @@ export function clearCalculatorInputs() {
     
     productComponents = [];
     renderProductComponents();
+    renderVisualConfigurator();
 
     lastCalculationResult = null;
-    if(DOM.sidebarRemoveImageBtn) DOM.sidebarRemoveImageBtn.click();
 
     if (DOM.mainMaterialWoodCombobox.setValue) DOM.mainMaterialWoodCombobox.setValue('');
     if (DOM.mainMaterialBackPanelCombobox.setValue) DOM.mainMaterialBackPanelCombobox.setValue('');
@@ -404,26 +448,14 @@ export function loadItemIntoForm(item) {
     if (DOM.mainMaterialWoodCombobox.setValue) DOM.mainMaterialWoodCombobox.setValue(inputs.mainWoodId || '');
     if (DOM.mainMaterialBackPanelCombobox.setValue) DOM.mainMaterialBackPanelCombobox.setValue(inputs.backPanelId || '');
     if (DOM.edgeMaterialCombobox.setValue) DOM.edgeMaterialCombobox.setValue(inputs.edgeMaterialId || '');
-
-    if (inputs.uploadedImage) {
-        uploadedImage = inputs.uploadedImage;
-        const imageSrc = `data:${uploadedImage.mimeType};base64,${uploadedImage.data}`;
-
-        if (DOM.sidebarImagePreview && DOM.sidebarImagePlaceholder) {
-            DOM.sidebarImagePreview.src = imageSrc;
-            DOM.sidebarImagePreview.classList.remove('hidden');
-            DOM.sidebarImagePlaceholder.classList.add('hidden');
-            DOM.sidebarRemoveImageBtn.classList.remove('hidden');
-        }
-    }
     
     addedAccessories = inputs.accessories ? JSON.parse(JSON.stringify(inputs.accessories)) : [];
     if(accessoryManager) accessoryManager.setAccessories(addedAccessories);
     
     productComponents = inputs.components ? JSON.parse(JSON.stringify(inputs.components)) : [];
+    
     renderProductComponents();
-
-    // The results will be recalculated based on the loaded inputs
+    renderVisualConfigurator();
     calculateAndDisplayFinalPrice();
     
     document.querySelector('button[data-tab="calculator"]')?.click();
@@ -451,8 +483,7 @@ export function getCalculatorStateForSave() {
             backPanelId: DOM.mainMaterialBackPanelCombobox.querySelector('.combobox-value').value,
             edgeMaterialId: DOM.edgeMaterialCombobox.querySelector('.combobox-value').value,
             accessories: addedAccessories,
-            components: productComponents,
-            uploadedImage: uploadedImage
+            components: productComponents
         },
         finalPrices: lastCalculationResult,
     };
@@ -544,5 +575,53 @@ export function initializeCalculator() {
             runFullCalculation();
         },
         showToast,
+    });
+    
+    DOM.addShelfBtn?.addEventListener('click', () => {
+        const shelfComponent = localComponentNames.find(c => c.name === 'Đợt Cố Định');
+        if (!shelfComponent) {
+            showToast('Không tìm thấy cấu phần "Đợt Cố Định" trong Cấu hình.', 'error');
+            return;
+        }
+
+        const existing = productComponents.find(p => p.componentNameId === shelfComponent.id);
+        if (existing) {
+            existing.qty += 1;
+        } else {
+            productComponents.push({
+                id: `comp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                name: shelfComponent.name,
+                length: 0, width: 0,
+                qty: 1,
+                componentNameId: shelfComponent.id,
+                isDefault: true,
+                materialId: null
+            });
+        }
+        updateComponentCalculationsAndRender();
+    });
+
+    DOM.addDividerBtn?.addEventListener('click', () => {
+        const dividerComponent = localComponentNames.find(c => c.name === 'Vách Ngăn');
+         if (!dividerComponent) {
+            showToast('Không tìm thấy cấu phần "Vách Ngăn" trong Cấu hình.', 'error');
+            return;
+        }
+        
+        const existing = productComponents.find(p => p.componentNameId === dividerComponent.id);
+        if (existing) {
+            existing.qty += 1;
+        } else {
+             productComponents.push({
+                id: `comp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                name: dividerComponent.name,
+                length: 0, width: 0,
+                qty: 1,
+                componentNameId: dividerComponent.id,
+                isDefault: true,
+                materialId: null
+            });
+        }
+        updateComponentCalculationsAndRender();
     });
 }
