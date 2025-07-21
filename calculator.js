@@ -55,13 +55,12 @@ function evaluateFormula(formula, context) {
 const runFullCalculation = debounce(calculateAndDisplayFinalPrice, 300);
 
 function renderVisualConfigurator() {
-    if (!DOM.cabinetBox) return;
+    if (!DOM.cabinetBox || !DOM.cabinetInternals) return;
 
     const L = parseNumber(DOM.itemLengthInput.value) || 0;
-    const W = parseNumber(DOM.itemWidthInput.value) || 0; // This is Depth
+    const W = parseNumber(DOM.itemWidthInput.value) || 0; // Depth
     const H = parseNumber(DOM.itemHeightInput.value) || 0;
 
-    // Create a scaling factor to keep the visualization a reasonable size
     const maxDim = Math.max(L, W, H, 1);
     const scaleFactor = 300 / maxDim;
 
@@ -73,34 +72,64 @@ function renderVisualConfigurator() {
     DOM.cabinetBox.style.setProperty('--cabinet-height', `${vizHeight}px`);
     DOM.cabinetBox.style.setProperty('--cabinet-depth', `${vizDepth}px`);
 
-    // Render internals
-    if (DOM.cabinetInternals) {
-        DOM.cabinetInternals.innerHTML = '';
-        
-        const shelves = productComponents.filter(c => c.name.toLowerCase().includes('đợt'));
-        const dividers = productComponents.filter(c => c.name.toLowerCase().includes('vách'));
+    DOM.cabinetInternals.innerHTML = '';
+    
+    const mainWoodId = DOM.mainMaterialWoodCombobox.querySelector('.combobox-value').value;
+    const mainWoodMaterial = localMaterials['Ván'].find(m => m.id === mainWoodId);
+    const t = getBoardThickness(mainWoodMaterial);
+    const scaledT = t * scaleFactor;
 
-        // Basic positioning for shelves
-        const shelfCount = shelves.reduce((sum, s) => sum + (s.qty || 0), 0);
-        if (shelfCount > 0) {
-            const spacing = 100 / (shelfCount + 1);
-            for(let i=1; i <= shelfCount; i++) {
-                const shelfEl = h('div', { className: 'cabinet-shelf', style: `top: ${i * spacing}%;`});
+    // --- Render Shelves ---
+    const shelves = productComponents.filter(c => c.name.toLowerCase().includes('đợt') && c.qty > 0 && c.length > 0 && c.width > 0);
+    const totalShelves = shelves.reduce((sum, s) => sum + s.qty, 0);
+    if (totalShelves > 0) {
+        const availableHeight = vizHeight - (2 * scaledT);
+        const spacing = availableHeight / (totalShelves + 1);
+        let shelfIndex = 0;
+
+        shelves.forEach(comp => {
+            for (let i = 0; i < comp.qty; i++) {
+                shelfIndex++;
+                const shelfEl = h('div', {
+                    className: 'cabinet-shelf',
+                    style: `
+                        width: ${comp.length * scaleFactor}px;
+                        height: ${comp.width * scaleFactor}px; /* This becomes depth after rotation */
+                        top: ${scaledT + (shelfIndex * spacing)}px;
+                        left: ${scaledT}px;
+                    `
+                });
                 DOM.cabinetInternals.appendChild(shelfEl);
             }
-        }
+        });
+    }
 
-        // Basic positioning for dividers
-        const dividerCount = dividers.reduce((sum, d) => sum + (d.qty || 0), 0);
-        if (dividerCount > 0) {
-            const spacing = 100 / (dividerCount + 1);
-            for(let i=1; i <= dividerCount; i++) {
-                const dividerEl = h('div', { className: 'cabinet-divider', style: `left: ${i * spacing}%;`});
+    // --- Render Dividers ---
+    const dividers = productComponents.filter(c => c.name.toLowerCase().includes('vách') && c.qty > 0 && c.length > 0 && c.width > 0);
+    const totalDividers = dividers.reduce((sum, d) => sum + d.qty, 0);
+    if (totalDividers > 0) {
+        const availableWidth = vizWidth - (2 * scaledT);
+        const spacing = availableWidth / (totalDividers + 1);
+        let dividerIndex = 0;
+
+        dividers.forEach(comp => {
+            for (let i = 0; i < comp.qty; i++) {
+                dividerIndex++;
+                const dividerEl = h('div', {
+                    className: 'cabinet-divider',
+                    style: `
+                        height: ${comp.length * scaleFactor}px;
+                        width: ${comp.width * scaleFactor}px; /* This becomes depth after rotation */
+                        left: ${scaledT + (dividerIndex * spacing)}px;
+                        top: ${scaledT}px;
+                    `
+                });
                 DOM.cabinetInternals.appendChild(dividerEl);
             }
-        }
+        });
     }
 }
+
 
 function updateComponentCalculationsAndRender() {
     const L = parseNumber(DOM.itemLengthInput.value) || 0;
@@ -589,9 +618,9 @@ export function initializeCalculator() {
     });
     
     DOM.addShelfBtn?.addEventListener('click', () => {
-        const shelfComponent = localComponentNames.find(c => c.name === 'Đợt Cố Định');
+        const shelfComponent = localComponentNames.find(c => c.name.toLowerCase().includes('đợt'));
         if (!shelfComponent) {
-            showToast('Không tìm thấy cấu phần "Đợt Cố Định" trong Cấu hình.', 'error');
+            showToast('Không tìm thấy cấu phần nào chứa "đợt". Vui lòng tạo trong tab Cấu hình.', 'error');
             return;
         }
 
@@ -613,9 +642,9 @@ export function initializeCalculator() {
     });
 
     DOM.addDividerBtn?.addEventListener('click', () => {
-        const dividerComponent = localComponentNames.find(c => c.name === 'Vách Ngăn');
+        const dividerComponent = localComponentNames.find(c => c.name.toLowerCase().includes('vách'));
          if (!dividerComponent) {
-            showToast('Không tìm thấy cấu phần "Vách Ngăn" trong Cấu hình.', 'error');
+            showToast('Không tìm thấy cấu phần nào chứa "vách". Vui lòng tạo trong tab Cấu hình.', 'error');
             return;
         }
         

@@ -944,7 +944,7 @@ td button { transition: color 0.2s; }
     width: 100%;
     height: 100%;
     transform-style: preserve-3d;
-    transform: translateZ(calc(var(--cabinet-depth) * 0.05));
+    /* The Z-transform is removed as components will be positioned individually */
 }
 
 .cabinet-shelf, .cabinet-divider {
@@ -956,18 +956,14 @@ td button { transition: color 0.2s; }
 }
 
 .cabinet-shelf {
-    width: 100%;
-    height: var(--cabinet-depth);
-    left: 0;
-    transform-origin: top;
+    /* JS sets width and height (which is depth after rotation) */
+    transform-origin: top left;
     transform: rotateX(90deg);
 }
 
 .cabinet-divider {
-    width: var(--cabinet-depth);
-    height: 100%;
-    top: 0;
-    transform-origin: left;
+    /* JS sets width (which is depth after rotation) and height */
+    transform-origin: top left;
     transform: rotateY(-90deg);
 }
 
