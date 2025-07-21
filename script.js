@@ -168,8 +168,8 @@ function clearLocalData() {
     displayMaterials();
     displaySavedItems();
     displayComponentNames();
-    renderProductTypes();
-    renderComponentGroups();
+    if (renderProductTypes) renderProductTypes([]);
+    if (renderComponentGroups) renderComponentGroups([]);
     populateComboboxes();
     updateQuickCalcMaterials(localMaterials);
 }
@@ -650,7 +650,7 @@ function createConfigManager(config) {
     attachListeners();
 
     return (newItems) => {
-        localItems = newItems.sort((a,b) => a.name.localeCompare(b.name, 'vi'));
+        localItems = (newItems || []).sort((a, b) => a.name.localeCompare(b.name, 'vi'));
         renderList();
         if (currentEditingId) renderEditor();
     };
