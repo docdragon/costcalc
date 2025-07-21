@@ -101,7 +101,6 @@ body {
     padding: 0 2rem 1rem;
     border-bottom: 1px solid var(--border-color);
 }
-.card.mt-8 { margin-top: 2rem; }
 
 /* --- Forms --- */
 .form-group { margin-top: 1.25rem; }
@@ -123,8 +122,6 @@ body {
     box-shadow: 0 0 0 3px var(--ring-color);
 }
 .button-group { display: flex; gap: 0.75rem; margin-top: 1.5rem; }
-.button-group.justify-end { justify-content: flex-end; }
-.button-group.justify-start { justify-content: flex-start; }
 .full-width { width: 100%; }
 .material-form { border-bottom: 1px solid var(--border-color); padding-bottom: 2rem; margin-bottom: 2rem; }
 
@@ -354,7 +351,7 @@ tbody tr:nth-child(even) { background-color: #fdfdff; }
 }
 
 .text-center { text-align: center; }
-.text-right { text-align: right; }
+.text-right { text-right: right; }
 .font-semibold { font-weight: 600; }
 td button { transition: color 0.2s; }
 .text-blue-500 { color: var(--primary-color); }
@@ -375,13 +372,10 @@ td button { transition: color 0.2s; }
     flex-wrap: wrap;
     gap: 1rem;
 }
-.component-table { white-space: nowrap; }
-.th-name { width: 35%; }
-.th-material { width: 25%; }
-.th-delete { width: 5%; }
-.th-name-col { width: 25%; }
-.th-actions-col { width: 15%; }
-.th-project-details { width: 35%; }
+.component-table {
+    white-space: nowrap;
+}
+.component-table .th-delete { width: 5%; }
 
 .component-table td {
     padding: 0.25rem 0.5rem;
@@ -686,7 +680,6 @@ td button { transition: color 0.2s; }
     border: none; cursor: pointer; line-height: 1;
 }
 .modal-title { font-size: 1.5rem; font-weight: 700; text-align: center; margin-bottom: 1.5rem; }
-.modal-title.text-left { text-align: left; }
 .modal-title-sm { font-size: 1.125rem; font-weight: 600; color: var(--text-dark); margin-bottom: 0.5rem; }
 .modal-body { white-space: normal; max-height: 75vh; overflow-y: auto; padding: 0 0.5rem; }
 .error-message { color: var(--danger-color); font-size: 0.875rem; text-align: center; height: 1.25rem; margin-bottom: 1rem; }
@@ -805,10 +798,6 @@ td button { transition: color 0.2s; }
     font-size: 0.8rem;
     color: var(--text-light);
 }
-.form-text.text-right { text-align: right; }
-.form-text.text-primary { color: var(--primary-color); }
-.form-text.font-medium { font-weight: 500; }
-
 
 /* --- Loaders --- */
 .loading-overlay {
@@ -906,8 +895,24 @@ td button { transition: color 0.2s; }
 .border-t { border-top: 1px solid var(--border-color); }
 .pt-8 { padding-top: 2rem !important; }
 
-/* --- Visual Configurator --- */
-#visual-configurator-container {
+
+/* --- Guide Section --- */
+.guide-details {
+    border-top: 1px solid var(--border-color);
+    margin-top: 1.5rem;
+    padding-top: 0.5rem;
+}
+.guide-details summary {
+    cursor: pointer;
+    list-style: none;
+}
+.guide-details summary::-webkit-details-marker { display: none; }
+.guide-details summary:focus-visible { outline: none; }
+.guide-details summary h4 { margin: 0; }
+
+/* --- Product Preview --- */
+#product-preview-section { margin-bottom: 1.5rem; }
+.preview-canvas {
     width: 100%;
     min-height: 300px;
     display: flex;
@@ -1071,7 +1076,8 @@ td button { transition: color 0.2s; }
     background-color: #e2e8f0;
     color: var(--text-dark);
 }
-.config-list-item-actions .delete-btn:hover {
+.config-list-item-actions .delete-pt-btn:hover,
+.config-list-item-actions .delete-cg-btn:hover {
     background-color: #fee2e2;
     color: var(--danger-color);
 }
@@ -1082,11 +1088,11 @@ td button { transition: color 0.2s; }
     margin-bottom: 0.75rem;
 }
 #pt-components-list .remove-component-btn,
-#cg-components-list .remove-component-btn {
+#cg-components-list .remove-cg-component-btn {
     color: var(--text-light);
 }
 #pt-components-list .remove-component-btn:hover,
-#cg-components-list .remove-component-btn:hover {
+#cg-components-list .remove-cg-component-btn:hover {
     color: var(--danger-color);
     background-color: #fee2e2;
 }
