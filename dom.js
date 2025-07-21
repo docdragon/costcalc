@@ -54,14 +54,13 @@ export const suggestedPriceValue = document.getElementById('suggested-price-valu
 export const estimatedProfitValue = document.getElementById('estimated-profit-value');
 export const costBreakdownContainer = document.getElementById('cost-breakdown-container');
 
-// Visual Configurator (Sidebar)
-export const visualConfiguratorContainer = document.getElementById('visual-configurator-container');
-export const visualConfigurator = document.getElementById('visual-configurator');
-export const cabinetBox = document.getElementById('cabinet-box');
-export const cabinetInternals = document.getElementById('cabinet-internals');
-export const configuratorActions = document.getElementById('configurator-actions');
-export const addShelfBtn = document.getElementById('add-shelf-btn');
-export const addDividerBtn = document.getElementById('add-divider-btn');
+// Product Image (Sidebar)
+export const productImageContainer = document.getElementById('product-image-container');
+export const productImagePreviewWrapper = document.getElementById('product-image-preview-wrapper');
+export const productImagePreview = document.getElementById('product-image-preview');
+export const productImagePlaceholder = document.getElementById('product-image-placeholder');
+export const productImageUploadInput = document.getElementById('product-image-upload-input');
+export const productImageRemoveBtn = document.getElementById('product-image-remove-btn');
 
 
 // --- Quick Calculator Tab ---

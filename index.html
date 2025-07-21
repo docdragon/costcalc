@@ -267,41 +267,39 @@
                         </div>
                     </div>
                     <div class="sidebar-card card">
-                        <h2 class="card-header">
-                            <i class="fas fa-cube"></i> Trình Dựng Tủ Trực Quan
-                        </h2>
+                        <h2 class="card-header">Công cụ & Hướng dẫn</h2>
                         <div class="content-wrapper calculator-form-content">
-                            <div id="visual-configurator-container">
-                                <div id="visual-configurator">
-                                    <div id="cabinet-box" style="--cabinet-width: 200px; --cabinet-height: 250px; --cabinet-depth: 100px;">
-                                        <div class="face front"></div>
-                                        <div class="face back"></div>
-                                        <div class="face right"></div>
-                                        <div class="face left"></div>
-                                        <div class="face top"></div>
-                                        <div class="face bottom"></div>
-                                        <div id="cabinet-internals">
-                                            <!-- Shelves and dividers will be added here by JS -->
-                                        </div>
+                            <!-- Product Preview -->
+                             <div id="product-preview-section">
+                                <h4><i class="fas fa-image"></i> Hình ảnh Sản phẩm</h4>
+                                <input type="file" id="sidebar-image-input" class="hidden" accept="image/*">
+                                <div id="sidebar-image-preview-wrapper" class="preview-canvas">
+                                    <img id="sidebar-image-preview" src="" alt="Xem trước hình ảnh" class="hidden">
+                                    <div id="sidebar-image-placeholder">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <p>Nhấp hoặc kéo thả ảnh vào đây</p>
                                     </div>
+                                    <button id="sidebar-remove-image-btn" class="remove-image-btn hidden">&times;</button>
                                 </div>
                             </div>
-                            <div id="configurator-actions" class="button-group justify-start mt-4">
-                                <button id="add-shelf-btn" class="btn btn-secondary btn-sm">
-                                    <i class="fas fa-plus"></i> Thêm Đợt
-                                </button>
-                                <button id="add-divider-btn" class="btn btn-secondary btn-sm">
-                                    <i class="fas fa-plus"></i> Thêm Vách
-                                </button>
-                            </div>
-                            <div class="form-text mt-3">
-                                Kích thước của khối hộp sẽ được cập nhật theo các ô nhập liệu bên trái.
-                            </div>
+                            
+                            <!-- Guide -->
+                            <details class="guide-details">
+                                <summary>
+                                    <h4><i class="fas fa-question-circle"></i> Hướng dẫn sử dụng</h4>
+                                </summary>
+                                <ul>
+                                    <li><strong>Chọn Loại Sản phẩm:</strong> Chọn một loại sản phẩm từ danh sách để tải cấu trúc chi tiết mặc định. Bạn có thể tùy chỉnh các loại sản phẩm này trong tab 'Cấu hình'.</li>
+                                    <li><strong>Điền thông tin:</strong> Hoàn thiện các thông tin chi tiết về kích thước, vật liệu, và phụ kiện. Kết quả báo giá sẽ tự động cập nhật.</li>
+                                    <li><strong>Tính toán & Lưu:</strong> Nhấn nút "Tính toán & Lưu dự án" để nhận kết quả phân tích chi phí và lưu lại dự án để xem sau.</li>
+                                    <li><strong>Lưu & Tải lại:</strong> Đăng nhập và lưu các dự án quan trọng để xem lại hoặc chỉnh sửa sau này.</li>
+                                </ul>
+                           </details>
                         </div>
                          <div class="login-prompt-view">
-                            <div class="icon-prompt"><i class="fas fa-cube"></i></div>
-                            <h3>Dựng tủ trực quan</h3>
-                            <p>Đăng nhập để sử dụng công cụ thiết kế và báo giá.</p>
+                            <div class="icon-prompt"><i class="fas fa-info-circle"></i></div>
+                            <h3>Chào mừng bạn!</h3>
+                            <p>Đăng nhập để mở khóa tất cả tính năng.</p>
                         </div>
                     </div>
                 </div>
