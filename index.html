@@ -73,11 +73,11 @@
                             <div class="form-section no-top-border">
                                 <h3 class="form-section-header"><span class="step-circle">1</span>Thông tin & Kích thước Sản phẩm</h3>
                                 <div class="grid-2-col">
-                                    <div class="form-group" style="margin-top:0;">
+                                    <div class="form-group mt-0">
                                         <label for="item-name" class="form-label">Tên sản phẩm / dự án</label>
                                         <input type="text" id="item-name" class="input-style" placeholder="Vd: Tủ bếp dưới chân sắt">
                                     </div>
-                                    <div class="form-group" style="margin-top:0;">
+                                    <div class="form-group mt-0">
                                          <label for="item-type-input" class="form-label">Loại sản phẩm</label>
                                          <div id="item-type-combobox" class="combobox-container">
                                              <input type="text" id="item-type-input" class="input-style combobox-input" placeholder="Tìm hoặc chọn loại sản phẩm...">
@@ -92,7 +92,7 @@
                                     <label for="item-description" class="form-label">Ghi chú / Mô tả Sản phẩm</label>
                                     <textarea id="item-description" class="input-style" placeholder="Thêm mô tả chi tiết về sản phẩm, yêu cầu đặc biệt..."></textarea>
                                 </div>
-                                <div class="grid-3-col" style="margin-top: 1.25rem;">
+                                <div class="grid-3-col mt-5">
                                     <div><label for="item-length" class="form-label">Dài (mm)</label><input type="text" inputmode="decimal" id="item-length" class="input-style" placeholder="Vd: 2000"></div>
                                     <div><label for="item-width" class="form-label">Rộng (mm)</label><input type="text" inputmode="decimal" id="item-width" class="input-style" placeholder="Vd: 600"></div>
                                     <div><label for="item-height" class="form-label">Cao (mm)</label><input type="text" inputmode="decimal" id="item-height" class="input-style" placeholder="Vd: 850"></div>
@@ -154,7 +154,7 @@
                                             <thead>
                                                 <tr>
                                                     <th class="th-style th-name">Tên Chi tiết</th>
-                                                    <th class="th-style" style="width: 25%;">Vật liệu</th>
+                                                    <th class="th-style th-material">Vật liệu</th>
                                                     <th class="th-style">Dài</th>
                                                     <th class="th-style">Rộng</th>
                                                     <th class="th-style">SL</th>
@@ -166,7 +166,7 @@
                                             </tbody>
                                         </table>
                                     </div>
-                                    <button id="add-custom-component-btn" class="btn btn-secondary btn-sm" style="margin-top: 1rem;"><i class="fas fa-plus"></i> Thêm Chi tiết</button>
+                                    <button id="add-custom-component-btn" class="btn btn-secondary btn-sm mt-4"><i class="fas fa-plus"></i> Thêm Chi tiết</button>
                                 </div>
                             </div>
                             
@@ -210,12 +210,12 @@
                                     </div>
                                     <ul id="accessories-list" class="accessory-list"></ul>
                                 </div>
-                                <div class="grid-2-col" style="margin-top: 1.25rem;">
-                                    <div class="form-group" style="margin-top: 0;">
+                                <div class="grid-2-col mt-5">
+                                    <div class="form-group mt-0">
                                         <label for="labor-cost" class="form-label">Chi phí nhân công (VND)</label>
                                         <input type="text" inputmode="decimal" id="labor-cost" class="input-style" value="0" placeholder="Vd: 500000">
                                     </div>
-                                    <div class="form-group" style="margin-top: 0;">
+                                    <div class="form-group mt-0">
                                         <label for="profit-margin" class="form-label">Lợi nhuận mong muốn (%)</label>
                                         <input type="text" inputmode="decimal" id="profit-margin" class="input-style" value="50">
                                     </div>
@@ -318,9 +318,9 @@
                     <div class="content-wrapper quick-calc-form-content">
                         
                         <!-- Section 1: Board Materials -->
-                        <div class="form-group" style="margin-top: 1rem;">
-                            <h3 class="result-box-header" style="margin-bottom: 1.5rem; font-size: 1.1rem;"><span class="step-circle">1</span>Vật liệu ván</h3>
-                            <div class="grid-2-col" style="gap: 0.5rem 1.25rem;">
+                        <div class="form-group mt-4">
+                            <h3 class="result-box-header mb-6 fs-md"><span class="step-circle">1</span>Vật liệu ván</h3>
+                            <div class="grid-2-col gap-y-2 gap-x-5">
                                 <div>
                                     <label for="qc-area" class="form-label">Diện tích ván loại 1 (m²)</label>
                                     <input type="text" inputmode="decimal" id="qc-area" class="input-style" placeholder="Vd: 4.5">
@@ -334,10 +334,10 @@
                                             <ul class="combobox-options"></ul>
                                         </div>
                                     </div>
-                                    <small id="qc-sheet-count-display" class="form-text" style="margin-top: 0.5rem; text-align: right; color: var(--primary-color); font-weight: 500;"></small>
+                                    <small id="qc-sheet-count-display" class="form-text text-right text-primary font-medium mt-2"></small>
                                 </div>
                             </div>
-                            <div class="grid-2-col" style="gap: 0.5rem 1.25rem; margin-top: 1.25rem;">
+                            <div class="grid-2-col gap-y-2 gap-x-5 mt-5">
                                 <div>
                                     <label for="qc-area-2" class="form-label">Diện tích ván loại 2 (m²)</label>
                                     <input type="text" inputmode="decimal" id="qc-area-2" class="input-style" placeholder="Vd: 1.2">
@@ -351,14 +351,14 @@
                                             <ul class="combobox-options"></ul>
                                         </div>
                                     </div>
-                                    <small id="qc-sheet-count-display-2" class="form-text" style="margin-top: 0.5rem; text-align: right; color: var(--primary-color); font-weight: 500;"></small>
+                                    <small id="qc-sheet-count-display-2" class="form-text text-right text-primary font-medium mt-2"></small>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Section 2: Accessories, Edge, and Other Costs -->
                         <div class="form-group">
-                             <h3 class="result-box-header" style="margin-bottom: 1.5rem; font-size: 1.1rem;"><span class="step-circle">2</span>Phụ kiện, Nẹp & Chi phí Phát sinh</h3>
+                             <h3 class="result-box-header mb-6 fs-md"><span class="step-circle">2</span>Phụ kiện, Nẹp & Chi phí Phát sinh</h3>
                             <div class="accessory-adder qc-accessory-adder">
                                 <div id="qc-material-accessories-combobox" class="combobox-container">
                                     <input type="text" class="input-style combobox-input" placeholder="Tìm phụ kiện hoặc nẹp...">
@@ -370,13 +370,13 @@
                                 <input type="text" inputmode="decimal" id="qc-accessory-quantity" class="input-style accessory-qty" placeholder="SL / mét" value="1" min="0">
                                 <button id="qc-add-accessory-btn" class="btn btn-secondary accessory-add-btn"><i class="fas fa-plus"></i> Thêm</button>
                             </div>
-                            <ul id="qc-accessories-list" class="accessory-list" style="margin-top: 1rem; margin-bottom: 1.25rem;"></ul>
+                            <ul id="qc-accessories-list" class="accessory-list mt-4 mb-5"></ul>
                         </div>
 
                         <!-- Section 3: Pricing Setup -->
                         <div class="form-group">
-                            <h3 class="result-box-header" style="margin-bottom: 1.5rem; font-size: 1.1rem;"><span class="step-circle">3</span>Thiết lập Giá bán</h3>
-                            <div class="grid-2-col" style="gap: 0.5rem 1.25rem;">
+                            <h3 class="result-box-header mb-6 fs-md"><span class="step-circle">3</span>Thiết lập Giá bán</h3>
+                            <div class="grid-2-col gap-y-2 gap-x-5">
                                  <div>
                                     <label for="qc-install-cost" class="form-label">Chi phí lắp đặt & phát sinh (VND)</label>
                                     <input type="text" inputmode="decimal" id="qc-install-cost" class="input-style" placeholder="Vd: 500000" value="0" min="0">
@@ -389,7 +389,7 @@
                         </div>
 
                         <!-- Section 4: Results -->
-                        <div id="qc-results-container" style="margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 2rem;">
+                        <div id="qc-results-container" class="mt-8 pt-8 border-t">
                              <div class="grid-3-col">
                                 <div class="price-card bg-indigo">
                                     <div class="price-label">Tổng Chi Phí</div>
@@ -454,7 +454,7 @@
                                 <label for="material-notes" class="form-label">Ghi chú</label>
                                 <input type="text" id="material-notes" class="input-style" placeholder="Vd: Khổ 1220x2440, chống ẩm">
                             </div>
-                            <div class="button-group" style="justify-content: flex-end;">
+                            <div class="button-group justify-end">
                                 <button type="button" id="cancel-edit-button" class="btn btn-secondary hidden">Hủy</button>
                                 <button type="submit" class="btn btn-primary"><i class="fas fa-plus mr-2"></i> Thêm Vật tư</button>
                             </div>
@@ -492,7 +492,7 @@
                             </div>
                              <div id="pagination-controls" class="pagination-controls hidden">
                                 <span id="page-info"></span>
-                                <div class="button-group" style="margin: 0; justify-content: flex-end;">
+                                <div class="button-group m-0 justify-end">
                                     <button id="prev-page-btn" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Trước</button>
                                     <button id="next-page-btn" class="btn btn-secondary">Sau <i class="fas fa-arrow-right"></i></button>
                                 </div>
@@ -517,11 +517,11 @@
                             <div class="config-list-panel">
                                  <form id="product-type-form">
                                     <input type="hidden" id="product-type-id">
-                                    <div class="form-group" style="margin-top: 0;">
+                                    <div class="form-group mt-0">
                                         <label for="product-type-name" class="form-label">Tên Loại Sản Phẩm</label>
                                         <input type="text" id="product-type-name" class="input-style" placeholder="Vd: Tủ Bếp Dưới" required>
                                     </div>
-                                    <div class="button-group" style="justify-content: flex-start; margin-top: 0.75rem;">
+                                    <div class="button-group justify-start mt-3">
                                         <button type="submit" class="btn btn-primary"><i class="fas fa-plus mr-2"></i> Thêm Mới</button>
                                         <button type="button" id="cancel-product-type-edit-btn" class="btn btn-secondary hidden">Hủy</button>
                                     </div>
@@ -535,7 +535,7 @@
                             <!-- Right: Editor for the selected Product Type -->
                             <div id="product-type-editor" class="config-editor-panel hidden">
                                 <h3 id="product-type-editor-title" class="table-header">Chỉnh sửa: Tủ Bếp Dưới</h3>
-                                <div class="form-group" style="margin-top: 0;">
+                                <div class="form-group mt-0">
                                     <label class="form-label">Thêm chi tiết vào loại sản phẩm</label>
                                     <div class="accessory-adder">
                                         <div id="pt-component-add-combobox" class="combobox-container">
@@ -574,7 +574,7 @@
                     </div>
                 </div>
 
-                <div class="card" style="margin-top: 2rem;">
+                <div class="card mt-8">
                     <h2 class="card-header">
                         Quản lý Nhóm Chi tiết (Cụm)
                         <span class="tooltip-icon-wrapper">
@@ -588,11 +588,11 @@
                             <div class="config-list-panel">
                                 <form id="component-group-form">
                                     <input type="hidden" id="component-group-id">
-                                    <div class="form-group" style="margin-top: 0;">
+                                    <div class="form-group mt-0">
                                         <label for="component-group-name" class="form-label">Tên Nhóm / Cụm</label>
                                         <input type="text" id="component-group-name" class="input-style" placeholder="Vd: Cụm Hộc Kéo" required>
                                     </div>
-                                    <div class="button-group" style="justify-content: flex-start; margin-top: 0.75rem;">
+                                    <div class="button-group justify-start mt-3">
                                         <button type="submit" class="btn btn-primary"><i class="fas fa-plus mr-2"></i> Thêm Mới</button>
                                         <button type="button" id="cancel-component-group-edit-btn" class="btn btn-secondary hidden">Hủy</button>
                                     </div>
@@ -606,7 +606,7 @@
                             <!-- Right: Editor for the selected Component Group -->
                             <div id="component-group-editor" class="config-editor-panel hidden">
                                 <h3 id="component-group-editor-title" class="table-header">Chỉnh sửa: Cụm Hộc Kéo</h3>
-                                <div class="form-group" style="margin-top: 0;">
+                                <div class="form-group mt-0">
                                     <label class="form-label">Thêm chi tiết vào nhóm</label>
                                     <div class="accessory-adder">
                                         <div id="cg-component-add-combobox" class="combobox-container">
@@ -645,7 +645,7 @@
                     </div>
                 </div>
 
-                <div class="card" style="margin-top: 2rem;">
+                <div class="card mt-8">
                     <h2 class="card-header">Quản lý Tên Chi tiết & Công thức</h2>
                     <div class="content-wrapper component-names-content">
                         <form id="component-name-form" class="material-form">
@@ -654,7 +654,7 @@
                                 <label for="component-name-input" class="form-label">Tên chi tiết</label>
                                 <input type="text" id="component-name-input" class="input-style" placeholder="Vd: Hông Trái, Đáy, Nóc..." required>
                             </div>
-                             <div class="grid-2-col" style="margin-top: 1rem;">
+                             <div class="grid-2-col mt-4">
                                 <div>
                                     <label for="component-length-formula" class="form-label">
                                         Công thức tính Chiều Dài
@@ -670,7 +670,7 @@
                                     <input type="text" id="component-width-formula" class="input-style" placeholder="Vd: W">
                                 </div>
                             </div>
-                            <div class="form-group" style="margin-top: 1rem;">
+                            <div class="form-group mt-4">
                                 <label class="form-label">
                                     Quy tắc dán cạnh mặc định
                                     <span class="tooltip-icon-wrapper">
@@ -685,7 +685,7 @@
                                     <label><input type="checkbox" id="component-edge-4"> Cạnh rộng 2</label>
                                 </div>
                             </div>
-                            <div class="button-group" style="justify-content: flex-end;">
+                            <div class="button-group justify-end">
                                 <button type="button" id="cancel-component-name-edit-btn" class="btn btn-secondary hidden">Hủy</button>
                                 <button type="submit" class="btn btn-primary"><i class="fas fa-plus mr-2"></i> Thêm Tên</button>
                             </div>
@@ -702,11 +702,11 @@
                                 <table class="data-table">
                                     <thead>
                                         <tr>
-                                            <th class="th-style" style="width: 25%;">Tên</th>
+                                            <th class="th-style th-name-col">Tên</th>
                                             <th class="th-style">CT Dài</th>
                                             <th class="th-style">CT Rộng</th>
                                             <th class="th-style text-center" colspan="4">Dán cạnh (D1-D2-R1-R2)</th>
-                                            <th class="th-style text-center" style="width: 15%;">Thao tác</th>
+                                            <th class="th-style text-center th-actions-col">Thao tác</th>
                                         </tr>
                                     </thead>
                                     <tbody id="component-names-table-body">
@@ -716,7 +716,7 @@
                             </div>
                             <div id="cn-pagination-controls" class="pagination-controls hidden">
                                 <span id="cn-page-info"></span>
-                                <div class="button-group" style="margin: 0; justify-content: flex-end;">
+                                <div class="button-group m-0 justify-end">
                                     <button id="cn-prev-page-btn" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Trước</button>
                                     <button id="cn-next-page-btn" class="btn btn-secondary">Sau <i class="fas fa-arrow-right"></i></button>
                                 </div>
@@ -748,7 +748,7 @@
                                 <table class="data-table">
                                     <thead>
                                         <tr>
-                                            <th class="th-style" style="width: 35%;">Tên & Chi tiết Dự án</th>
+                                            <th class="th-style th-project-details">Tên & Chi tiết Dự án</th>
                                             <th class="th-style">Giá Bán</th>
                                             <th class="th-style">Chi Phí</th>
                                             <th class="th-style">Lợi Nhuận</th>
@@ -763,7 +763,7 @@
                             </div>
                             <div id="saved-items-pagination-controls" class="pagination-controls hidden">
                                 <span id="si-page-info"></span>
-                                <div class="button-group" style="margin: 0; justify-content: flex-end;">
+                                <div class="button-group m-0 justify-end">
                                     <button id="si-prev-page-btn" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Trước</button>
                                     <button id="si-next-page-btn" class="btn btn-secondary">Sau <i class="fas fa-arrow-right"></i></button>
                                 </div>
@@ -805,7 +805,7 @@
     <div id="view-item-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="view-item-title">
         <div class="modal-content modal-lg">
             <button class="modal-close-btn" aria-label="Đóng modal">&times;</button>
-            <h3 id="view-item-title" class="modal-title" style="text-align: left;"></h3>
+            <h3 id="view-item-title" class="modal-title text-left"></h3>
             <div id="view-item-content" class="modal-body"></div>
         </div>
     </div>
