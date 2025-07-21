@@ -54,83 +54,6 @@ function evaluateFormula(formula, context) {
 // --- Component & Calculation Logic ---
 const runFullCalculation = debounce(calculateAndDisplayFinalPrice, 300);
 
-function renderVisualConfigurator() {
-    if (!DOM.cabinetBox || !DOM.cabinetInternals) return;
-
-    const L = parseNumber(DOM.itemLengthInput.value) || 0;
-    const W = parseNumber(DOM.itemWidthInput.value) || 0; // Depth
-    const H = parseNumber(DOM.itemHeightInput.value) || 0;
-
-    const maxDim = Math.max(L, W, H, 1);
-    const scaleFactor = 300 / maxDim;
-
-    const vizWidth = L > 0 ? L * scaleFactor : 0;
-    const vizHeight = H > 0 ? H * scaleFactor : 0;
-    const vizDepth = W > 0 ? W * scaleFactor : 0;
-
-    DOM.cabinetBox.style.setProperty('--cabinet-width', `${vizWidth}px`);
-    DOM.cabinetBox.style.setProperty('--cabinet-height', `${vizHeight}px`);
-    DOM.cabinetBox.style.setProperty('--cabinet-depth', `${vizDepth}px`);
-
-    DOM.cabinetInternals.innerHTML = '';
-    
-    const mainWoodId = DOM.mainMaterialWoodCombobox.querySelector('.combobox-value').value;
-    const mainWoodMaterial = localMaterials['Ván'].find(m => m.id === mainWoodId);
-    const t = getBoardThickness(mainWoodMaterial);
-    const scaledT = t * scaleFactor;
-
-    // --- Render Shelves ---
-    const shelves = productComponents.filter(c => c.name.toLowerCase().includes('đợt') && c.qty > 0 && c.length > 0 && c.width > 0);
-    const totalShelves = shelves.reduce((sum, s) => sum + s.qty, 0);
-    if (totalShelves > 0) {
-        const availableHeight = vizHeight - (2 * scaledT);
-        const spacing = availableHeight / (totalShelves + 1);
-        let shelfIndex = 0;
-
-        shelves.forEach(comp => {
-            for (let i = 0; i < comp.qty; i++) {
-                shelfIndex++;
-                const shelfEl = h('div', {
-                    className: 'cabinet-shelf',
-                    style: `
-                        width: ${comp.length * scaleFactor}px;
-                        height: ${comp.width * scaleFactor}px; /* This becomes depth after rotation */
-                        top: ${scaledT + (shelfIndex * spacing)}px;
-                        left: ${scaledT}px;
-                    `
-                });
-                DOM.cabinetInternals.appendChild(shelfEl);
-            }
-        });
-    }
-
-    // --- Render Dividers ---
-    const dividers = productComponents.filter(c => c.name.toLowerCase().includes('vách') && c.qty > 0 && c.length > 0 && c.width > 0);
-    const totalDividers = dividers.reduce((sum, d) => sum + d.qty, 0);
-    if (totalDividers > 0) {
-        const availableWidth = vizWidth - (2 * scaledT);
-        const spacing = availableWidth / (totalDividers + 1);
-        let dividerIndex = 0;
-
-        dividers.forEach(comp => {
-            for (let i = 0; i < comp.qty; i++) {
-                dividerIndex++;
-                const dividerEl = h('div', {
-                    className: 'cabinet-divider',
-                    style: `
-                        height: ${comp.length * scaleFactor}px;
-                        width: ${comp.width * scaleFactor}px; /* This becomes depth after rotation */
-                        left: ${scaledT + (dividerIndex * spacing)}px;
-                        top: ${scaledT}px;
-                    `
-                });
-                DOM.cabinetInternals.appendChild(dividerEl);
-            }
-        });
-    }
-}
-
-
 function updateComponentCalculationsAndRender() {
     const L = parseNumber(DOM.itemLengthInput.value) || 0;
     const W = parseNumber(DOM.itemWidthInput.value) || 0;
@@ -157,7 +80,6 @@ function updateComponentCalculationsAndRender() {
     }
 
     renderProductComponents();
-    renderVisualConfigurator();
     runFullCalculation();
 }
 
@@ -433,7 +355,6 @@ export function clearCalculatorInputs() {
     
     productComponents = [];
     renderProductComponents();
-    renderVisualConfigurator();
 
     lastCalculationResult = null;
 
@@ -484,7 +405,6 @@ export function loadItemIntoForm(item) {
     productComponents = inputs.components ? JSON.parse(JSON.stringify(inputs.components)) : [];
     
     renderProductComponents();
-    renderVisualConfigurator();
     calculateAndDisplayFinalPrice();
     
     document.querySelector('button[data-tab="calculator"]')?.click();
@@ -616,105 +536,4 @@ export function initializeCalculator() {
         },
         showToast,
     });
-    
-    DOM.addShelfBtn?.addEventListener('click', () => {
-        const shelfComponent = localComponentNames.find(c => c.name.toLowerCase().includes('đợt'));
-        if (!shelfComponent) {
-            showToast('Không tìm thấy cấu phần nào chứa "đợt". Vui lòng tạo trong tab Cấu hình.', 'error');
-            return;
-        }
-
-        const existing = productComponents.find(p => p.componentNameId === shelfComponent.id);
-        if (existing) {
-            existing.qty += 1;
-        } else {
-            productComponents.push({
-                id: `comp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                name: shelfComponent.name,
-                length: 0, width: 0,
-                qty: 1,
-                componentNameId: shelfComponent.id,
-                isDefault: true,
-                materialId: null
-            });
-        }
-        updateComponentCalculationsAndRender();
-    });
-
-    DOM.addDividerBtn?.addEventListener('click', () => {
-        const dividerComponent = localComponentNames.find(c => c.name.toLowerCase().includes('vách'));
-         if (!dividerComponent) {
-            showToast('Không tìm thấy cấu phần nào chứa "vách". Vui lòng tạo trong tab Cấu hình.', 'error');
-            return;
-        }
-        
-        const existing = productComponents.find(p => p.componentNameId === dividerComponent.id);
-        if (existing) {
-            existing.qty += 1;
-        } else {
-             productComponents.push({
-                id: `comp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                name: dividerComponent.name,
-                length: 0, width: 0,
-                qty: 1,
-                componentNameId: dividerComponent.id,
-                isDefault: true,
-                materialId: null
-            });
-        }
-        updateComponentCalculationsAndRender();
-    });
-
-    // Visual Configurator Interactivity
-    const visualConfigurator = DOM.visualConfigurator;
-    const cabinetBox = DOM.cabinetBox;
-    if (visualConfigurator && cabinetBox) {
-        let isDragging = false;
-        let previousMouseX = 0;
-        let previousMouseY = 0;
-        let rotateX = -20;
-        let rotateY = -30;
-
-        const onMouseDown = (e) => {
-            isDragging = true;
-            previousMouseX = e.clientX;
-            previousMouseY = e.clientY;
-            visualConfigurator.style.cursor = 'grabbing';
-        };
-
-        const onMouseUp = () => {
-            if (!isDragging) return;
-            isDragging = false;
-            visualConfigurator.style.cursor = 'grab';
-        };
-        
-        const onMouseLeave = () => {
-            if (!isDragging) return;
-            isDragging = false;
-            visualConfigurator.style.cursor = 'grab';
-        };
-
-        const onMouseMove = (e) => {
-            if (!isDragging) return;
-            e.preventDefault();
-            const deltaX = e.clientX - previousMouseX;
-            const deltaY = e.clientY - previousMouseY;
-
-            rotateY += deltaX * 0.5;
-            rotateX -= deltaY * 0.5;
-            
-            rotateX = Math.max(-90, Math.min(90, rotateX));
-
-            cabinetBox.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-
-            previousMouseX = e.clientX;
-            previousMouseY = e.clientY;
-        };
-        
-        visualConfigurator.addEventListener('mousedown', onMouseDown);
-        document.addEventListener('mouseup', onMouseUp);
-        visualConfigurator.addEventListener('mouseleave', onMouseLeave); // Also stop on leave
-        document.addEventListener('mousemove', onMouseMove);
-        visualConfigurator.style.cursor = 'grab';
-    }
 }
