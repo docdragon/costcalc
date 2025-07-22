@@ -368,10 +368,9 @@ function populateProductTypeDropdown() {
 }
 
 function populateComboboxes() {
-    const allAccessoryMaterials = [ ...appState.localMaterials['Phụ kiện'], ...appState.localMaterials['Gia Công'], ...appState.localMaterials['Cạnh'] ];
-
     if (DOM.mainMaterialWoodCombobox?.updateComboboxData) DOM.mainMaterialWoodCombobox.updateComboboxData(appState.localMaterials['Ván']);
     if (DOM.mainMaterialBackPanelCombobox?.updateComboboxData) DOM.mainMaterialBackPanelCombobox.updateComboboxData(appState.localMaterials['Ván']);
+    if (DOM.edgeMaterialCombobox?.updateComboboxData) DOM.edgeMaterialCombobox.updateComboboxData(appState.localMaterials['Cạnh']);
     if (DOM.addGroupCombobox?.updateComboboxData) DOM.addGroupCombobox.updateComboboxData(appState.localComponentGroups);
 }
 

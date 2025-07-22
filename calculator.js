@@ -454,13 +454,29 @@ export function initializeCalculator() {
         { placeholder: "Chọn loại sản phẩm...", allowEmpty: true, emptyOptionText: "--- Tự định nghĩa ---" }
     );
     
+    initializeCombobox(
+        DOM.mainMaterialWoodCombobox,
+        [],
+        updateComponentCalculationsAndRender,
+        { placeholder: "Tìm hoặc chọn loại ván..." }
+    );
+
+    initializeCombobox(
+        DOM.mainMaterialBackPanelCombobox,
+        [],
+        runFullCalculation,
+        { placeholder: "Tìm hoặc chọn loại ván...", allowEmpty: true, emptyOptionText: "--- Dùng ván chính ---" }
+    );
+
+    initializeCombobox(
+        DOM.edgeMaterialCombobox,
+        [],
+        runFullCalculation,
+        { placeholder: "Tìm hoặc chọn loại nẹp...", allowEmpty: true, emptyOptionText: "--- Không dùng nẹp ---" }
+    );
+
     [DOM.itemLengthInput, DOM.itemWidthInput, DOM.itemHeightInput].forEach(input => input.addEventListener('input', debounce(updateComponentCalculationsAndRender, 300)));
     [DOM.laborCostInput, DOM.profitMarginInput].forEach(input => input.addEventListener('input', runFullCalculation));
-    
-    DOM.mainMaterialWoodCombobox.addEventListener('change', updateComponentCalculationsAndRender);
-    DOM.edgeMaterialCombobox.addEventListener('change', runFullCalculation);
-    DOM.mainMaterialBackPanelCombobox.addEventListener('change', runFullCalculation);
-
 
     DOM.componentsTableBody.addEventListener('input', e => {
         if (e.target.classList.contains('component-input')) {
