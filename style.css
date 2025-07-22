@@ -32,10 +32,9 @@ body {
 
 /* --- Layout & Container --- */
 .container {
-    width: 90%;
-    max-width: 1320px;
-    margin-left: auto;
-    margin-right: auto;
+    width: 100%;
+    padding: 0 1rem;
+    box-sizing: border-box;
 }
 .main-container { padding: 1.5rem 0; }
 .grid-layout { display: grid; grid-template-columns: 1fr; gap: 2rem; }
@@ -252,10 +251,9 @@ body {
     grid-template-columns: 240px 1fr;
     gap: 2rem;
     align-items: flex-start;
-    padding: 1.5rem 0;
-    max-width: 1600px;
-    margin: 0 auto;
     padding: 1rem;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .sidebar {
