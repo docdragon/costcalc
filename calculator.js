@@ -475,6 +475,13 @@ export function initializeCalculator() {
         { placeholder: "Tìm hoặc chọn loại nẹp...", allowEmpty: true, emptyOptionText: "--- Không dùng nẹp ---" }
     );
 
+    initializeCombobox(
+        DOM.addGroupCombobox,
+        [],
+        null, // Action is on button click, not selection change
+        { placeholder: "Tìm một cụm chi tiết..." }
+    );
+
     [DOM.itemLengthInput, DOM.itemWidthInput, DOM.itemHeightInput].forEach(input => input.addEventListener('input', debounce(updateComponentCalculationsAndRender, 300)));
     [DOM.laborCostInput, DOM.profitMarginInput].forEach(input => input.addEventListener('input', runFullCalculation));
 
