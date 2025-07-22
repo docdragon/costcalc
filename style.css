@@ -66,26 +66,6 @@ body {
 .user-email { font-size: 0.875rem; font-weight: 500; color: var(--text-light); }
 @media (max-width: 768px) { .user-email { display: none; } }
 
-
-/* --- Intro Section --- */
-.intro-section {
-    text-align: center;
-    padding: 2rem 1rem;
-    margin-bottom: 1rem;
-}
-.intro-section h2 {
-    font-size: 2.25rem;
-    font-weight: 700;
-    color: var(--text-dark);
-    letter-spacing: -1px;
-}
-.intro-section p {
-    font-size: 1.125rem;
-    color: var(--text-light);
-    max-width: 650px;
-    margin: 0.5rem auto 0;
-}
-
 /* --- Card --- */
 .card {
     background-color: var(--card-background);
