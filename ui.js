@@ -141,8 +141,10 @@ export function initializeImageUploader(uploadedCallback, removedCallback) {
 // --- Tab Navigation ---
 export function initializeTabs() {
     DOM.tabs.addEventListener('click', (e) => {
-        const button = e.target.closest('button[role="tab"]');
-        if (button) {
+        const link = e.target.closest('a[role="tab"]');
+        if (link) {
+            e.preventDefault(); // Prevent default anchor behavior (page jump)
+
             // Deactivate all tabs in the list
             DOM.tabs.querySelectorAll('[role="tab"]').forEach(tab => {
                 tab.classList.remove('active');
@@ -150,14 +152,14 @@ export function initializeTabs() {
             });
             
             // Activate the clicked tab
-            button.classList.add('active');
-            button.setAttribute('aria-selected', 'true');
+            link.classList.add('active');
+            link.setAttribute('aria-selected', 'true');
             
             // Hide all panes and show the one controlled by the clicked tab
             if (DOM.tabContent) {
                  for (let pane of DOM.tabContent.children) {
                     if (pane.getAttribute('role') === 'tabpanel') {
-                         pane.classList.toggle('hidden', pane.id !== button.getAttribute('aria-controls'));
+                         pane.classList.toggle('hidden', pane.id !== link.getAttribute('aria-controls'));
                     }
                 }
             }

@@ -43,26 +43,32 @@
         </div>
     </header>
 
-    <div class="container main-container">
-        <!-- Intro Section -->
-        <div class="intro-section">
-            <h2>Tính giá Nội thất nhanh</h2>
-            <p>Phân tích chi phí, tối ưu hóa vật liệu và tính giá nhanh chuyên nghiệp chỉ trong vài giây.</p>
-        </div>
+    <div class="dashboard-layout">
+        <nav id="main-nav" class="sidebar" role="navigation" aria-label="Main navigation">
+            <a href="#" role="tab" id="tab-btn-calculator" aria-selected="true" aria-controls="calculator-tab" data-tab="calculator" class="sidebar-link active">
+                <i class="fas fa-magic fa-fw"></i><span>Trình Tính Giá</span>
+            </a>
+            <a href="#" role="tab" id="tab-btn-quick-calc" aria-selected="false" aria-controls="quick-calc-tab" data-tab="quick-calc" class="sidebar-link">
+                <i class="fas fa-calculator fa-fw"></i><span>Tính Nhanh</span>
+            </a>
+            <a href="#" role="tab" id="tab-btn-materials" aria-selected="false" aria-controls="materials-tab" data-tab="materials" class="sidebar-link">
+                <i class="fas fa-boxes fa-fw"></i><span>Kho Vật Tư</span>
+            </a>
+            <a href="#" role="tab" id="tab-btn-config" aria-selected="false" aria-controls="config-tab" data-tab="config" class="sidebar-link">
+                <i class="fas fa-cogs fa-fw"></i><span>Cấu hình</span>
+            </a>
+            <a href="#" role="tab" id="tab-btn-saved" aria-selected="false" aria-controls="saved-tab" data-tab="saved" class="sidebar-link">
+                <i class="fas fa-folder-open fa-fw"></i><span>Dự Án</span>
+            </a>
+        </nav>
 
-        <!-- Tab Navigation -->
-        <div class="tabs-container">
-            <nav id="tabs" class="tabs-nav" role="tablist" aria-label="Main navigation">
-                <button role="tab" id="tab-btn-calculator" aria-selected="true" aria-controls="calculator-tab" data-tab="calculator" class="tab-btn active"><i class="fas fa-magic"></i>Trình Tính Giá</button>
-                <button role="tab" id="tab-btn-quick-calc" aria-selected="false" aria-controls="quick-calc-tab" data-tab="quick-calc" class="tab-btn"><i class="fas fa-calculator"></i>Tính Nhanh</button>
-                <button role="tab" id="tab-btn-materials" aria-selected="false" aria-controls="materials-tab" data-tab="materials" class="tab-btn"><i class="fas fa-boxes"></i>Kho Vật Tư</button>
-                <button role="tab" id="tab-btn-config" aria-selected="false" aria-controls="config-tab" data-tab="config" class="tab-btn"><i class="fas fa-cogs"></i>Cấu hình</button>
-                <button role="tab" id="tab-btn-saved" aria-selected="false" aria-controls="saved-tab" data-tab="saved" class="tab-btn"><i class="fas fa-folder-open"></i>Dự Án</button>
-            </nav>
-        </div>
+        <main id="tab-content" class="main-content">
+            <!-- Intro Section -->
+            <div class="intro-section">
+                <h2>Tính giá Nội thất nhanh</h2>
+                <p>Phân tích chi phí, tối ưu hóa vật liệu và tính giá nhanh chuyên nghiệp chỉ trong vài giây.</p>
+            </div>
 
-        <!-- Tab Content -->
-        <main id="tab-content">
             <!-- Tab 1: Trình Báo Giá -->
             <div id="calculator-tab" role="tabpanel" aria-labelledby="tab-btn-calculator" class="tab-pane active">
                 <div class="grid-layout">
@@ -777,7 +783,6 @@
                     </div>
                 </div>
             </div>
-
         </main>
     </div>
 

@@ -407,7 +407,7 @@ export function loadItemIntoForm(item) {
     renderProductComponents();
     calculateAndDisplayFinalPrice();
     
-    document.querySelector('button[data-tab="calculator"]')?.click();
+    document.querySelector('a[data-tab="calculator"]')?.click();
     window.scrollTo({ top: 0, behavior: 'smooth' });
     showToast('Đã tải dữ liệu dự án. Bạn có thể chỉnh sửa và tính toán lại.', 'info');
 }

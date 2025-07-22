@@ -9,7 +9,7 @@ export const loggedOutView = document.getElementById('logged-out-view');
 export const userEmailDisplay = document.getElementById('user-email-display');
 
 // --- Tabs ---
-export const tabs = document.getElementById('tabs');
+export const tabs = document.getElementById('main-nav');
 export const tabContent = document.getElementById('tab-content');
 
 // --- Main Calculator Tab ---
@@ -62,6 +62,12 @@ export const productImagePlaceholder = document.getElementById('product-image-pl
 export const productImageUploadInput = document.getElementById('product-image-upload-input');
 export const productImageRemoveBtn = document.getElementById('product-image-remove-btn');
 
+// Sidebar image uploader elements from user's HTML
+export const sidebarImageInput = document.getElementById('sidebar-image-input');
+export const sidebarImagePreviewWrapper = document.getElementById('sidebar-image-preview-wrapper');
+export const sidebarImagePreview = document.getElementById('sidebar-image-preview');
+export const sidebarImagePlaceholder = document.getElementById('sidebar-image-placeholder');
+export const sidebarRemoveImageBtn = document.getElementById('sidebar-remove-image-btn');
 
 // --- Quick Calculator Tab ---
 export const qcAreaInput = document.getElementById('qc-area');
