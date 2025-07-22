@@ -323,7 +323,6 @@ function calculateAndDisplayFinalPrice() {
         DOM.resultsContent.classList.remove('hidden');
         DOM.saveItemBtn.disabled = false;
         DOM.updateItemBtn.disabled = false;
-        if (DOM.aiAnalysisBtn) DOM.aiAnalysisBtn.disabled = false;
         lastCalculationResult = { 
             totalCost: roundedTotalCost, 
             suggestedPrice: roundedSuggestedPrice, 
@@ -333,7 +332,6 @@ function calculateAndDisplayFinalPrice() {
     } else {
         DOM.saveItemBtn.disabled = true;
         DOM.updateItemBtn.disabled = true;
-        if (DOM.aiAnalysisBtn) DOM.aiAnalysisBtn.disabled = true;
     }
 }
 
@@ -366,14 +364,6 @@ export function clearCalculatorInputs() {
     DOM.saveItemBtn.disabled = true;
     DOM.updateItemBtn.disabled = true;
     
-    // AI Feature Reset
-    if (DOM.aiAnalysisBtn) DOM.aiAnalysisBtn.disabled = true;
-    if (DOM.aiAnalysisContainer) {
-        DOM.aiAnalysisContainer.innerHTML = '';
-        DOM.aiAnalysisContainer.classList.add('hidden');
-    }
-    if(DOM.guideDetails) DOM.guideDetails.classList.remove('hidden');
-    if(DOM.aiAnalysisLoader) DOM.aiAnalysisLoader.classList.add('hidden');
 }
 
 export function loadItemIntoForm(item) {
