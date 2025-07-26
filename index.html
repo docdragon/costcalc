@@ -53,6 +53,9 @@
             <a href="#" role="tab" id="tab-btn-saved" aria-selected="false" aria-controls="saved-tab" data-tab="saved" class="sidebar-link">
                 <i class="fas fa-folder-open fa-fw"></i><span>Dự Án</span>
             </a>
+            <a href="#" role="tab" id="tab-btn-admin" aria-selected="false" aria-controls="admin-tab" data-tab="admin" class="sidebar-link hidden">
+                <i class="fas fa-user-shield fa-fw"></i><span>Admin</span>
+            </a>
         </nav>
 
         <main id="tab-content" class="main-content">
@@ -767,6 +770,26 @@
                         <div class="icon-prompt"><i class="fas fa-folder-open"></i></div>
                         <h3>Xem lại dự án</h3>
                         <p>Vui lòng đăng nhập để xem các dự án đã lưu của bạn.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Admin Panel -->
+            <div id="admin-tab" role="tabpanel" aria-labelledby="tab-btn-admin" class="tab-pane hidden">
+                <div class="card">
+                    <h2 class="card-header"><i class="fas fa-user-shield" style="margin-right: 0.75rem;"></i>Admin Panel</h2>
+                    <div class="content-wrapper" style="padding-top: 1rem;">
+                        <div class="settings-intro">
+                            <p style="margin:0;">Chào mừng Admin! Đây là khu vực quản trị. Các tính năng trong tương lai sẽ được thêm vào đây.</p>
+                        </div>
+                        <div class="guide-details" style="border:none; padding:0; margin:0;">
+                             <h4 style="margin-top:0;"><i class="fas fa-tasks"></i> Chức năng Dự kiến</h4>
+                             <ul>
+                                 <li>Quản lý người dùng (xem, chỉnh sửa vai trò).</li>
+                                 <li>Thống kê và phân tích toàn trang.</li>
+                                 <li>Cấu hình cài đặt chung cho ứng dụng.</li>
+                             </ul>
+                        </div>
                     </div>
                 </div>
             </div>

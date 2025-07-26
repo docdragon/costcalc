@@ -22,6 +22,8 @@ import { parseNumber, h, formatDate } from './utils.js';
 
 
 // --- Global State ---
+const ADMIN_UID = 'Tz5sYa3n3wXnVo9sZ2fJj7n2lI33'; // The admin user's UID
+
 const appState = {
     currentUserId: null,
     materialsCollectionRef: null,
@@ -159,7 +161,7 @@ onAuthStateChanged(auth, async (user) => {
         clearLocalData();
         updateCalculatorData({ userId: null });
     }
-    updateUIVisibility(loggedIn, user);
+    updateUIVisibility(loggedIn, user, ADMIN_UID);
     DOM.initialLoader.style.opacity = '0';
     setTimeout(() => DOM.initialLoader.style.display = 'none', 300);
 });

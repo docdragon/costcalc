@@ -65,7 +65,7 @@ export function showToast(message, type = 'info') {
 }
 
 // --- UI Visibility ---
-export function updateUIVisibility(isLoggedIn, user) {
+export function updateUIVisibility(isLoggedIn, user, adminUid) {
     DOM.loggedInView.classList.toggle('hidden', !isLoggedIn);
     DOM.loggedOutView.classList.toggle('hidden', isLoggedIn);
     DOM.userEmailDisplay.textContent = isLoggedIn ? (user.displayName || user.email) : '';
@@ -76,6 +76,11 @@ export function updateUIVisibility(isLoggedIn, user) {
     document.querySelectorAll('.login-prompt-view').forEach(el => {
         el.style.display = isLoggedIn ? 'none' : 'block';
     });
+
+    if (DOM.adminTabBtn) {
+        const isAdmin = isLoggedIn && user.uid === adminUid;
+        DOM.adminTabBtn.classList.toggle('hidden', !isAdmin);
+    }
 
     if (isLoggedIn) closeAllModals();
 }

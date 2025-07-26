@@ -146,6 +146,10 @@ export const siPageInfo = document.getElementById('si-page-info');
 export const siPrevPageBtn = document.getElementById('si-prev-page-btn');
 export const siNextPageBtn = document.getElementById('si-next-page-btn');
 
+// --- Admin Tab ---
+export const adminTabBtn = document.getElementById('tab-btn-admin');
+export const adminTab = document.getElementById('admin-tab');
+
 // --- Modals ---
 export const loginModal = document.getElementById('login-modal');
 export const openLoginModalBtn = document.getElementById('open-login-modal-btn');
