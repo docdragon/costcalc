@@ -134,6 +134,12 @@ async function getUserProfile(user) {
         const usersQuery = query(collection(db, 'users'), limit(1));
         const usersSnapshot = await getDocs(usersQuery);
         const isFirstUser = usersSnapshot.empty;
+
+        const settingsDocRef = doc(db, 'siteContent', 'main');
+        const settingsDocSnap = await getGet(settingsDocRef);
+        const defaultTrialDays = (settingsDocSnap.exists() && typeof settingsDocSnap.data().defaultTrialDays === 'number')
+            ? settingsDocSnap.data().defaultTrialDays
+            : 0;
         
         const newUserProfile = {
             email: user.email,
@@ -144,6 +150,10 @@ async function getUserProfile(user) {
             status: 'active',
             expiresAt: null,
         };
+
+        if (newUserProfile.role === 'user' && defaultTrialDays > 0) {
+            newUserProfile.expiresAt = new Date(Date.now() + defaultTrialDays * 24 * 60 * 60 * 1000);
+        }
 
         await setDoc(userDocRef, newUserProfile);
 
@@ -188,8 +198,34 @@ function renderUsersTable(usersToRender) {
         );
         
         // Expiry input
-        const expiresAt = user.expiresAt?.toDate ? user.expiresAt.toDate().toISOString().split('T')[0] : '';
-        const expiryInput = h('input', { type: 'date', className: 'input-style', value: expiresAt, dataset: { uid: user.uid, field: 'expiresAt' }, disabled: isCurrentUser });
+        let statusText;
+        if (user.expiresAt === null) {
+            statusText = 'Vĩnh viễn';
+        } else if (user.expiresAt?.toDate) {
+            const expiryDate = user.expiresAt.toDate();
+            if (expiryDate < new Date()) {
+                statusText = 'Hết hạn';
+            } else {
+                const remainingDays = Math.ceil((expiryDate - new Date()) / (1000 * 60 * 60 * 24));
+                statusText = `Còn ${remainingDays} ngày`;
+            }
+        } else {
+            statusText = 'Chưa đặt';
+        }
+
+        const expiryInput = h('input', {
+            type: 'text',
+            className: 'input-style',
+            placeholder: "Số ngày hoặc 'vv'",
+            dataset: { uid: user.uid, field: 'expiresAt' },
+            disabled: isCurrentUser
+        });
+
+        const expiryCellContent = h('div', {},
+            h('div', { style: 'font-size: 0.8rem; color: var(--text-light); margin-bottom: 0.25rem;' }, statusText),
+            expiryInput
+        );
+
 
         // Last login display
         const lastLogin = user.lastLoginAt?.toDate ? formatDate(user.lastLoginAt.toDate()) : 'Chưa đăng nhập';
@@ -199,7 +235,7 @@ function renderUsersTable(usersToRender) {
             h('td', { dataset: { label: 'Tên hiển thị' } }, user.displayName || '-'),
             h('td', { dataset: { label: 'Vai trò' } }, roleSelect),
             h('td', { dataset: { label: 'Trạng thái' } }, statusSelect),
-            h('td', { dataset: { label: 'Ngày hết hạn' } }, expiryInput),
+            h('td', { dataset: { label: 'Thời hạn' } }, expiryCellContent),
             h('td', { dataset: { label: 'Đăng nhập cuối' } }, lastLogin)
         );
         DOM.adminUserListTbody.appendChild(tr);
@@ -235,7 +271,22 @@ async function handleAdminUserUpdate(e) {
 
     let valueToUpdate;
     if (field === 'expiresAt') {
-        valueToUpdate = inputEl.value ? new Date(inputEl.value) : null;
+        const newValue = inputEl.value.trim();
+        if (!newValue) return; // Ignore if input is empty
+
+        const lowerCaseValue = newValue.toLowerCase();
+        if (lowerCaseValue === 'vv' || lowerCaseValue === 'vĩnh viễn') {
+            valueToUpdate = null;
+        } else {
+            const days = parseInt(newValue, 10);
+            if (!isNaN(days) && days >= 0) {
+                valueToUpdate = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+            } else {
+                showToast("Vui lòng nhập một số ngày hợp lệ (vd: 30) hoặc 'vv' cho vĩnh viễn.", 'error');
+                inputEl.value = ''; // Clear invalid input
+                return;
+            }
+        }
     } else {
         valueToUpdate = inputEl.value;
     }
@@ -243,14 +294,14 @@ async function handleAdminUserUpdate(e) {
     try {
         await updateDoc(doc(db, 'users', uid), { [field]: valueToUpdate });
         showToast(`Đã cập nhật '${field}' cho ${userToUpdate.email}.`, 'success');
+        if (field === 'expiresAt') {
+            inputEl.value = ''; // Clear input on successful date update
+        }
     } catch (error) {
         showToast(`Lỗi khi cập nhật '${field}'.`, 'error');
         console.error('User update error:', error);
-        // Revert value on error
-        if (field === 'role' || field === 'status') {
-            inputEl.value = userToUpdate[field];
-        } else if (field === 'expiresAt') {
-            inputEl.value = userToUpdate.expiresAt?.toDate ? userToUpdate.expiresAt.toDate().toISOString().split('T')[0] : '';
+        if (field !== 'expiresAt') {
+             inputEl.value = userToUpdate[field];
         }
     }
 }
@@ -282,30 +333,47 @@ const defaultGuideContent = `<li><strong>Chọn Loại Sản phẩm:</strong> Ch
 <li><strong>Tính toán & Lưu:</strong> Nhấn nút "Tính toán & Lưu dự án" để nhận kết quả phân tích chi phí và lưu lại dự án để xem sau.</li>
 <li><strong>Lưu & Tải lại:</strong> Đăng nhập và lưu các dự án quan trọng để xem lại hoặc chỉnh sửa sau này.</li>`;
 
-async function initializeContentManagement() {
-    if (!DOM.adminGuideForm) return;
+async function initializeAdminSettings() {
+    if (!DOM.adminSettingsForm) return;
 
     const contentDocRef = doc(db, 'siteContent', 'main');
     
     try {
         const docSnap = await getDoc(contentDocRef);
-        const content = (docSnap.exists() && docSnap.data().guideContent) ? docSnap.data().guideContent : defaultGuideContent;
-        DOM.adminGuideContentEditor.value = content;
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            DOM.adminGuideContentEditor.value = data.guideContent || defaultGuideContent;
+            DOM.adminDefaultTrialDaysInput.value = data.defaultTrialDays || '';
+        } else {
+            DOM.adminGuideContentEditor.value = defaultGuideContent;
+        }
     } catch (error) {
-        console.error("Error fetching guide content for admin:", error);
+        console.error("Error fetching admin settings:", error);
         DOM.adminGuideContentEditor.value = "Lỗi khi tải nội dung.";
     }
 
-    DOM.adminGuideForm.addEventListener('submit', async (e) => {
+    DOM.adminSettingsForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const newContent = DOM.adminGuideContentEditor.value;
+        const newGuideContent = DOM.adminGuideContentEditor.value;
+        const newTrialDaysRaw = DOM.adminDefaultTrialDaysInput.value.trim();
+        const newTrialDays = parseInt(newTrialDaysRaw, 10);
+
+        if (newTrialDaysRaw && (isNaN(newTrialDays) || newTrialDays < 0)) {
+            showToast('Số ngày dùng thử phải là một con số không âm.', 'error');
+            return;
+        }
+        
         try {
-            await setDoc(contentDocRef, { guideContent: newContent }, { merge: true });
-            showToast('Đã cập nhật hướng dẫn thành công!', 'success');
-            await loadDynamicContent(); // Refresh content for the admin too
+            const settingsData = {
+                guideContent: newGuideContent,
+                defaultTrialDays: newTrialDaysRaw ? newTrialDays : null
+            };
+            await setDoc(contentDocRef, settingsData, { merge: true });
+            showToast('Đã cập nhật cài đặt thành công!', 'success');
+            await loadDynamicContent();
         } catch (error) {
-            showToast('Lỗi khi lưu hướng dẫn.', 'error');
-            console.error("Error saving guide content:", error);
+            showToast('Lỗi khi lưu cài đặt.', 'error');
+            console.error("Error saving admin settings:", error);
         }
     });
 }
@@ -367,7 +435,7 @@ onAuthStateChanged(auth, async (user) => {
 
         if (appState.currentUserProfile?.role === 'admin') {
             initializeAdminTab();
-            initializeContentManagement();
+            initializeAdminSettings();
         }
         
         listenForData();

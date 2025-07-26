@@ -151,8 +151,9 @@ export const adminTabBtn = document.getElementById('tab-btn-admin');
 export const adminTab = document.getElementById('admin-tab');
 export const adminUserListTbody = document.getElementById('admin-user-list-tbody');
 export const adminUserFilterInput = document.getElementById('admin-user-filter-input');
-export const adminGuideForm = document.getElementById('admin-guide-form');
+export const adminSettingsForm = document.getElementById('admin-settings-form');
 export const adminGuideContentEditor = document.getElementById('admin-guide-content-editor');
+export const adminDefaultTrialDaysInput = document.getElementById('admin-default-trial-days');
 
 
 // --- Modals ---
