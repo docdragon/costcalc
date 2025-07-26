@@ -126,6 +126,8 @@ async function getUserProfile(user) {
     const userDocSnap = await getDoc(userDocRef);
 
     if (userDocSnap.exists()) {
+        // Update last login time on every successful auth
+        updateDoc(userDocRef, { lastLoginAt: serverTimestamp() }).catch(console.error);
         return { uid: user.uid, ...userDocSnap.data() };
     } else {
         console.log("Creating new user profile.");
@@ -137,7 +139,10 @@ async function getUserProfile(user) {
             email: user.email,
             displayName: user.displayName,
             createdAt: serverTimestamp(),
-            role: isFirstUser ? 'admin' : 'user'
+            lastLoginAt: serverTimestamp(),
+            role: isFirstUser ? 'admin' : 'user',
+            status: 'active',
+            expiresAt: null,
         };
 
         await setDoc(userDocRef, newUserProfile);
@@ -148,7 +153,7 @@ async function getUserProfile(user) {
         
         await checkAndAddSampleData(user.uid);
         
-        return { uid: user.uid, ...newUserProfile, role: newUserProfile.role };
+        return { uid: user.uid, ...newUserProfile };
     }
 }
 
@@ -161,23 +166,41 @@ function renderUsersTable(usersToRender) {
     DOM.adminUserListTbody.innerHTML = '';
 
     if (usersToRender.length === 0) {
-        DOM.adminUserListTbody.appendChild(h('tr', {}, h('td', { colSpan: 3, style: 'text-align: center; padding: 1rem; color: var(--text-light);' }, 'Không tìm thấy người dùng nào.')));
+        DOM.adminUserListTbody.appendChild(h('tr', {}, h('td', { colSpan: 6, style: 'text-align: center; padding: 1rem; color: var(--text-light);' }, 'Không tìm thấy người dùng nào.')));
         return;
     }
 
     usersToRender.forEach(user => {
-        const select = h('select', { className: 'input-style', dataset: { uid: user.uid } },
+        const isCurrentUser = user.uid === appState.currentUserId;
+
+        // Role select
+        const roleSelect = h('select', { className: 'input-style', dataset: { uid: user.uid, field: 'role' }, disabled: isCurrentUser },
             h('option', { value: 'user', selected: user.role === 'user' }, 'User'),
-            h('option', { value: 'admin', selected: user.role === 'admin' }, 'Admin')
+            h('option', { value: 'admin', selected: user.role === 'admin' }, 'Admin'),
+            h('option', { value: 'paid', selected: user.role === 'paid' }, 'Paid'),
+            h('option', { value: 'trial', selected: user.role === 'trial' }, 'Trial')
         );
-        if (user.uid === appState.currentUserId) {
-            select.disabled = true;
-        }
+
+        // Status select
+        const statusSelect = h('select', { className: 'input-style', dataset: { uid: user.uid, field: 'status' }, disabled: isCurrentUser },
+            h('option', { value: 'active', selected: user.status === 'active' }, 'Hoạt động'),
+            h('option', { value: 'disabled', selected: user.status === 'disabled' }, 'Vô hiệu hóa')
+        );
+        
+        // Expiry input
+        const expiresAt = user.expiresAt?.toDate ? user.expiresAt.toDate().toISOString().split('T')[0] : '';
+        const expiryInput = h('input', { type: 'date', className: 'input-style', value: expiresAt, dataset: { uid: user.uid, field: 'expiresAt' }, disabled: isCurrentUser });
+
+        // Last login display
+        const lastLogin = user.lastLoginAt?.toDate ? formatDate(user.lastLoginAt.toDate()) : 'Chưa đăng nhập';
 
         const tr = h('tr', { key: user.uid },
             h('td', { dataset: { label: 'Email' } }, user.email),
             h('td', { dataset: { label: 'Tên hiển thị' } }, user.displayName || '-'),
-            h('td', { dataset: { label: 'Vai trò' } }, select)
+            h('td', { dataset: { label: 'Vai trò' } }, roleSelect),
+            h('td', { dataset: { label: 'Trạng thái' } }, statusSelect),
+            h('td', { dataset: { label: 'Ngày hết hạn' } }, expiryInput),
+            h('td', { dataset: { label: 'Đăng nhập cuối' } }, lastLogin)
         );
         DOM.adminUserListTbody.appendChild(tr);
     });
@@ -196,27 +219,39 @@ function filterAndRenderUsers() {
     renderUsersTable(filteredUsers);
 }
 
-async function handleRoleChange(e) {
-    const select = e.target;
-    if (select.tagName !== 'SELECT') return;
+async function handleAdminUserUpdate(e) {
+    const inputEl = e.target;
+    const uid = inputEl.dataset.uid;
+    const field = inputEl.dataset.field;
 
-    const uid = select.dataset.uid;
-    const newRole = select.value;
+    if (!uid || !field) return;
+
     const userToUpdate = localUsers.find(u => u.uid === uid);
-
-    if (uid === appState.currentUserId) {
-        showToast('Bạn không thể thay đổi vai trò của chính mình.', 'error');
-        select.value = userToUpdate.role;
+    if (uid === appState.currentUserId && (field === 'role' || field === 'status')) {
+        showToast('Bạn không thể thay đổi vai trò hoặc trạng thái của chính mình.', 'error');
+        inputEl.value = userToUpdate[field]; // Revert value
         return;
     }
 
+    let valueToUpdate;
+    if (field === 'expiresAt') {
+        valueToUpdate = inputEl.value ? new Date(inputEl.value) : null;
+    } else {
+        valueToUpdate = inputEl.value;
+    }
+    
     try {
-        await updateDoc(doc(db, 'users', uid), { role: newRole });
-        showToast(`Đã cập nhật vai trò cho ${userToUpdate.email} thành ${newRole}.`, 'success');
+        await updateDoc(doc(db, 'users', uid), { [field]: valueToUpdate });
+        showToast(`Đã cập nhật '${field}' cho ${userToUpdate.email}.`, 'success');
     } catch (error) {
-        showToast('Lỗi khi cập nhật vai trò.', 'error');
-        console.error('Role update error:', error);
-        select.value = userToUpdate.role;
+        showToast(`Lỗi khi cập nhật '${field}'.`, 'error');
+        console.error('User update error:', error);
+        // Revert value on error
+        if (field === 'role' || field === 'status') {
+            inputEl.value = userToUpdate[field];
+        } else if (field === 'expiresAt') {
+            inputEl.value = userToUpdate.expiresAt?.toDate ? userToUpdate.expiresAt.toDate().toISOString().split('T')[0] : '';
+        }
     }
 }
 
@@ -231,7 +266,7 @@ function initializeAdminTab() {
     }, console.error);
 
     DOM.adminUserFilterInput.addEventListener('input', debounce(filterAndRenderUsers, 300));
-    DOM.adminUserListTbody.addEventListener('change', handleRoleChange);
+    DOM.adminUserListTbody.addEventListener('change', handleAdminUserUpdate);
 }
 
 function stopAdminListeners() {
@@ -239,6 +274,57 @@ function stopAdminListeners() {
         unsubscribeUsers();
         unsubscribeUsers = null;
     }
+}
+
+// --- Content Management (Admin) ---
+const defaultGuideContent = `<li><strong>Chọn Loại Sản phẩm:</strong> Chọn một loại sản phẩm từ danh sách để tải cấu trúc chi tiết mặc định. Bạn có thể tùy chỉnh các loại sản phẩm này trong tab 'Cấu hình'.</li>
+<li><strong>Điền thông tin:</strong> Hoàn thiện các thông tin chi tiết về kích thước, vật liệu, và phụ kiện. Kết quả báo giá sẽ tự động cập nhật.</li>
+<li><strong>Tính toán & Lưu:</strong> Nhấn nút "Tính toán & Lưu dự án" để nhận kết quả phân tích chi phí và lưu lại dự án để xem sau.</li>
+<li><strong>Lưu & Tải lại:</strong> Đăng nhập và lưu các dự án quan trọng để xem lại hoặc chỉnh sửa sau này.</li>`;
+
+async function initializeContentManagement() {
+    if (!DOM.adminGuideForm) return;
+
+    const contentDocRef = doc(db, 'siteContent', 'main');
+    
+    try {
+        const docSnap = await getDoc(contentDocRef);
+        const content = (docSnap.exists() && docSnap.data().guideContent) ? docSnap.data().guideContent : defaultGuideContent;
+        DOM.adminGuideContentEditor.value = content;
+    } catch (error) {
+        console.error("Error fetching guide content for admin:", error);
+        DOM.adminGuideContentEditor.value = "Lỗi khi tải nội dung.";
+    }
+
+    DOM.adminGuideForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const newContent = DOM.adminGuideContentEditor.value;
+        try {
+            await setDoc(contentDocRef, { guideContent: newContent }, { merge: true });
+            showToast('Đã cập nhật hướng dẫn thành công!', 'success');
+            await loadDynamicContent(); // Refresh content for the admin too
+        } catch (error) {
+            showToast('Lỗi khi lưu hướng dẫn.', 'error');
+            console.error("Error saving guide content:", error);
+        }
+    });
+}
+
+async function loadDynamicContent() {
+     if (!DOM.guideContentList) return;
+
+     try {
+        const contentDocRef = doc(db, 'siteContent', 'main');
+        const docSnap = await getDoc(contentDocRef);
+        if (docSnap.exists() && docSnap.data().guideContent) {
+            DOM.guideContentList.innerHTML = docSnap.data().guideContent;
+        } else {
+            DOM.guideContentList.innerHTML = defaultGuideContent;
+        }
+     } catch(error) {
+        console.error("Error loading dynamic guide content:", error);
+        DOM.guideContentList.innerHTML = "<li>Không thể tải hướng dẫn. Vui lòng thử lại sau.</li>";
+     }
 }
 
 // --- Auth & App Initialization ---
@@ -281,6 +367,7 @@ onAuthStateChanged(auth, async (user) => {
 
         if (appState.currentUserProfile?.role === 'admin') {
             initializeAdminTab();
+            initializeContentManagement();
         }
         
         listenForData();
@@ -734,6 +821,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeMaterialsManagement();
     initializeSavedItemsManagement();
     updateCalculatorActionButtons();
+    loadDynamicContent();
 
     // Event Listeners for actions that cross module boundaries
     DOM.saveItemBtn.addEventListener('click', async () => {

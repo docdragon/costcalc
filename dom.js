@@ -151,6 +151,8 @@ export const adminTabBtn = document.getElementById('tab-btn-admin');
 export const adminTab = document.getElementById('admin-tab');
 export const adminUserListTbody = document.getElementById('admin-user-list-tbody');
 export const adminUserFilterInput = document.getElementById('admin-user-filter-input');
+export const adminGuideForm = document.getElementById('admin-guide-form');
+export const adminGuideContentEditor = document.getElementById('admin-guide-content-editor');
 
 
 // --- Modals ---
@@ -169,3 +171,4 @@ export const confirmOkBtn = document.getElementById('confirm-ok-btn');
 
 // --- Misc ---
 export const toastContainer = document.getElementById('toast-container');
+export const guideContentList = document.getElementById('guide-content-list');

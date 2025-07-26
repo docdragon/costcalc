@@ -285,11 +285,9 @@
                                 <summary>
                                     <h4><i class="fas fa-question-circle"></i> Hướng dẫn sử dụng</h4>
                                 </summary>
-                                <ul>
-                                    <li><strong>Chọn Loại Sản phẩm:</strong> Chọn một loại sản phẩm từ danh sách để tải cấu trúc chi tiết mặc định. Bạn có thể tùy chỉnh các loại sản phẩm này trong tab 'Cấu hình'.</li>
-                                    <li><strong>Điền thông tin:</strong> Hoàn thiện các thông tin chi tiết về kích thước, vật liệu, và phụ kiện. Kết quả báo giá sẽ tự động cập nhật.</li>
-                                    <li><strong>Tính toán & Lưu:</strong> Nhấn nút "Tính toán & Lưu dự án" để nhận kết quả phân tích chi phí và lưu lại dự án để xem sau.</li>
-                                    <li><strong>Lưu & Tải lại:</strong> Đăng nhập và lưu các dự án quan trọng để xem lại hoặc chỉnh sửa sau này.</li>
+                                <ul id="guide-content-list">
+                                    <!-- JS will render content here -->
+                                    <li>Đang tải hướng dẫn...</li>
                                 </ul>
                            </details>
                         </div>
@@ -791,9 +789,12 @@
                                 <table class="data-table">
                                     <thead>
                                         <tr>
-                                            <th class="th-style" style="width: 35%;">Email</th>
+                                            <th class="th-style" style="width: 25%;">Email</th>
                                             <th class="th-style">Tên hiển thị</th>
-                                            <th class="th-style" style="width: 20%;">Vai trò</th>
+                                            <th class="th-style" style="width: 15%;">Vai trò</th>
+                                            <th class="th-style" style="width: 15%;">Trạng thái</th>
+                                            <th class="th-style" style="width: 15%;">Ngày hết hạn</th>
+                                            <th class="th-style">Đăng nhập cuối</th>
                                         </tr>
                                     </thead>
                                     <tbody id="admin-user-list-tbody">
@@ -804,6 +805,23 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="card" style="margin-top: 2rem;">
+                    <h2 class="card-header"><i class="fas fa-edit" style="margin-right: 0.75rem;"></i>Quản lý Nội dung</h2>
+                    <div class="content-wrapper admin-content">
+                        <form id="admin-guide-form">
+                            <div class="form-group">
+                                <label for="admin-guide-content-editor" class="form-label">Nội dung Hướng dẫn sử dụng</label>
+                                <textarea id="admin-guide-content-editor" class="input-style" rows="10" placeholder="Nhập nội dung hướng dẫn tại đây. Sử dụng thẻ <li> cho mỗi mục."></textarea>
+                                <small class="form-text">Nội dung sẽ được hiển thị trong phần Hướng dẫn sử dụng ở tab Trình Tính Giá. Sử dụng thẻ <code>&lt;li&gt;Nội dung&lt;/li&gt;</code> cho mỗi gạch đầu dòng.</small>
+                            </div>
+                            <div class="button-group" style="justify-content: flex-end;">
+                                <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-2"></i> Lưu Hướng dẫn</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
             </div>
         </main>
     </div>
