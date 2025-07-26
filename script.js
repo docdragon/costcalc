@@ -2,7 +2,7 @@
 import { 
     db, auth, collection, onSnapshot, addDoc, doc, updateDoc, 
     deleteDoc, serverTimestamp, getDocs, query, limit, onAuthStateChanged, 
-    signOut
+    signOut, setDoc, getDoc
 } from './firebase.js';
 
 import { 
@@ -22,10 +22,9 @@ import { parseNumber, h, formatDate } from './utils.js';
 
 
 // --- Global State ---
-const ADMIN_UID = 'Tz5sYa3n3wXnVo9sZ2fJj7n2lI33'; // The admin user's UID
-
 const appState = {
     currentUserId: null,
+    currentUserProfile: null,
     materialsCollectionRef: null,
     savedItemsCollectionRef: null,
     
@@ -121,17 +120,145 @@ async function checkAndAddSampleData(userId) {
     }
 }
 
+// --- User Profile Management ---
+async function getUserProfile(user) {
+    const userDocRef = doc(db, 'users', user.uid);
+    const userDocSnap = await getDoc(userDocRef);
+
+    if (userDocSnap.exists()) {
+        return { uid: user.uid, ...userDocSnap.data() };
+    } else {
+        console.log("Creating new user profile.");
+        const usersQuery = query(collection(db, 'users'), limit(1));
+        const usersSnapshot = await getDocs(usersQuery);
+        const isFirstUser = usersSnapshot.empty;
+        
+        const newUserProfile = {
+            email: user.email,
+            displayName: user.displayName,
+            createdAt: serverTimestamp(),
+            role: isFirstUser ? 'admin' : 'user'
+        };
+
+        await setDoc(userDocRef, newUserProfile);
+
+        if (isFirstUser) {
+            showToast('Chào mừng Admin đầu tiên của CostCraft!', 'success');
+        }
+        
+        await checkAndAddSampleData(user.uid);
+        
+        return { uid: user.uid, ...newUserProfile, role: newUserProfile.role };
+    }
+}
+
+// --- Admin Tab Logic ---
+let localUsers = [];
+let unsubscribeUsers = null;
+
+function renderUsersTable(usersToRender) {
+    if (!DOM.adminUserListTbody) return;
+    DOM.adminUserListTbody.innerHTML = '';
+
+    if (usersToRender.length === 0) {
+        DOM.adminUserListTbody.appendChild(h('tr', {}, h('td', { colSpan: 3, style: 'text-align: center; padding: 1rem; color: var(--text-light);' }, 'Không tìm thấy người dùng nào.')));
+        return;
+    }
+
+    usersToRender.forEach(user => {
+        const select = h('select', { className: 'input-style', dataset: { uid: user.uid } },
+            h('option', { value: 'user', selected: user.role === 'user' }, 'User'),
+            h('option', { value: 'admin', selected: user.role === 'admin' }, 'Admin')
+        );
+        if (user.uid === appState.currentUserId) {
+            select.disabled = true;
+        }
+
+        const tr = h('tr', { key: user.uid },
+            h('td', { dataset: { label: 'Email' } }, user.email),
+            h('td', { dataset: { label: 'Tên hiển thị' } }, user.displayName || '-'),
+            h('td', { dataset: { label: 'Vai trò' } }, select)
+        );
+        DOM.adminUserListTbody.appendChild(tr);
+    });
+}
+
+function filterAndRenderUsers() {
+    const filterText = DOM.adminUserFilterInput.value.toLowerCase().trim();
+    if (!filterText) {
+        renderUsersTable(localUsers);
+        return;
+    }
+    const filteredUsers = localUsers.filter(u => 
+        (u.email && u.email.toLowerCase().includes(filterText)) || 
+        (u.displayName && u.displayName.toLowerCase().includes(filterText))
+    );
+    renderUsersTable(filteredUsers);
+}
+
+async function handleRoleChange(e) {
+    const select = e.target;
+    if (select.tagName !== 'SELECT') return;
+
+    const uid = select.dataset.uid;
+    const newRole = select.value;
+    const userToUpdate = localUsers.find(u => u.uid === uid);
+
+    if (uid === appState.currentUserId) {
+        showToast('Bạn không thể thay đổi vai trò của chính mình.', 'error');
+        select.value = userToUpdate.role;
+        return;
+    }
+
+    try {
+        await updateDoc(doc(db, 'users', uid), { role: newRole });
+        showToast(`Đã cập nhật vai trò cho ${userToUpdate.email} thành ${newRole}.`, 'success');
+    } catch (error) {
+        showToast('Lỗi khi cập nhật vai trò.', 'error');
+        console.error('Role update error:', error);
+        select.value = userToUpdate.role;
+    }
+}
+
+function initializeAdminTab() {
+    if (!DOM.adminTab || !appState.currentUserId) return;
+    
+    if (unsubscribeUsers) unsubscribeUsers();
+    unsubscribeUsers = onSnapshot(collection(db, 'users'), snapshot => {
+        localUsers = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+        localUsers.sort((a,b) => (a.email || '').localeCompare(b.email || ''));
+        filterAndRenderUsers();
+    }, console.error);
+
+    DOM.adminUserFilterInput.addEventListener('input', debounce(filterAndRenderUsers, 300));
+    DOM.adminUserListTbody.addEventListener('change', handleRoleChange);
+}
+
+function stopAdminListeners() {
+    if (unsubscribeUsers) {
+        unsubscribeUsers();
+        unsubscribeUsers = null;
+    }
+}
+
 // --- Auth & App Initialization ---
 onAuthStateChanged(auth, async (user) => {
     const loggedIn = !!user;
+
+    // Stop all data listeners on auth state change to prevent data leaks
+    if (appState.unsubscribeMaterials) appState.unsubscribeMaterials();
+    if (appState.unsubscribeSavedItems) appState.unsubscribeSavedItems();
+    stopConfigurationListeners();
+    stopAdminListeners();
+
     if (loggedIn) {
         appState.currentUserId = user.uid;
+        appState.currentUserProfile = await getUserProfile(user);
+        
         appState.materialsCollectionRef = collection(db, `users/${appState.currentUserId}/materials`);
         appState.savedItemsCollectionRef = collection(db, `users/${appState.currentUserId}/savedItems`);
         
-        const dataForCalc = { userId: appState.currentUserId };
-        updateCalculatorData(dataForCalc);
-        await checkAndAddSampleData(appState.currentUserId);
+        updateCalculatorData({ userId: appState.currentUserId });
         
         initializeConfigurationTab(appState.currentUserId, (updates) => {
             if (updates.componentNames) {
@@ -151,17 +278,20 @@ onAuthStateChanged(auth, async (user) => {
                 }
             }
         });
+
+        if (appState.currentUserProfile?.role === 'admin') {
+            initializeAdminTab();
+        }
         
         listenForData();
     } else {
         appState.currentUserId = null;
-        if (appState.unsubscribeMaterials) appState.unsubscribeMaterials();
-        if (appState.unsubscribeSavedItems) appState.unsubscribeSavedItems();
-        stopConfigurationListeners();
+        appState.currentUserProfile = null;
         clearLocalData();
         updateCalculatorData({ userId: null });
     }
-    updateUIVisibility(loggedIn, user, ADMIN_UID);
+
+    updateUIVisibility(loggedIn, user, appState.currentUserProfile);
     DOM.initialLoader.style.opacity = '0';
     setTimeout(() => DOM.initialLoader.style.display = 'none', 300);
 });

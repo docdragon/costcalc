@@ -777,18 +777,29 @@
             <!-- Tab: Admin Panel -->
             <div id="admin-tab" role="tabpanel" aria-labelledby="tab-btn-admin" class="tab-pane hidden">
                 <div class="card">
-                    <h2 class="card-header"><i class="fas fa-user-shield" style="margin-right: 0.75rem;"></i>Admin Panel</h2>
-                    <div class="content-wrapper" style="padding-top: 1rem;">
-                        <div class="settings-intro">
-                            <p style="margin:0;">Chào mừng Admin! Đây là khu vực quản trị. Các tính năng trong tương lai sẽ được thêm vào đây.</p>
+                    <h2 class="card-header"><i class="fas fa-users-cog" style="margin-right: 0.75rem;"></i>Quản lý Người dùng</h2>
+                    <div class="content-wrapper admin-content">
+                        <div class="material-controls">
+                            <div class="filter-wrapper">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="admin-user-filter-input" class="input-style" placeholder="Lọc theo email hoặc tên...">
+                            </div>
                         </div>
-                        <div class="guide-details" style="border:none; padding:0; margin:0;">
-                             <h4 style="margin-top:0;"><i class="fas fa-tasks"></i> Chức năng Dự kiến</h4>
-                             <ul>
-                                 <li>Quản lý người dùng (xem, chỉnh sửa vai trò).</li>
-                                 <li>Thống kê và phân tích toàn trang.</li>
-                                 <li>Cấu hình cài đặt chung cho ứng dụng.</li>
-                             </ul>
+                        <div class="table-container">
+                            <div class="table-wrapper">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="th-style" style="width: 35%;">Email</th>
+                                            <th class="th-style">Tên hiển thị</th>
+                                            <th class="th-style" style="width: 20%;">Vai trò</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="admin-user-list-tbody">
+                                        <!-- User list rendered by script.js -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>

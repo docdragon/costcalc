@@ -2,7 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { 
     getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, 
-    deleteDoc, serverTimestamp, getDocs, query, limit, setDoc
+    deleteDoc, serverTimestamp, getDocs, query, limit, setDoc, getDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { 
     getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut,
@@ -44,6 +44,7 @@ export {
     signInWithPopup,
     signOut,
     setDoc,
+    getDoc,
     setPersistence,
     browserSessionPersistence,
     browserLocalPersistence

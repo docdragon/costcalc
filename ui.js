@@ -65,20 +65,26 @@ export function showToast(message, type = 'info') {
 }
 
 // --- UI Visibility ---
-export function updateUIVisibility(isLoggedIn, user, adminUid) {
+export function updateUIVisibility(isLoggedIn, user, userProfile) {
     DOM.loggedInView.classList.toggle('hidden', !isLoggedIn);
     DOM.loggedOutView.classList.toggle('hidden', isLoggedIn);
     DOM.userEmailDisplay.textContent = isLoggedIn ? (user.displayName || user.email) : '';
     
+    const isAdmin = isLoggedIn && userProfile?.role === 'admin';
+
     document.querySelectorAll('.calculator-form-content, .materials-form-content, .saved-items-content, .quick-calc-form-content, .component-names-content, .config-form-content').forEach(el => {
         el.style.display = isLoggedIn ? 'block' : 'none';
     });
+    
+    if (DOM.adminTab.querySelector('.admin-content')) {
+        DOM.adminTab.querySelector('.admin-content').style.display = isAdmin ? 'block' : 'none';
+    }
+    
     document.querySelectorAll('.login-prompt-view').forEach(el => {
         el.style.display = isLoggedIn ? 'none' : 'block';
     });
 
     if (DOM.adminTabBtn) {
-        const isAdmin = isLoggedIn && user.uid === adminUid;
         DOM.adminTabBtn.classList.toggle('hidden', !isAdmin);
     }
 

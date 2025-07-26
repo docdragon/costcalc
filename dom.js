@@ -149,6 +149,9 @@ export const siNextPageBtn = document.getElementById('si-next-page-btn');
 // --- Admin Tab ---
 export const adminTabBtn = document.getElementById('tab-btn-admin');
 export const adminTab = document.getElementById('admin-tab');
+export const adminUserListTbody = document.getElementById('admin-user-list-tbody');
+export const adminUserFilterInput = document.getElementById('admin-user-filter-input');
+
 
 // --- Modals ---
 export const loginModal = document.getElementById('login-modal');
