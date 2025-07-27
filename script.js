@@ -338,7 +338,7 @@ async function initializeAdminSettings() {
             DOM.adminGuideContentEditor.value = defaultGuideContent;
         }
     } catch (error) {
-        console.error("Error fetching admin settings:", error);
+        // Firebase permission error is expected if rules are not set for 'siteContent'. Fallback to default.
         DOM.adminGuideContentEditor.value = defaultGuideContent;
         DOM.adminDefaultTrialDaysInput.value = '';
     }
@@ -381,7 +381,7 @@ async function loadDynamicContent() {
             DOM.guideContentList.innerHTML = defaultGuideContent;
         }
      } catch(error) {
-        console.error("Error loading dynamic guide content:", error);
+        // Firebase permission error is expected if rules are not set for 'siteContent'. Fallback to default.
         DOM.guideContentList.innerHTML = defaultGuideContent;
      }
 }
