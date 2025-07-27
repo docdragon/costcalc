@@ -134,17 +134,6 @@ async function getUserProfile(user) {
         const usersQuery = query(collection(db, 'users'), limit(1));
         const usersSnapshot = await getDocs(usersQuery);
         const isFirstUser = usersSnapshot.empty;
-
-        let defaultTrialDays = 0;
-        try {
-            const settingsDocRef = doc(db, 'siteContent', 'main');
-            const settingsDocSnap = await getDoc(settingsDocRef);
-            if (settingsDocSnap.exists() && typeof settingsDocSnap.data().defaultTrialDays === 'number') {
-                defaultTrialDays = settingsDocSnap.data().defaultTrialDays;
-            }
-        } catch (error) {
-            console.warn("Could not read site settings for new user, possibly due to restrictive security rules. Defaulting trial days.", error);
-        }
         
         const newUserProfile = {
             email: user.email,
@@ -153,12 +142,8 @@ async function getUserProfile(user) {
             lastLoginAt: serverTimestamp(),
             role: isFirstUser ? 'admin' : 'user',
             status: 'active',
-            expiresAt: null,
+            expiresAt: null, // Trial period is not set by default to avoid permission errors on creation. Admin can set it.
         };
-
-        if (newUserProfile.role === 'user' && defaultTrialDays > 0) {
-            newUserProfile.expiresAt = new Date(Date.now() + defaultTrialDays * 24 * 60 * 60 * 1000);
-        }
 
         await setDoc(userDocRef, newUserProfile);
 
@@ -444,11 +429,15 @@ onAuthStateChanged(auth, async (user) => {
         }
         
         listenForData();
+        await loadDynamicContent();
     } else {
         appState.currentUserId = null;
         appState.currentUserProfile = null;
         clearLocalData();
         updateCalculatorData({ userId: null });
+        if (DOM.guideContentList) {
+            DOM.guideContentList.innerHTML = defaultGuideContent;
+        }
     }
 
     updateUIVisibility(loggedIn, user, appState.currentUserProfile);
@@ -894,7 +883,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeMaterialsManagement();
     initializeSavedItemsManagement();
     updateCalculatorActionButtons();
-    loadDynamicContent();
 
     // Event Listeners for actions that cross module boundaries
     DOM.saveItemBtn.addEventListener('click', async () => {
