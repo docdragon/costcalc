@@ -339,7 +339,8 @@ async function initializeAdminSettings() {
         }
     } catch (error) {
         console.error("Error fetching admin settings:", error);
-        DOM.adminGuideContentEditor.value = "Lỗi khi tải nội dung.";
+        DOM.adminGuideContentEditor.value = defaultGuideContent;
+        DOM.adminDefaultTrialDaysInput.value = '';
     }
 
     DOM.adminSettingsForm.addEventListener('submit', async (e) => {
@@ -381,7 +382,7 @@ async function loadDynamicContent() {
         }
      } catch(error) {
         console.error("Error loading dynamic guide content:", error);
-        DOM.guideContentList.innerHTML = "<li>Không thể tải hướng dẫn. Vui lòng thử lại sau.</li>";
+        DOM.guideContentList.innerHTML = defaultGuideContent;
      }
 }
 
