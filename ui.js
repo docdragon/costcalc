@@ -72,14 +72,19 @@ export function updateUIVisibility(isLoggedIn, user, userProfile) {
     
     const isAdmin = isLoggedIn && userProfile?.role === 'admin';
 
+    // Show/hide content for general logged-in users
     document.querySelectorAll('.calculator-form-content, .materials-form-content, .saved-items-content, .quick-calc-form-content, .component-names-content, .config-form-content').forEach(el => {
         el.style.display = isLoggedIn ? 'block' : 'none';
     });
     
-    if (DOM.adminTab.querySelector('.admin-content')) {
-        DOM.adminTab.querySelector('.admin-content').style.display = isAdmin ? 'block' : 'none';
+    // Show/hide content specifically for admins
+    if (DOM.adminTab) {
+        DOM.adminTab.querySelectorAll('.admin-content').forEach(el => {
+            el.style.display = isAdmin ? 'block' : 'none';
+        });
     }
     
+    // Show/hide the entire prompt view (for logged-out users)
     document.querySelectorAll('.login-prompt-view').forEach(el => {
         el.style.display = isLoggedIn ? 'none' : 'block';
     });
@@ -90,6 +95,7 @@ export function updateUIVisibility(isLoggedIn, user, userProfile) {
 
     if (isLoggedIn) closeAllModals();
 }
+
 
 // --- Image Upload Logic (Now in Sidebar) ---
 export function initializeImageUploader(uploadedCallback, removedCallback) {
