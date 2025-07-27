@@ -318,11 +318,6 @@ function stopAdminListeners() {
 }
 
 // --- Content Management (Admin) ---
-const defaultGuideContent = `<li><strong>Chọn Loại Sản phẩm:</strong> Chọn một loại sản phẩm từ danh sách để tải cấu trúc chi tiết mặc định. Bạn có thể tùy chỉnh các loại sản phẩm này trong tab 'Cấu hình'.</li>
-<li><strong>Điền thông tin:</strong> Hoàn thiện các thông tin chi tiết về kích thước, vật liệu, và phụ kiện. Kết quả báo giá sẽ tự động cập nhật.</li>
-<li><strong>Tính toán & Lưu:</strong> Nhấn nút "Tính toán & Lưu dự án" để nhận kết quả phân tích chi phí và lưu lại dự án để xem sau.</li>
-<li><strong>Lưu & Tải lại:</strong> Đăng nhập và lưu các dự án quan trọng để xem lại hoặc chỉnh sửa sau này.</li>`;
-
 async function initializeAdminSettings() {
     if (!DOM.adminSettingsForm) return;
 
@@ -332,20 +327,15 @@ async function initializeAdminSettings() {
         const docSnap = await getDoc(contentDocRef);
         if (docSnap.exists()) {
             const data = docSnap.data();
-            DOM.adminGuideContentEditor.value = data.guideContent || defaultGuideContent;
             DOM.adminDefaultTrialDaysInput.value = data.defaultTrialDays || '';
-        } else {
-            DOM.adminGuideContentEditor.value = defaultGuideContent;
         }
     } catch (error) {
         // Firebase permission error is expected if rules are not set for 'siteContent'. Fallback to default.
-        DOM.adminGuideContentEditor.value = defaultGuideContent;
         DOM.adminDefaultTrialDaysInput.value = '';
     }
 
     DOM.adminSettingsForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const newGuideContent = DOM.adminGuideContentEditor.value;
         const newTrialDaysRaw = DOM.adminDefaultTrialDaysInput.value.trim();
         const newTrialDays = parseInt(newTrialDaysRaw, 10);
 
@@ -356,12 +346,10 @@ async function initializeAdminSettings() {
         
         try {
             const settingsData = {
-                guideContent: newGuideContent,
                 defaultTrialDays: newTrialDaysRaw ? newTrialDays : null
             };
             await setDoc(contentDocRef, settingsData, { merge: true });
             showToast('Đã cập nhật cài đặt thành công!', 'success');
-            await loadDynamicContent();
         } catch (error) {
             showToast('Lỗi khi lưu cài đặt.', 'error');
             console.error("Error saving admin settings:", error);
@@ -369,22 +357,6 @@ async function initializeAdminSettings() {
     });
 }
 
-async function loadDynamicContent() {
-     if (!DOM.guideContentList) return;
-
-     try {
-        const contentDocRef = doc(db, 'siteContent', 'main');
-        const docSnap = await getDoc(contentDocRef);
-        if (docSnap.exists() && docSnap.data().guideContent) {
-            DOM.guideContentList.innerHTML = docSnap.data().guideContent;
-        } else {
-            DOM.guideContentList.innerHTML = defaultGuideContent;
-        }
-     } catch(error) {
-        // Firebase permission error is expected if rules are not set for 'siteContent'. Fallback to default.
-        DOM.guideContentList.innerHTML = defaultGuideContent;
-     }
-}
 
 // --- Auth & App Initialization ---
 onAuthStateChanged(auth, async (user) => {
@@ -430,15 +402,11 @@ onAuthStateChanged(auth, async (user) => {
         }
         
         listenForData();
-        await loadDynamicContent();
     } else {
         appState.currentUserId = null;
         appState.currentUserProfile = null;
         clearLocalData();
         updateCalculatorData({ userId: null });
-        if (DOM.guideContentList) {
-            DOM.guideContentList.innerHTML = defaultGuideContent;
-        }
     }
 
     updateUIVisibility(loggedIn, user, appState.currentUserProfile);

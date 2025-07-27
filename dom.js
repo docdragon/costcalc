@@ -172,4 +172,3 @@ export const confirmOkBtn = document.getElementById('confirm-ok-btn');
 
 // --- Misc ---
 export const toastContainer = document.getElementById('toast-container');
-export const guideContentList = document.getElementById('guide-content-list');

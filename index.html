@@ -57,6 +57,9 @@
             <a href="#" role="tab" id="tab-btn-admin" aria-selected="false" aria-controls="admin-tab" data-tab="admin" class="sidebar-link hidden">
                 <i class="fas fa-user-shield fa-fw"></i><span>Admin</span>
             </a>
+            <a href="#" role="tab" id="tab-btn-update" aria-selected="false" aria-controls="update-tab" data-tab="update" class="sidebar-link">
+                <i class="fas fa-rocket fa-fw"></i><span>Update</span>
+            </a>
         </nav>
 
         <main id="tab-content" class="main-content">
@@ -279,17 +282,6 @@
                                     <button id="sidebar-remove-image-btn" class="remove-image-btn hidden">&times;</button>
                                 </div>
                             </div>
-                            
-                            <!-- Guide -->
-                            <details class="guide-details">
-                                <summary>
-                                    <h4><i class="fas fa-question-circle"></i> Hướng dẫn sử dụng</h4>
-                                </summary>
-                                <ul id="guide-content-list">
-                                    <!-- JS will render content here -->
-                                    <li>Đang tải hướng dẫn...</li>
-                                </ul>
-                           </details>
                         </div>
                          <div class="login-prompt-view">
                             <div class="icon-prompt"><i class="fas fa-info-circle"></i></div>
@@ -815,20 +807,39 @@
                                 <input type="text" inputmode="decimal" id="admin-default-trial-days" class="input-style" placeholder="Vd: 7">
                                 <small class="form-text">Người dùng mới đăng ký sẽ tự động có thời hạn dùng thử bằng số ngày này.</small>
                             </div>
-                            <hr class="form-divider">
-                            <div class="form-group">
-                                <label for="admin-guide-content-editor" class="form-label">Nội dung Hướng dẫn sử dụng</label>
-                                <textarea id="admin-guide-content-editor" class="input-style" rows="10" placeholder="Nhập nội dung hướng dẫn tại đây. Sử dụng thẻ <li> cho mỗi mục."></textarea>
-                                <small class="form-text">Nội dung này sẽ hiển thị trong phần Hướng dẫn ở tab Trình Tính Giá. Sử dụng thẻ <code>&lt;li&gt;Nội dung&lt;/li&gt;</code> cho mỗi gạch đầu dòng.</small>
-                            </div>
                             <div class="button-group" style="justify-content: flex-end; margin-top: 1.5rem;">
-                                <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-2"></i> Lưu Cài đặt & Nội dung</button>
+                                <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-2"></i> Lưu Cài đặt</button>
                             </div>
                         </form>
                     </div>
                 </div>
 
             </div>
+            
+            <!-- Tab: Update Log -->
+            <div id="update-tab" role="tabpanel" aria-labelledby="tab-btn-update" class="tab-pane hidden">
+                <div class="card">
+                    <h2 class="card-header"><i class="fas fa-rocket" style="margin-right: 0.75rem;"></i>Thông tin Cập nhật</h2>
+                    <div class="content-wrapper update-content">
+                        <div class="update-entry">
+                            <h3>Phiên bản 1.1.0 (29/07/2024)</h3>
+                            <ul>
+                                <li><span class="update-tag new">Mới</span> Thêm tab "Update" để theo dõi lịch sử cập nhật.</li>
+                                <li><span class="update-tag remove">Xóa</span> Gỡ bỏ phần "Hướng dẫn sử dụng" khỏi giao diện chính và trang quản trị.</li>
+                            </ul>
+                        </div>
+                         <div class="update-entry">
+                            <h3>Phiên bản 1.0.0 (25/07/2024)</h3>
+                            <ul>
+                                <li><span class="update-tag new">Mới</span> Ra mắt phiên bản đầu tiên của CostCraft.</li>
+                                <li><span class="update-tag new">Mới</span> Các tính năng chính: Trình tính giá, Kho vật tư, Cấu hình, Lưu dự án.</li>
+                                <li><span class="update-tag new">Mới</span> Hỗ trợ đăng nhập qua Google.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </main>
     </div>
 
