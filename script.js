@@ -135,11 +135,16 @@ async function getUserProfile(user) {
         const usersSnapshot = await getDocs(usersQuery);
         const isFirstUser = usersSnapshot.empty;
 
-        const settingsDocRef = doc(db, 'siteContent', 'main');
-        const settingsDocSnap = await getGet(settingsDocRef);
-        const defaultTrialDays = (settingsDocSnap.exists() && typeof settingsDocSnap.data().defaultTrialDays === 'number')
-            ? settingsDocSnap.data().defaultTrialDays
-            : 0;
+        let defaultTrialDays = 0;
+        try {
+            const settingsDocRef = doc(db, 'siteContent', 'main');
+            const settingsDocSnap = await getDoc(settingsDocRef);
+            if (settingsDocSnap.exists() && typeof settingsDocSnap.data().defaultTrialDays === 'number') {
+                defaultTrialDays = settingsDocSnap.data().defaultTrialDays;
+            }
+        } catch (error) {
+            console.warn("Could not read site settings for new user, possibly due to restrictive security rules. Defaulting trial days.", error);
+        }
         
         const newUserProfile = {
             email: user.email,
