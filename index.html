@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CostCraft - Tính giá Nội thất Nhanh</title>
-    <link rel="icon" href="data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%233730a3'%3e%3cpath d='M507.41 19.82c-4.49-4.49-10.49-6.83-16.5-6.83-6.02 0-12.01 2.34-16.51 6.83L347.53 146.69l-18.7-18.7c-4.28-4.28-11.27-4.59-15.93-.72L21.5 258.4c-4.45 3.69-5.59 10.15-2.73 14.9l121.36 205.82c2.86 4.75 9.17 6.27 14.62 3.44l131.14-68.52c4.66-2.44 7.23-7.88 6.42-13.43l-18.39-125.61 18.7 18.7c4.49 4.49 10.49 6.83 16.5 6.83 6.02 0 12.01-2.34 16.51-6.83L507.41 52.83c9.02-9.02 9.02-23.56 0-33.01zM288 288c-17.67 0-32 14.33-32 32s14.33 32 32 32 32-14.33 32-32-14.33-32-32-32z'/%3e%3c/svg%3e">
+    <link rel="icon" href="data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%233730a3'%3e%3cpath d='M507.41 19.82c-4.49-4.49-10.49-6.83-16.5-6.83-6.02 0-12.01 2.34-16.51 6.83L347.53 146.69l-18.7-18.7c-4.28-4.28-11.27-4.59-15.93-.72L21.5 258.4c-4.45 3.69-5.59 10.15-2.73 14.9l121.36 205.82c2.86 4.75 9.17 6.27 14.62 3.44l131.14-68.52c4.66-2.44 7.23-7.88 6.42-13.43l-18.39-125.61 18.7 18.7c4.49 4.49 10.49 6.83 16.5 6.83 6.02 0 12.01 2.34 16.51-6.83L507.41 52.83c9.02-9.02 9.02-23.56 0-33.01zM288 288c-17.67 0-32 14.33-32 32s14.33 32 32 32 32-14.33 32-32-14.33-32-32-32z'/%3e%3c/svg%3e">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -799,7 +799,7 @@
                 </div>
 
                 <div class="card" style="margin-top: 2rem;">
-                    <h2 class="card-header"><i class="fas fa-cogs" style="margin-right: 0.75rem;"></i>Cài đặt & Nội dung</h2>
+                    <h2 class="card-header"><i class="fas fa-cogs" style="margin-right: 0.75rem;"></i>Cài đặt Chung</h2>
                     <div class="content-wrapper admin-content">
                         <form id="admin-settings-form">
                              <div class="form-group">
@@ -814,27 +814,42 @@
                     </div>
                 </div>
 
+                <div class="card" style="margin-top: 2rem;">
+                    <h2 class="card-header"><i class="fas fa-history" style="margin-right: 0.75rem;"></i>Quản lý Lịch sử Cập nhật</h2>
+                    <div class="content-wrapper admin-content">
+                        <form id="admin-update-log-form" class="material-form">
+                            <div class="grid-2-col">
+                                <div>
+                                    <label for="admin-update-version" class="form-label">Phiên bản</label>
+                                    <input type="text" id="admin-update-version" class="input-style" placeholder="Vd: 1.2.0" required>
+                                </div>
+                                <div>
+                                    <label for="admin-update-date" class="form-label">Ngày cập nhật</label>
+                                    <input type="text" id="admin-update-date" class="input-style" placeholder="Vd: 30/07/2024" required>
+                                </div>
+                            </div>
+                            <div class="button-group" style="justify-content: flex-end;">
+                                <button type="submit" class="btn btn-primary"><i class="fas fa-plus mr-2"></i> Thêm Phiên bản</button>
+                            </div>
+                        </form>
+                        <div class="table-container">
+                            <h3 class="table-header">Danh sách Phiên bản</h3>
+                            <div id="admin-update-log-list">
+                                <!-- Admin update log entries will be rendered here by script.js -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <!-- Tab: Update Log -->
             <div id="update-tab" role="tabpanel" aria-labelledby="tab-btn-update" class="tab-pane hidden">
                 <div class="card">
                     <h2 class="card-header"><i class="fas fa-rocket" style="margin-right: 0.75rem;"></i>Thông tin Cập nhật</h2>
-                    <div class="content-wrapper update-content">
-                        <div class="update-entry">
-                            <h3>Phiên bản 1.1.0 (29/07/2024)</h3>
-                            <ul>
-                                <li><span class="update-tag new">Mới</span> Thêm tab "Update" để theo dõi lịch sử cập nhật.</li>
-                                <li><span class="update-tag remove">Xóa</span> Gỡ bỏ phần "Hướng dẫn sử dụng" khỏi giao diện chính và trang quản trị.</li>
-                            </ul>
-                        </div>
-                         <div class="update-entry">
-                            <h3>Phiên bản 1.0.0 (25/07/2024)</h3>
-                            <ul>
-                                <li><span class="update-tag new">Mới</span> Ra mắt phiên bản đầu tiên của CostCraft.</li>
-                                <li><span class="update-tag new">Mới</span> Các tính năng chính: Trình tính giá, Kho vật tư, Cấu hình, Lưu dự án.</li>
-                                <li><span class="update-tag new">Mới</span> Hỗ trợ đăng nhập qua Google.</li>
-                            </ul>
+                    <div id="update-log-content" class="content-wrapper update-content">
+                        <!-- Dynamic content will be rendered here by script.js -->
+                        <div class="loading-overlay">
+                            <div class="spinner"></div>
                         </div>
                     </div>
                 </div>

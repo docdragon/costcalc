@@ -940,7 +940,13 @@ td button { transition: color 0.2s; }
 .update-tag.update { background-color: #fef9c3; color: #854d0e; } /* yellow-100, yellow-800 */
 .update-tag.fix { background-color: #dcfce7; color: #166534; } /* green-100, green-800 */
 .update-tag.remove { background-color: #fee2e2; color: #991b1b; } /* red-100, red-800 */
-
+#update-log-content .loading-overlay {
+    position: relative; 
+    background: none; 
+    display: flex; 
+    height: 200px;
+    opacity: 1; /* override initial state */
+}
 
 /* --- Product Preview --- */
 #product-preview-section { margin-bottom: 1.5rem; }
@@ -1262,4 +1268,29 @@ textarea.input-style {
     .project-name-main, .project-details-list {
         width: 100%;
     }
+}
+
+/* Admin Update Log Styles */
+#admin-update-log-list .card {
+    border: 1px solid #f1f5f9;
+    box-shadow: none;
+    padding: 1.5rem;
+    background-color: #f8fafc;
+}
+#admin-update-log-list h4 {
+    color: var(--text-dark);
+}
+#admin-update-log-list .delete-version-btn {
+    flex-shrink: 0;
+}
+#admin-update-log-list .delete-update-item-btn {
+    font-size: 1rem;
+    color: var(--text-light);
+}
+#admin-update-log-list .delete-update-item-btn:hover {
+    color: var(--danger-color);
+    background-color: #fee2e2;
+}
+#admin-update-log-list .cost-list {
+    background-color: var(--card-background);
 }

@@ -317,7 +317,193 @@ function stopAdminListeners() {
     }
 }
 
-// --- Content Management (Admin) ---
+// --- Content Management (Admin & Public) ---
+let localUpdateLog = []; // holds the array of version objects
+let unsubscribeUpdateLog = null;
+
+// Renders the public update log view
+function renderPublicUpdateLog(versions = []) {
+    if (!DOM.updateLogContent) return;
+
+    DOM.updateLogContent.innerHTML = '';
+    if (versions.length === 0) {
+        DOM.updateLogContent.appendChild(h('p', { className: 'form-text' }, 'Chưa có thông tin cập nhật nào.'));
+        return;
+    }
+    
+    // Sort by date descending (newest first)
+    const sortedVersions = [...versions].sort((a, b) => {
+        const dateA = new Date(a.date.split('/').reverse().join('-')).getTime();
+        const dateB = new Date(b.date.split('/').reverse().join('-')).getTime();
+        return (dateB || 0) - (dateA || 0);
+    });
+    
+    sortedVersions.forEach(version => {
+        const items = version.items || [];
+        const updateEntry = h('div', { className: 'update-entry' },
+            h('h3', {}, `Phiên bản ${version.version} (${version.date})`),
+            h('ul', {}, ...items.map(item =>
+                h('li', {},
+                    h('span', { className: `update-tag ${item.type}` }, item.type),
+                    item.text
+                )
+            ))
+        );
+        DOM.updateLogContent.appendChild(updateEntry);
+    });
+}
+
+// Renders the admin interface for managing the update log
+function renderAdminUpdateLog() {
+    if (!DOM.adminUpdateLogList) return;
+    DOM.adminUpdateLogList.innerHTML = '';
+
+    const sortedVersions = [...localUpdateLog].sort((a, b) => {
+        const dateA = new Date(a.date.split('/').reverse().join('-')).getTime();
+        const dateB = new Date(b.date.split('/').reverse().join('-')).getTime();
+        return (dateB || 0) - (dateA || 0);
+    });
+
+    sortedVersions.forEach(version => {
+        const itemForm = h('form', { className: 'accessory-adder', style: 'margin-bottom: 1rem;', dataset: { versionId: version.id }, onsubmit: e => e.preventDefault() },
+            h('select', { className: 'input-style', name: 'item-type', style: 'max-width: 120px;' },
+                h('option', {value: 'new'}, 'Mới'),
+                h('option', {value: 'update'}, 'Cập nhật'),
+                h('option', {value: 'fix'}, 'Sửa lỗi'),
+                h('option', {value: 'remove'}, 'Xóa')
+            ),
+            h('input', { type: 'text', name: 'item-text', className: 'input-style', placeholder: 'Nội dung cập nhật...' , required: true }),
+            h('button', { type: 'submit', className: 'btn btn-secondary accessory-add-btn' }, h('i', { className: 'fas fa-plus' }))
+        );
+
+        const itemList = h('ul', { className: 'cost-list', style: 'margin-top: 0;' },
+            ...(version.items || []).map((item, index) =>
+                h('li', {},
+                    h('span', { className: 'cost-item-name' },
+                        h('span', { className: `update-tag ${item.type}` }, item.type),
+                        item.text
+                    ),
+                    h('button', { type: 'button', className: 'remove-acc-btn delete-update-item-btn', title: 'Xóa chi tiết này', dataset: { versionId: version.id, itemIndex: index } }, '×')
+                )
+            )
+        );
+
+        const versionCard = h('div', { className: 'card', style: 'margin-bottom: 1.5rem;' },
+            h('div', { style: 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;' },
+                h('h4', { style: 'margin: 0; font-size: 1.1rem;' }, `Phiên bản ${version.version} (${version.date})`),
+                h('button', { className: 'btn btn-danger btn-sm delete-version-btn', dataset: { versionId: version.id } }, h('i', { className: 'fas fa-trash' }), ' Xóa Phiên bản')
+            ),
+            itemForm,
+            (version.items && version.items.length > 0) ? itemList : h('p', {className: 'form-text'}, 'Chưa có chi tiết cập nhật nào cho phiên bản này.')
+        );
+
+        DOM.adminUpdateLogList.appendChild(versionCard);
+    });
+}
+
+async function saveUpdateLog() {
+    try {
+        const docRef = doc(db, 'siteContent', 'updateLog');
+        await setDoc(docRef, { versions: localUpdateLog });
+        showToast('Đã lưu lịch sử cập nhật.', 'success');
+    } catch (error) {
+        showToast('Lỗi khi lưu lịch sử cập nhật.', 'error');
+        console.error("Error saving update log:", error);
+    }
+}
+
+function initializeAdminUpdateLogManagement() {
+    if (!DOM.adminUpdateLogForm) return;
+
+    // Add new version
+    DOM.adminUpdateLogForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const version = DOM.adminUpdateVersionInput.value.trim();
+        const date = DOM.adminUpdateDateInput.value.trim();
+
+        if (version && date) {
+            localUpdateLog.push({
+                id: `v_${Date.now()}`,
+                version,
+                date,
+                items: []
+            });
+            await saveUpdateLog();
+            DOM.adminUpdateLogForm.reset();
+        }
+    });
+
+    // Add/delete items within a version
+    DOM.adminUpdateLogList.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (e.target.matches('form')) {
+            const versionId = e.target.dataset.versionId;
+            const text = e.target.elements['item-text'].value.trim();
+            const type = e.target.elements['item-type'].value;
+
+            if (text && versionId) {
+                const version = localUpdateLog.find(v => v.id === versionId);
+                if (version) {
+                    if (!version.items) version.items = [];
+                    version.items.push({ type, text });
+                    await saveUpdateLog();
+                }
+            }
+        }
+    });
+    
+    DOM.adminUpdateLogList.addEventListener('click', async (e) => {
+        // Delete item within a version
+        const deleteItemBtn = e.target.closest('.delete-update-item-btn');
+        if (deleteItemBtn) {
+            const { versionId, itemIndex } = deleteItemBtn.dataset;
+            const version = localUpdateLog.find(v => v.id === versionId);
+            if (version && version.items && version.items[itemIndex]) {
+                const confirmed = await showConfirm(`Bạn có chắc muốn xóa chi tiết cập nhật này?`);
+                if(confirmed) {
+                    version.items.splice(itemIndex, 1);
+                    await saveUpdateLog();
+                }
+            }
+        }
+
+        // Delete entire version
+        const deleteVersionBtn = e.target.closest('.delete-version-btn');
+        if (deleteVersionBtn) {
+             const { versionId } = deleteVersionBtn.dataset;
+             const confirmed = await showConfirm(`Bạn có chắc muốn xóa toàn bộ phiên bản ${localUpdateLog.find(v=>v.id === versionId)?.version}?`);
+             if (confirmed) {
+                localUpdateLog = localUpdateLog.filter(v => v.id !== versionId);
+                await saveUpdateLog();
+             }
+        }
+    });
+}
+
+function listenForUpdateLog() {
+    if (unsubscribeUpdateLog) unsubscribeUpdateLog();
+
+    const docRef = doc(db, 'siteContent', 'updateLog');
+    unsubscribeUpdateLog = onSnapshot(docRef, (docSnap) => {
+        if (docSnap.exists()) {
+            localUpdateLog = docSnap.data().versions || [];
+        } else {
+            localUpdateLog = [];
+        }
+        renderPublicUpdateLog(localUpdateLog);
+        
+        // Render admin view only if admin user is active
+        if (appState.currentUserProfile?.role === 'admin') {
+            renderAdminUpdateLog();
+        }
+    }, (error) => {
+        console.error("Error listening to update log:", error);
+        localUpdateLog = []; // reset on error
+        renderPublicUpdateLog([]);
+        if (appState.currentUserProfile?.role === 'admin') renderAdminUpdateLog();
+    });
+}
+
 async function initializeAdminSettings() {
     if (!DOM.adminSettingsForm) return;
 
@@ -355,6 +541,8 @@ async function initializeAdminSettings() {
             console.error("Error saving admin settings:", error);
         }
     });
+
+    initializeAdminUpdateLogManagement();
 }
 
 
@@ -852,6 +1040,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeMaterialsManagement();
     initializeSavedItemsManagement();
     updateCalculatorActionButtons();
+    listenForUpdateLog(); // Start listening for update log for everyone
 
     // Event Listeners for actions that cross module boundaries
     DOM.saveItemBtn.addEventListener('click', async () => {

@@ -152,9 +152,14 @@ export const adminTab = document.getElementById('admin-tab');
 export const adminUserListTbody = document.getElementById('admin-user-list-tbody');
 export const adminUserFilterInput = document.getElementById('admin-user-filter-input');
 export const adminSettingsForm = document.getElementById('admin-settings-form');
-export const adminGuideContentEditor = document.getElementById('admin-guide-content-editor');
 export const adminDefaultTrialDaysInput = document.getElementById('admin-default-trial-days');
+export const adminUpdateLogForm = document.getElementById('admin-update-log-form');
+export const adminUpdateVersionInput = document.getElementById('admin-update-version');
+export const adminUpdateDateInput = document.getElementById('admin-update-date');
+export const adminUpdateLogList = document.getElementById('admin-update-log-list');
 
+// --- Update Log Tab ---
+export const updateLogContent = document.getElementById('update-log-content');
 
 // --- Modals ---
 export const loginModal = document.getElementById('login-modal');
