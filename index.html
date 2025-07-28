@@ -818,6 +818,7 @@
                     <h2 class="card-header"><i class="fas fa-history" style="margin-right: 0.75rem;"></i>Quản lý Lịch sử Cập nhật</h2>
                     <div class="content-wrapper admin-content">
                         <form id="admin-update-log-form" class="material-form">
+                            <input type="hidden" id="admin-update-id">
                             <div class="grid-2-col">
                                 <div>
                                     <label for="admin-update-version" class="form-label">Phiên bản</label>
@@ -825,16 +826,21 @@
                                 </div>
                                 <div>
                                     <label for="admin-update-date" class="form-label">Ngày cập nhật</label>
-                                    <input type="text" id="admin-update-date" class="input-style" placeholder="Vd: 30/07/2024" required>
+                                    <input type="date" id="admin-update-date" class="input-style" required>
                                 </div>
                             </div>
+                            <div class="form-group" style="margin-top: 1rem;">
+                                <label for="admin-update-link" class="form-label">Link Google Docs</label>
+                                <input type="url" id="admin-update-link" class="input-style" placeholder="https://docs.google.com/document/d/..." required>
+                            </div>
                             <div class="button-group" style="justify-content: flex-end;">
+                                <button type="button" id="cancel-update-log-edit-btn" class="btn btn-secondary hidden">Hủy</button>
                                 <button type="submit" class="btn btn-primary"><i class="fas fa-plus mr-2"></i> Thêm Phiên bản</button>
                             </div>
                         </form>
                         <div class="table-container">
                             <h3 class="table-header">Danh sách Phiên bản</h3>
-                            <div id="admin-update-log-list">
+                            <div id="admin-update-log-list" class="config-list">
                                 <!-- Admin update log entries will be rendered here by script.js -->
                             </div>
                         </div>

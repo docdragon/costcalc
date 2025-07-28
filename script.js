@@ -18,7 +18,7 @@ import {
     loadComponentsByProductType
 } from './calculator.js';
 import { initializeConfigurationTab, stopConfigurationListeners } from './config-manager.js';
-import { parseNumber, h, formatDate } from './utils.js';
+import { parseNumber, h, formatDate, getGDocsEmbedUrl, formatInputDateToDisplay } from './utils.js';
 
 
 // --- Global State ---
@@ -330,24 +330,30 @@ function renderPublicUpdateLog(versions = []) {
         DOM.updateLogContent.appendChild(h('p', { className: 'form-text' }, 'Chưa có thông tin cập nhật nào.'));
         return;
     }
-    
+
     // Sort by date descending (newest first)
     const sortedVersions = [...versions].sort((a, b) => {
-        const dateA = new Date(a.date.split('/').reverse().join('-')).getTime();
-        const dateB = new Date(b.date.split('/').reverse().join('-')).getTime();
-        return (dateB || 0) - (dateA || 0);
+        // Assuming date is in 'YYYY-MM-DD' format from <input type="date">
+        return new Date(b.date) - new Date(a.date);
     });
-    
+
     sortedVersions.forEach(version => {
-        const items = version.items || [];
+        const embedUrl = getGDocsEmbedUrl(version.gdocsLink);
+        const displayDate = formatInputDateToDisplay(version.date);
+
         const updateEntry = h('div', { className: 'update-entry' },
-            h('h3', {}, `Phiên bản ${version.version} (${version.date})`),
-            h('ul', {}, ...items.map(item =>
-                h('li', {},
-                    h('span', { className: `update-tag ${item.type}` }, item.type),
-                    item.text
-                )
-            ))
+            h('h3', {}, `Phiên bản ${version.version} (${displayDate})`),
+            embedUrl 
+                ? h('iframe', { 
+                    src: embedUrl, 
+                    className: 'gdoc-iframe', 
+                    style: 'width: 100%; height: 500px; border: 1px solid var(--border-color); border-radius: 0.5rem;',
+                    frameborder: '0' 
+                  })
+                : h('div', {}, 
+                    h('p', {className: 'form-text'}, 'Link tài liệu không hợp lệ hoặc bị thiếu. Vui lòng thử mở trực tiếp:'),
+                    h('a', { href: version.gdocsLink, target: '_blank', rel: 'noopener noreferrer' }, version.gdocsLink)
+                  )
         );
         DOM.updateLogContent.appendChild(updateEntry);
     });
@@ -358,47 +364,35 @@ function renderAdminUpdateLog() {
     if (!DOM.adminUpdateLogList) return;
     DOM.adminUpdateLogList.innerHTML = '';
 
-    const sortedVersions = [...localUpdateLog].sort((a, b) => {
-        const dateA = new Date(a.date.split('/').reverse().join('-')).getTime();
-        const dateB = new Date(b.date.split('/').reverse().join('-')).getTime();
-        return (dateB || 0) - (dateA || 0);
-    });
+    const sortedVersions = [...localUpdateLog].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    if (sortedVersions.length === 0) {
+        DOM.adminUpdateLogList.appendChild(h('p', { className: 'form-text' }, `Chưa có phiên bản nào.`));
+        return;
+    }
 
     sortedVersions.forEach(version => {
-        const itemForm = h('form', { className: 'accessory-adder', style: 'margin-bottom: 1rem;', dataset: { versionId: version.id }, onsubmit: e => e.preventDefault() },
-            h('select', { className: 'input-style', name: 'item-type', style: 'max-width: 120px;' },
-                h('option', {value: 'new'}, 'Mới'),
-                h('option', {value: 'update'}, 'Cập nhật'),
-                h('option', {value: 'fix'}, 'Sửa lỗi'),
-                h('option', {value: 'remove'}, 'Xóa')
+        const displayDate = formatInputDateToDisplay(version.date);
+        const itemEl = h('div', { className: 'config-list-item' },
+            h('div', { style: 'flex-grow: 1; min-width: 0;'}, 
+                h('span', { style: 'font-weight: 600; color: var(--text-dark);'}, `v${version.version}`),
+                h('span', { style: 'margin-left: 1rem; color: var(--text-light);'}, displayDate),
+                h('p', { style: 'font-size: 0.8rem; color: var(--primary-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px; margin: 0.25rem 0 0 0;'}, version.gdocsLink)
             ),
-            h('input', { type: 'text', name: 'item-text', className: 'input-style', placeholder: 'Nội dung cập nhật...' , required: true }),
-            h('button', { type: 'submit', className: 'btn btn-secondary accessory-add-btn' }, h('i', { className: 'fas fa-plus' }))
-        );
-
-        const itemList = h('ul', { className: 'cost-list', style: 'margin-top: 0;' },
-            ...(version.items || []).map((item, index) =>
-                h('li', {},
-                    h('span', { className: 'cost-item-name' },
-                        h('span', { className: `update-tag ${item.type}` }, item.type),
-                        item.text
-                    ),
-                    h('button', { type: 'button', className: 'remove-acc-btn delete-update-item-btn', title: 'Xóa chi tiết này', dataset: { versionId: version.id, itemIndex: index } }, '×')
-                )
+            h('div', { className: 'config-list-item-actions' },
+                h('button', { className: 'edit-version-btn', dataset: { versionId: version.id }, title: 'Sửa' }, h('i', { className: 'fas fa-edit' })),
+                h('button', { className: 'delete-version-btn', dataset: { versionId: version.id }, title: 'Xóa' }, h('i', { className: 'fas fa-trash' }))
             )
         );
-
-        const versionCard = h('div', { className: 'card', style: 'margin-bottom: 1.5rem;' },
-            h('div', { style: 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;' },
-                h('h4', { style: 'margin: 0; font-size: 1.1rem;' }, `Phiên bản ${version.version} (${version.date})`),
-                h('button', { className: 'btn btn-danger btn-sm delete-version-btn', dataset: { versionId: version.id } }, h('i', { className: 'fas fa-trash' }), ' Xóa Phiên bản')
-            ),
-            itemForm,
-            (version.items && version.items.length > 0) ? itemList : h('p', {className: 'form-text'}, 'Chưa có chi tiết cập nhật nào cho phiên bản này.')
-        );
-
-        DOM.adminUpdateLogList.appendChild(versionCard);
+        DOM.adminUpdateLogList.appendChild(itemEl);
     });
+}
+
+function resetUpdateLogForm() {
+    DOM.adminUpdateLogForm.reset();
+    DOM.adminUpdateIdInput.value = '';
+    DOM.adminUpdateLogForm.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-plus mr-2"></i> Thêm Phiên bản';
+    DOM.cancelUpdateLogEditBtn.classList.add('hidden');
 }
 
 async function saveUpdateLog() {
@@ -415,69 +409,64 @@ async function saveUpdateLog() {
 function initializeAdminUpdateLogManagement() {
     if (!DOM.adminUpdateLogForm) return;
 
-    // Add new version
+    // Add/Update version
     DOM.adminUpdateLogForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const version = DOM.adminUpdateVersionInput.value.trim();
-        const date = DOM.adminUpdateDateInput.value.trim();
+        const id = DOM.adminUpdateIdInput.value;
+        const versionData = {
+            version: DOM.adminUpdateVersionInput.value.trim(),
+            date: DOM.adminUpdateDateInput.value, // YYYY-MM-DD format
+            gdocsLink: DOM.adminUpdateLinkInput.value.trim(),
+        };
 
-        if (version && date) {
+        if (id) { // Editing existing
+            const index = localUpdateLog.findIndex(v => v.id === id);
+            if (index > -1) {
+                localUpdateLog[index] = { ...localUpdateLog[index], ...versionData };
+            }
+        } else { // Adding new
             localUpdateLog.push({
                 id: `v_${Date.now()}`,
-                version,
-                date,
-                items: []
+                ...versionData
             });
-            await saveUpdateLog();
-            DOM.adminUpdateLogForm.reset();
         }
+        await saveUpdateLog();
+        resetUpdateLogForm();
     });
 
-    // Add/delete items within a version
-    DOM.adminUpdateLogList.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (e.target.matches('form')) {
-            const versionId = e.target.dataset.versionId;
-            const text = e.target.elements['item-text'].value.trim();
-            const type = e.target.elements['item-type'].value;
-
-            if (text && versionId) {
-                const version = localUpdateLog.find(v => v.id === versionId);
-                if (version) {
-                    if (!version.items) version.items = [];
-                    version.items.push({ type, text });
-                    await saveUpdateLog();
-                }
-            }
-        }
-    });
-    
+    // Handle Edit and Delete buttons
     DOM.adminUpdateLogList.addEventListener('click', async (e) => {
-        // Delete item within a version
-        const deleteItemBtn = e.target.closest('.delete-update-item-btn');
-        if (deleteItemBtn) {
-            const { versionId, itemIndex } = deleteItemBtn.dataset;
+        const editBtn = e.target.closest('.edit-version-btn');
+        const deleteBtn = e.target.closest('.delete-version-btn');
+
+        if (editBtn) {
+            const versionId = editBtn.dataset.versionId;
             const version = localUpdateLog.find(v => v.id === versionId);
-            if (version && version.items && version.items[itemIndex]) {
-                const confirmed = await showConfirm(`Bạn có chắc muốn xóa chi tiết cập nhật này?`);
-                if(confirmed) {
-                    version.items.splice(itemIndex, 1);
+            if (version) {
+                DOM.adminUpdateIdInput.value = version.id;
+                DOM.adminUpdateVersionInput.value = version.version;
+                DOM.adminUpdateDateInput.value = version.date; // Should be YYYY-MM-DD
+                DOM.adminUpdateLinkInput.value = version.gdocsLink;
+
+                DOM.adminUpdateLogForm.querySelector('button[type="submit"]').textContent = 'Cập nhật';
+                DOM.cancelUpdateLogEditBtn.classList.remove('hidden');
+                DOM.adminUpdateVersionInput.focus();
+            }
+        } else if (deleteBtn) {
+            const versionId = deleteBtn.dataset.versionId;
+            const version = localUpdateLog.find(v => v.id === versionId);
+            if(version) {
+                const confirmed = await showConfirm(`Bạn có chắc muốn xóa phiên bản ${version.version}?`);
+                if (confirmed) {
+                    localUpdateLog = localUpdateLog.filter(v => v.id !== versionId);
                     await saveUpdateLog();
                 }
             }
         }
-
-        // Delete entire version
-        const deleteVersionBtn = e.target.closest('.delete-version-btn');
-        if (deleteVersionBtn) {
-             const { versionId } = deleteVersionBtn.dataset;
-             const confirmed = await showConfirm(`Bạn có chắc muốn xóa toàn bộ phiên bản ${localUpdateLog.find(v=>v.id === versionId)?.version}?`);
-             if (confirmed) {
-                localUpdateLog = localUpdateLog.filter(v => v.id !== versionId);
-                await saveUpdateLog();
-             }
-        }
     });
+
+    // Cancel edit
+    DOM.cancelUpdateLogEditBtn.addEventListener('click', resetUpdateLogForm);
 }
 
 function listenForUpdateLog() {
@@ -492,7 +481,6 @@ function listenForUpdateLog() {
         }
         renderPublicUpdateLog(localUpdateLog);
         
-        // Render admin view only if admin user is active
         if (appState.currentUserProfile?.role === 'admin') {
             renderAdminUpdateLog();
         }

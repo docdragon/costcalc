@@ -154,8 +154,11 @@ export const adminUserFilterInput = document.getElementById('admin-user-filter-i
 export const adminSettingsForm = document.getElementById('admin-settings-form');
 export const adminDefaultTrialDaysInput = document.getElementById('admin-default-trial-days');
 export const adminUpdateLogForm = document.getElementById('admin-update-log-form');
+export const adminUpdateIdInput = document.getElementById('admin-update-id');
 export const adminUpdateVersionInput = document.getElementById('admin-update-version');
 export const adminUpdateDateInput = document.getElementById('admin-update-date');
+export const adminUpdateLinkInput = document.getElementById('admin-update-link');
+export const cancelUpdateLogEditBtn = document.getElementById('cancel-update-log-edit-btn');
 export const adminUpdateLogList = document.getElementById('admin-update-log-list');
 
 // --- Update Log Tab ---
