@@ -128,7 +128,7 @@ async function getUserProfile(user) {
     if (userDocSnap.exists()) {
         // Update last login time on every successful auth
         updateDoc(userDocRef, { lastLoginAt: serverTimestamp() }).catch(console.error);
-        return { uid: user.uid, ...userDocSnap.data() };
+        return { profile: { uid: user.uid, ...userDocSnap.data() }, isNew: false };
     } else {
         console.log("Creating new user profile.");
         const usersQuery = query(collection(db, 'users'), limit(1));
@@ -151,9 +151,9 @@ async function getUserProfile(user) {
             showToast('Chào mừng Admin đầu tiên của CostCraft!', 'success');
         }
         
-        await checkAndAddSampleData(user.uid);
-        
-        return { uid: user.uid, ...newUserProfile };
+        // The returned profile is the local one. Server timestamps won't be resolved yet,
+        // but that's okay because the full profile will be read by listeners shortly after.
+        return { profile: { uid: user.uid, ...newUserProfile }, isNew: true };
     }
 }
 
@@ -589,7 +589,13 @@ onAuthStateChanged(auth, async (user) => {
 
     if (loggedIn) {
         appState.currentUserId = user.uid;
-        appState.currentUserProfile = await getUserProfile(user);
+        
+        const { profile, isNew } = await getUserProfile(user);
+        appState.currentUserProfile = profile;
+
+        if (isNew) {
+            await checkAndAddSampleData(user.uid);
+        }
         
         appState.materialsCollectionRef = collection(db, `users/${appState.currentUserId}/materials`);
         appState.savedItemsCollectionRef = collection(db, `users/${appState.currentUserId}/savedItems`);
