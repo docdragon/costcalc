@@ -1,4 +1,5 @@
 
+
 // script.js
 import { 
     db, auth, collection, onSnapshot, addDoc, doc, updateDoc, 
@@ -122,26 +123,21 @@ async function getUserProfile(user) {
         return { profile: { uid: user.uid, ...userDocSnap.data() }, isNew: false };
     } else {
         console.log("Creating new user profile.");
-        const usersQuery = query(collection(db, 'users'), limit(1));
-        const usersSnapshot = await getDocs(usersQuery);
-        const isFirstUser = usersSnapshot.empty;
-        
+        // REMOVED: Querying 'users' collection which causes permission errors for new users.
+        // The logic to make the first user an admin is insecure on the client-side.
+        // Admin role must now be assigned manually.
         const newUserProfile = {
             email: user.email,
             displayName: user.displayName,
             createdAt: serverTimestamp(),
             lastLoginAt: serverTimestamp(),
-            role: isFirstUser ? 'admin' : 'user',
+            role: 'user', // Default all new users to 'user' role for security.
             status: 'active',
             expiresAt: null, // Trial period is not set by default to avoid permission errors on creation. Admin can set it.
         };
 
         await setDoc(userDocRef, newUserProfile);
 
-        if (isFirstUser) {
-            showToast('Chào mừng Admin đầu tiên của CostCraft!', 'success');
-        }
-        
         // The returned profile is the local one. Server timestamps won't be resolved yet,
         // but that's okay because the full profile will be read by listeners shortly after.
         return { profile: { uid: user.uid, ...newUserProfile }, isNew: true };
@@ -493,6 +489,13 @@ function initializeAdminUpdateLogManagement() {
     DOM.cancelUpdateLogEditBtn.addEventListener('click', resetUpdateLogForm);
 }
 
+function stopUpdateLogListener() {
+    if (unsubscribeUpdateLog) {
+        unsubscribeUpdateLog();
+        unsubscribeUpdateLog = null;
+    }
+}
+
 function listenForUpdateLog() {
     if (unsubscribeUpdateLog) unsubscribeUpdateLog();
 
@@ -577,6 +580,7 @@ onAuthStateChanged(auth, async (user) => {
     if (appState.unsubscribeSavedItems) appState.unsubscribeSavedItems();
     stopConfigurationListeners();
     stopAdminListeners();
+    stopUpdateLogListener();
 
     if (loggedIn) {
         appState.currentUserId = user.uid;
@@ -622,6 +626,7 @@ onAuthStateChanged(auth, async (user) => {
         }
         
         listenForData();
+        listenForUpdateLog();
     } else {
         appState.currentUserId = null;
         appState.currentUserProfile = null;
@@ -1082,7 +1087,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     updateCalculatorActionButtons();
-    listenForUpdateLog(); // Start listening for update log for everyone
 
     // Event Listeners for actions that cross module boundaries
     DOM.saveItemBtn.addEventListener('click', async () => {
