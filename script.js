@@ -369,11 +369,6 @@ function renderPublicUpdateLog(versions = []) {
                     title: version.gdocsLink ? `Xem chi tiết cập nhật cho phiên bản ${version.version}` : 'Chi tiết không có sẵn'
                 }, `Phiên bản ${version.version}`),
                 h('span', { className: 'update-date' }, ` (${displayDate})`)
-            ),
-            h('p', { className: 'update-link-info' }, 
-              version.gdocsLink 
-                ? 'Nhấp vào phiên bản ở trên để xem chi tiết nội dung cập nhật trong một tab mới.'
-                : 'Tài liệu chi tiết cho phiên bản này không có sẵn.'
             )
         );
         DOM.updateLogContent.appendChild(updateEntry);
