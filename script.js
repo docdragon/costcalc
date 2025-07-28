@@ -1,3 +1,4 @@
+
 // script.js
 import { 
     db, auth, collection, onSnapshot, addDoc, doc, updateDoc, 
@@ -80,45 +81,35 @@ const sampleProductTypes = [
 
 
 async function addSampleData(userId) {
-    // Add sample component names first and get their new IDs
-    const componentNamesRef = collection(db, `users/${userId}/componentNames`);
-    const componentNameMap = {};
-    for (const compName of sampleComponentNames) {
-        const docRef = await addDoc(componentNamesRef, compName);
-        componentNameMap[compName.name] = docRef.id;
-    }
-    
-    // Add sample product types, using the new component name IDs
-    const productTypesRef = collection(db, `users/${userId}/productTypes`);
-    for (const prodType of sampleProductTypes) {
-        const componentsWithIds = prodType.components
-            .map(c => ({ componentNameId: componentNameMap[c.name], qty: c.qty }))
-            .filter(c => c.componentNameId); // Filter out any that might have failed to map
-        await addDoc(productTypesRef, { name: prodType.name, components: componentsWithIds });
-    }
-
-    // Add sample materials
-    const materialsRef = collection(db, `users/${userId}/materials`);
-    for (const material of sampleMaterials) {
-        await addDoc(materialsRef, material);
-    }
-}
-
-async function checkAndAddSampleData(userId) {
     try {
+        // Add sample component names first and get their new IDs
+        const componentNamesRef = collection(db, `users/${userId}/componentNames`);
+        const componentNameMap = {};
+        for (const compName of sampleComponentNames) {
+            const docRef = await addDoc(componentNamesRef, compName);
+            componentNameMap[compName.name] = docRef.id;
+        }
+        
+        // Add sample product types, using the new component name IDs
+        const productTypesRef = collection(db, `users/${userId}/productTypes`);
+        for (const prodType of sampleProductTypes) {
+            const componentsWithIds = prodType.components
+                .map(c => ({ componentNameId: componentNameMap[c.name], qty: c.qty }))
+                .filter(c => c.componentNameId); // Filter out any that might have failed to map
+            await addDoc(productTypesRef, { name: prodType.name, components: componentsWithIds });
+        }
+    
+        // Add sample materials
         const materialsRef = collection(db, `users/${userId}/materials`);
-        const q = query(materialsRef, limit(1));
-        const snapshot = await getDocs(q);
-
-        if (snapshot.empty) {
-            console.log("No materials found for user, adding sample data.");
-            await addSampleData(userId);
-            showToast('Đã thêm dữ liệu mẫu cho bạn!', 'info');
+        for (const material of sampleMaterials) {
+            await addDoc(materialsRef, material);
         }
     } catch (error) {
-        console.error("Error checking/adding sample data:", error);
+        console.error("Error adding sample data:", error);
+        showToast("Có lỗi xảy ra khi thêm dữ liệu mẫu.", "error");
     }
 }
+
 
 // --- User Profile Management ---
 async function getUserProfile(user) {
@@ -594,7 +585,11 @@ onAuthStateChanged(auth, async (user) => {
         appState.currentUserProfile = profile;
 
         if (isNew) {
-            await checkAndAddSampleData(user.uid);
+            // This direct call to addSampleData avoids a premature read operation
+            // that caused a race condition with Firestore security rules.
+            console.log("New user detected, seeding sample data.");
+            await addSampleData(user.uid);
+            showToast('Đã thêm dữ liệu mẫu cho bạn!', 'info');
         }
         
         appState.materialsCollectionRef = collection(db, `users/${appState.currentUserId}/materials`);
