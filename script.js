@@ -320,29 +320,33 @@ function stopAdminListeners() {
 // --- Content Management (Admin & Public) ---
 let localUpdateLog = []; // holds the array of version objects
 let unsubscribeUpdateLog = null;
+let updateLogPaginator;
 
-// Renders the public update log view
+// Renders the public update log view based on paginated items
 function renderPublicUpdateLog(versions = []) {
     if (!DOM.updateLogContent) return;
 
     DOM.updateLogContent.innerHTML = '';
     if (versions.length === 0) {
-        DOM.updateLogContent.appendChild(h('p', { className: 'form-text' }, 'Chưa có thông tin cập nhật nào.'));
+        DOM.updateLogContent.appendChild(h('div', { className: 'loading-overlay' }, h('p', {}, 'Chưa có thông tin cập nhật nào.')));
         return;
     }
 
-    // Sort by date descending (newest first)
-    const sortedVersions = [...versions].sort((a, b) => {
-        // Assuming date is in 'YYYY-MM-DD' format from <input type="date">
-        return new Date(b.date) - new Date(a.date);
-    });
-
-    sortedVersions.forEach(version => {
+    versions.forEach(version => {
         const embedUrl = getGDocsEmbedUrl(version.gdocsLink);
         const displayDate = formatInputDateToDisplay(version.date);
 
         const updateEntry = h('div', { className: 'update-entry' },
-            h('h3', {}, `Phiên bản ${version.version} (${displayDate})`),
+            h('h3', {}, 
+                h('a', { 
+                    href: version.gdocsLink, 
+                    target: '_blank', 
+                    rel: 'noopener noreferrer',
+                    className: 'update-version-link',
+                    title: `Xem chi tiết cập nhật cho phiên bản ${version.version}`
+                }, `Phiên bản ${version.version}`),
+                ` (${displayDate})`
+            ),
             embedUrl 
                 ? h('iframe', { 
                     src: embedUrl, 
@@ -357,6 +361,17 @@ function renderPublicUpdateLog(versions = []) {
         );
         DOM.updateLogContent.appendChild(updateEntry);
     });
+}
+
+// Handles sorting and pagination, then calls renderPublicUpdateLog
+function displayUpdateLog(currentPage = 1) {
+    const sortedVersions = [...localUpdateLog].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const itemsPerPage = 3;
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedItems = sortedVersions.slice(startIndex, startIndex + itemsPerPage);
+    
+    renderPublicUpdateLog(paginatedItems);
+    if(updateLogPaginator) updateLogPaginator.update(sortedVersions.length);
 }
 
 // Renders the admin interface for managing the update log
@@ -479,7 +494,7 @@ function listenForUpdateLog() {
         } else {
             localUpdateLog = [];
         }
-        renderPublicUpdateLog(localUpdateLog);
+        displayUpdateLog(updateLogPaginator?.getCurrentPage() || 1);
         
         if (appState.currentUserProfile?.role === 'admin') {
             renderAdminUpdateLog();
@@ -487,7 +502,7 @@ function listenForUpdateLog() {
     }, (error) => {
         console.error("Error listening to update log:", error);
         localUpdateLog = []; // reset on error
-        renderPublicUpdateLog([]);
+        displayUpdateLog();
         if (appState.currentUserProfile?.role === 'admin') renderAdminUpdateLog();
     });
 }
@@ -1027,6 +1042,16 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeQuickCalc(appState.localMaterials, showToast);
     initializeMaterialsManagement();
     initializeSavedItemsManagement();
+
+    updateLogPaginator = createPaginator({
+        controlsEl: DOM.updateLogPaginationControls,
+        pageInfoEl: DOM.ulPageInfo,
+        prevBtn: DOM.ulPrevPageBtn,
+        nextBtn: DOM.ulNextPageBtn,
+        itemsPerPage: 3, 
+        onPageChange: page => displayUpdateLog(page)
+    });
+
     updateCalculatorActionButtons();
     listenForUpdateLog(); // Start listening for update log for everyone
 

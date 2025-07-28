@@ -913,6 +913,14 @@ td button { transition: color 0.2s; }
     color: var(--text-dark);
     margin: 0 0 1rem 0;
 }
+.update-version-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+}
+.update-version-link:hover {
+    text-decoration: underline;
+}
 .update-entry ul {
     list-style: none;
     padding: 0;

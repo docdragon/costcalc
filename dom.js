@@ -163,6 +163,11 @@ export const adminUpdateLogList = document.getElementById('admin-update-log-list
 
 // --- Update Log Tab ---
 export const updateLogContent = document.getElementById('update-log-content');
+export const updateLogPaginationControls = document.getElementById('update-log-pagination-controls');
+export const ulPageInfo = document.getElementById('ul-page-info');
+export const ulPrevPageBtn = document.getElementById('ul-prev-page-btn');
+export const ulNextPageBtn = document.getElementById('ul-next-page-btn');
+
 
 // --- Modals ---
 export const loginModal = document.getElementById('login-modal');
