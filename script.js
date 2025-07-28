@@ -590,6 +590,45 @@ async function initializeAdminSettings() {
 }
 
 
+// --- User Access Control ---
+function isUserActive() {
+    const profile = appState.currentUserProfile;
+    if (!profile) return false;
+
+    // Admins have perpetual access
+    if (profile.role === 'admin') return true;
+    
+    // Disabled users are blocked
+    if (profile.status === 'disabled') return false;
+
+    // Users with an expiry date are checked
+    if (profile.expiresAt && typeof profile.expiresAt.toDate === 'function') {
+        if (profile.expiresAt.toDate() < new Date()) {
+            return false; // Expired
+        }
+    }
+    
+    // Active user (not disabled, not expired, or no expiry date)
+    return true;
+}
+
+function handleAppLock(isLocked) {
+    if (isLocked) {
+        const profile = appState.currentUserProfile;
+        if (profile.status === 'disabled') {
+            DOM.inactiveOverlayTitle.textContent = 'Tài khoản đã bị vô hiệu hoá';
+            DOM.inactiveOverlayMessage.textContent = 'Tài khoản của bạn đã bị khoá. Vui lòng liên hệ quản trị viên để được hỗ trợ.';
+        } else { // Expired
+            DOM.inactiveOverlayTitle.textContent = 'Tài khoản của bạn đã hết hạn';
+            DOM.inactiveOverlayMessage.textContent = 'Vui lòng liên hệ quản trị viên để gia hạn và tiếp tục sử dụng các tính năng của ứng dụng.';
+        }
+        DOM.inactiveUserOverlay.classList.remove('hidden');
+    } else {
+        DOM.inactiveUserOverlay.classList.add('hidden');
+    }
+}
+
+
 // --- Auth & App Initialization ---
 onAuthStateChanged(auth, async (user) => {
     const loggedIn = !!user;
@@ -606,6 +645,8 @@ onAuthStateChanged(auth, async (user) => {
         
         const { profile, isNew } = await getUserProfile(user);
         appState.currentUserProfile = profile;
+
+        handleAppLock(!isUserActive());
 
         if (isNew) {
             // This direct call to addSampleData avoids a premature read operation
@@ -651,6 +692,7 @@ onAuthStateChanged(auth, async (user) => {
         appState.currentUserProfile = null;
         clearLocalData();
         updateCalculatorData({ userId: null });
+        handleAppLock(false); // Hide overlay on logout
     }
 
     updateUIVisibility(loggedIn, user, appState.currentUserProfile);
@@ -1147,4 +1189,6 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast('Đã xóa biểu mẫu. Sẵn sàng cho dự án mới.', 'info');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
+
+    DOM.inactiveOverlayLogoutBtn.addEventListener('click', () => signOut(auth));
 });
