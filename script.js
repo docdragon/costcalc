@@ -123,17 +123,35 @@ async function getUserProfile(user) {
         return { profile: { uid: user.uid, ...userDocSnap.data() }, isNew: false };
     } else {
         console.log("Creating new user profile.");
-        // REMOVED: Querying 'users' collection which causes permission errors for new users.
-        // The logic to make the first user an admin is insecure on the client-side.
-        // Admin role must now be assigned manually.
+
+        // Fetch default trial days from admin settings
+        let trialExpiryDate = null;
+        let userRole = 'user'; // Default role
+        try {
+            const contentDocRef = doc(db, 'siteContent', 'main');
+            const contentDocSnap = await getDoc(contentDocRef);
+            if (contentDocSnap.exists()) {
+                const settings = contentDocSnap.data();
+                const trialDays = settings.defaultTrialDays;
+                if (typeof trialDays === 'number' && trialDays > 0) {
+                    trialExpiryDate = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
+                    userRole = 'trial'; // Set role to trial if there's an expiry date
+                }
+            }
+        } catch (error) {
+            console.error("Could not fetch trial settings. User will be created without an expiry date.", error);
+            // This error is expected if a new user doesn't have read permission for siteContent.
+            // In this case, expiresAt remains null.
+        }
+
         const newUserProfile = {
             email: user.email,
             displayName: user.displayName,
             createdAt: serverTimestamp(),
             lastLoginAt: serverTimestamp(),
-            role: 'user', // Default all new users to 'user' role for security.
+            role: userRole,
             status: 'active',
-            expiresAt: null, // Trial period is not set by default to avoid permission errors on creation. Admin can set it.
+            expiresAt: trialExpiryDate,
         };
 
         await setDoc(userDocRef, newUserProfile);
@@ -143,6 +161,7 @@ async function getUserProfile(user) {
         return { profile: { uid: user.uid, ...newUserProfile }, isNew: true };
     }
 }
+
 
 // --- Admin Tab Logic ---
 let localUsers = [];
