@@ -7,6 +7,7 @@ export const logoutBtn = document.getElementById('logout-btn');
 export const loggedInView = document.getElementById('logged-in-view');
 export const loggedOutView = document.getElementById('logged-out-view');
 export const userEmailDisplay = document.getElementById('user-email-display');
+export const userExpiryDisplay = document.getElementById('user-expiry-display');
 
 // --- Tabs ---
 export const tabs = document.getElementById('main-nav');

@@ -68,7 +68,45 @@ export function showToast(message, type = 'info') {
 export function updateUIVisibility(isLoggedIn, user, userProfile) {
     DOM.loggedInView.classList.toggle('hidden', !isLoggedIn);
     DOM.loggedOutView.classList.toggle('hidden', isLoggedIn);
-    DOM.userEmailDisplay.textContent = isLoggedIn ? (user.displayName || user.email) : '';
+
+    if (isLoggedIn && user) {
+        DOM.userEmailDisplay.textContent = user.displayName || user.email;
+
+        let statusText = '';
+        let statusClass = '';
+
+        if (userProfile?.role === 'admin') {
+            statusText = 'Admin';
+            statusClass = 'active';
+        } else if (userProfile?.expiresAt === null) {
+            statusText = 'Vĩnh viễn';
+            statusClass = 'active';
+        } else if (userProfile?.expiresAt?.toDate) {
+            const expiryDate = userProfile.expiresAt.toDate();
+            if (expiryDate < new Date()) {
+                statusText = 'Hết hạn';
+                statusClass = 'expired';
+            } else {
+                const remainingDays = Math.ceil((expiryDate - new Date()) / (1000 * 60 * 60 * 24));
+                statusText = `Còn ${remainingDays} ngày`;
+                statusClass = 'active';
+            }
+        } else {
+            statusText = ''; // No expiry info, hide it.
+        }
+        
+        if (statusText) {
+            DOM.userExpiryDisplay.textContent = statusText;
+            DOM.userExpiryDisplay.className = `user-expiry ${statusClass}`;
+            DOM.userExpiryDisplay.classList.remove('hidden');
+        } else {
+            DOM.userExpiryDisplay.classList.add('hidden');
+        }
+
+    } else {
+        DOM.userEmailDisplay.textContent = '';
+        DOM.userExpiryDisplay.classList.add('hidden');
+    }
     
     const isAdmin = isLoggedIn && userProfile?.role === 'admin';
 
