@@ -151,6 +151,10 @@ export const adminTabBtn = document.getElementById('tab-btn-admin');
 export const adminTab = document.getElementById('admin-tab');
 export const adminUserListTbody = document.getElementById('admin-user-list-tbody');
 export const adminUserFilterInput = document.getElementById('admin-user-filter-input');
+export const adminUserPaginationControls = document.getElementById('admin-user-pagination-controls');
+export const auPageInfo = document.getElementById('au-page-info');
+export const auPrevPageBtn = document.getElementById('au-prev-page-btn');
+export const auNextPageBtn = document.getElementById('au-next-page-btn');
 export const adminSettingsForm = document.getElementById('admin-settings-form');
 export const adminDefaultTrialDaysInput = document.getElementById('admin-default-trial-days');
 export const adminUpdateLogForm = document.getElementById('admin-update-log-form');
@@ -160,6 +164,11 @@ export const adminUpdateDateInput = document.getElementById('admin-update-date')
 export const adminUpdateLinkInput = document.getElementById('admin-update-link');
 export const cancelUpdateLogEditBtn = document.getElementById('cancel-update-log-edit-btn');
 export const adminUpdateLogList = document.getElementById('admin-update-log-list');
+export const adminUpdateLogPaginationControls = document.getElementById('admin-update-log-pagination-controls');
+export const aulPageInfo = document.getElementById('aul-page-info');
+export const aulPrevPageBtn = document.getElementById('aul-prev-page-btn');
+export const aulNextPageBtn = document.getElementById('aul-next-page-btn');
+
 
 // --- Update Log Tab ---
 export const updateLogContent = document.getElementById('update-log-content');

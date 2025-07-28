@@ -911,7 +911,7 @@ td button { transition: color 0.2s; }
     font-size: 1.25rem;
     font-weight: 600;
     color: var(--text-dark);
-    margin: 0 0 1rem 0;
+    margin: 0 0 0.5rem 0;
 }
 .update-version-link {
     color: var(--primary-color);
@@ -954,6 +954,20 @@ td button { transition: color 0.2s; }
     display: flex; 
     height: 200px;
     opacity: 1; /* override initial state */
+}
+
+.update-date {
+    font-weight: 500;
+    color: var(--text-light);
+    font-size: 1rem;
+    margin-left: 0.25rem;
+}
+
+.update-link-info {
+    color: var(--text-light);
+    font-size: 0.9rem;
+    margin: 0;
+    padding-left: 1px;
 }
 
 /* --- Product Preview --- */

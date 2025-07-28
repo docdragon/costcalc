@@ -18,7 +18,7 @@ import {
     loadComponentsByProductType
 } from './calculator.js';
 import { initializeConfigurationTab, stopConfigurationListeners } from './config-manager.js';
-import { parseNumber, h, formatDate, getGDocsEmbedUrl, formatInputDateToDisplay } from './utils.js';
+import { parseNumber, h, formatDate, formatInputDateToDisplay } from './utils.js';
 
 
 // --- Global State ---
@@ -160,8 +160,9 @@ async function getUserProfile(user) {
 // --- Admin Tab Logic ---
 let localUsers = [];
 let unsubscribeUsers = null;
+let adminUsersPaginator;
 
-function renderUsersTable(usersToRender) {
+function renderUsersTableChunk(usersToRender) {
     if (!DOM.adminUserListTbody) return;
     DOM.adminUserListTbody.innerHTML = '';
 
@@ -232,17 +233,24 @@ function renderUsersTable(usersToRender) {
     });
 }
 
-function filterAndRenderUsers() {
+function displayAdminUsers(currentPage = 1) {
     const filterText = DOM.adminUserFilterInput.value.toLowerCase().trim();
-    if (!filterText) {
-        renderUsersTable(localUsers);
-        return;
-    }
-    const filteredUsers = localUsers.filter(u => 
-        (u.email && u.email.toLowerCase().includes(filterText)) || 
+    const filteredUsers = localUsers.filter(u =>
+        (u.email && u.email.toLowerCase().includes(filterText)) ||
         (u.displayName && u.displayName.toLowerCase().includes(filterText))
     );
-    renderUsersTable(filteredUsers);
+
+    const itemsPerPage = 10;
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedItems = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
+
+    renderUsersTableChunk(paginatedItems);
+    if (adminUsersPaginator) adminUsersPaginator.update(filteredUsers.length);
+}
+
+function filterAndRenderUsers() {
+    if (adminUsersPaginator) adminUsersPaginator.reset();
+    displayAdminUsers(1);
 }
 
 async function handleAdminUserUpdate(e) {
@@ -299,11 +307,20 @@ async function handleAdminUserUpdate(e) {
 function initializeAdminTab() {
     if (!DOM.adminTab || !appState.currentUserId) return;
     
+    adminUsersPaginator = createPaginator({
+        controlsEl: DOM.adminUserPaginationControls,
+        pageInfoEl: DOM.auPageInfo,
+        prevBtn: DOM.auPrevPageBtn,
+        nextBtn: DOM.auNextPageBtn,
+        itemsPerPage: 10,
+        onPageChange: page => displayAdminUsers(page)
+    });
+
     if (unsubscribeUsers) unsubscribeUsers();
     unsubscribeUsers = onSnapshot(collection(db, 'users'), snapshot => {
         localUsers = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
         localUsers.sort((a,b) => (a.email || '').localeCompare(b.email || ''));
-        filterAndRenderUsers();
+        displayAdminUsers(adminUsersPaginator?.getCurrentPage() || 1);
     }, console.error);
 
     DOM.adminUserFilterInput.addEventListener('input', debounce(filterAndRenderUsers, 300));
@@ -321,6 +338,7 @@ function stopAdminListeners() {
 let localUpdateLog = []; // holds the array of version objects
 let unsubscribeUpdateLog = null;
 let updateLogPaginator;
+let adminUpdateLogPaginator;
 
 // Renders the public update log view based on paginated items
 function renderPublicUpdateLog(versions = []) {
@@ -333,35 +351,29 @@ function renderPublicUpdateLog(versions = []) {
     }
 
     versions.forEach(version => {
-        const embedUrl = getGDocsEmbedUrl(version.gdocsLink);
         const displayDate = formatInputDateToDisplay(version.date);
 
         const updateEntry = h('div', { className: 'update-entry' },
             h('h3', {}, 
                 h('a', { 
-                    href: version.gdocsLink, 
+                    href: version.gdocsLink || '#',
                     target: '_blank', 
                     rel: 'noopener noreferrer',
                     className: 'update-version-link',
-                    title: `Xem chi tiết cập nhật cho phiên bản ${version.version}`
+                    title: version.gdocsLink ? `Xem chi tiết cập nhật cho phiên bản ${version.version}` : 'Chi tiết không có sẵn'
                 }, `Phiên bản ${version.version}`),
-                ` (${displayDate})`
+                h('span', { className: 'update-date' }, ` (${displayDate})`)
             ),
-            embedUrl 
-                ? h('iframe', { 
-                    src: embedUrl, 
-                    className: 'gdoc-iframe', 
-                    style: 'width: 100%; height: 500px; border: 1px solid var(--border-color); border-radius: 0.5rem;',
-                    frameborder: '0' 
-                  })
-                : h('div', {}, 
-                    h('p', {className: 'form-text'}, 'Link tài liệu không hợp lệ hoặc bị thiếu. Vui lòng thử mở trực tiếp:'),
-                    h('a', { href: version.gdocsLink, target: '_blank', rel: 'noopener noreferrer' }, version.gdocsLink)
-                  )
+            h('p', { className: 'update-link-info' }, 
+              version.gdocsLink 
+                ? 'Nhấp vào phiên bản ở trên để xem chi tiết nội dung cập nhật trong một tab mới.'
+                : 'Tài liệu chi tiết cho phiên bản này không có sẵn.'
+            )
         );
         DOM.updateLogContent.appendChild(updateEntry);
     });
 }
+
 
 // Handles sorting and pagination, then calls renderPublicUpdateLog
 function displayUpdateLog(currentPage = 1) {
@@ -374,33 +386,38 @@ function displayUpdateLog(currentPage = 1) {
     if(updateLogPaginator) updateLogPaginator.update(sortedVersions.length);
 }
 
-// Renders the admin interface for managing the update log
-function renderAdminUpdateLog() {
+// Renders the admin interface for managing the update log, now with pagination
+function displayAdminUpdateLog(currentPage = 1) {
     if (!DOM.adminUpdateLogList) return;
     DOM.adminUpdateLogList.innerHTML = '';
 
     const sortedVersions = [...localUpdateLog].sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    const itemsPerPage = 5;
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedItems = sortedVersions.slice(startIndex, startIndex + itemsPerPage);
 
-    if (sortedVersions.length === 0) {
+    if (paginatedItems.length === 0) {
         DOM.adminUpdateLogList.appendChild(h('p', { className: 'form-text' }, `Chưa có phiên bản nào.`));
-        return;
+    } else {
+        paginatedItems.forEach(version => {
+            const displayDate = formatInputDateToDisplay(version.date);
+            const itemEl = h('div', { className: 'config-list-item' },
+                h('div', { style: 'flex-grow: 1; min-width: 0;'}, 
+                    h('span', { style: 'font-weight: 600; color: var(--text-dark);'}, `v${version.version}`),
+                    h('span', { style: 'margin-left: 1rem; color: var(--text-light);'}, displayDate),
+                    h('p', { style: 'font-size: 0.8rem; color: var(--primary-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px; margin: 0.25rem 0 0 0;'}, version.gdocsLink)
+                ),
+                h('div', { className: 'config-list-item-actions' },
+                    h('button', { className: 'edit-version-btn', dataset: { versionId: version.id }, title: 'Sửa' }, h('i', { className: 'fas fa-edit' })),
+                    h('button', { className: 'delete-version-btn', dataset: { versionId: version.id }, title: 'Xóa' }, h('i', { className: 'fas fa-trash' }))
+                )
+            );
+            DOM.adminUpdateLogList.appendChild(itemEl);
+        });
     }
 
-    sortedVersions.forEach(version => {
-        const displayDate = formatInputDateToDisplay(version.date);
-        const itemEl = h('div', { className: 'config-list-item' },
-            h('div', { style: 'flex-grow: 1; min-width: 0;'}, 
-                h('span', { style: 'font-weight: 600; color: var(--text-dark);'}, `v${version.version}`),
-                h('span', { style: 'margin-left: 1rem; color: var(--text-light);'}, displayDate),
-                h('p', { style: 'font-size: 0.8rem; color: var(--primary-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px; margin: 0.25rem 0 0 0;'}, version.gdocsLink)
-            ),
-            h('div', { className: 'config-list-item-actions' },
-                h('button', { className: 'edit-version-btn', dataset: { versionId: version.id }, title: 'Sửa' }, h('i', { className: 'fas fa-edit' })),
-                h('button', { className: 'delete-version-btn', dataset: { versionId: version.id }, title: 'Xóa' }, h('i', { className: 'fas fa-trash' }))
-            )
-        );
-        DOM.adminUpdateLogList.appendChild(itemEl);
-    });
+    if (adminUpdateLogPaginator) adminUpdateLogPaginator.update(sortedVersions.length);
 }
 
 function resetUpdateLogForm() {
@@ -413,6 +430,7 @@ function resetUpdateLogForm() {
 async function saveUpdateLog() {
     try {
         const docRef = doc(db, 'siteContent', 'updateLog');
+        // The onSnapshot listener will handle UI updates automatically.
         await setDoc(docRef, { versions: localUpdateLog });
         showToast('Đã lưu lịch sử cập nhật.', 'success');
     } catch (error) {
@@ -494,22 +512,32 @@ function listenForUpdateLog() {
         } else {
             localUpdateLog = [];
         }
+        // Update both public and admin views
         displayUpdateLog(updateLogPaginator?.getCurrentPage() || 1);
         
         if (appState.currentUserProfile?.role === 'admin') {
-            renderAdminUpdateLog();
+            displayAdminUpdateLog(adminUpdateLogPaginator?.getCurrentPage() || 1);
         }
     }, (error) => {
         console.error("Error listening to update log:", error);
         localUpdateLog = []; // reset on error
         displayUpdateLog();
-        if (appState.currentUserProfile?.role === 'admin') renderAdminUpdateLog();
+        if (appState.currentUserProfile?.role === 'admin') displayAdminUpdateLog();
     });
 }
 
 async function initializeAdminSettings() {
     if (!DOM.adminSettingsForm) return;
 
+    adminUpdateLogPaginator = createPaginator({
+        controlsEl: DOM.adminUpdateLogPaginationControls,
+        pageInfoEl: DOM.aulPageInfo,
+        prevBtn: DOM.aulPrevPageBtn,
+        nextBtn: DOM.aulNextPageBtn,
+        itemsPerPage: 5, 
+        onPageChange: page => displayAdminUpdateLog(page)
+    });
+    
     const contentDocRef = doc(db, 'siteContent', 'main');
     
     try {

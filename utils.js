@@ -95,20 +95,6 @@ export function parseNumber(str) {
 }
 
 /**
- * Extracts a Google Docs ID from a URL and returns an embeddable preview URL.
- * @param {string} url The Google Docs URL.
- * @returns {string|null} The embeddable URL or null if invalid.
- */
-export function getGDocsEmbedUrl(url) {
-    if (!url || typeof url !== 'string') return null;
-    const match = url.match(/document\/d\/([a-zA-Z0-9-_]+)/);
-    if (match && match[1]) {
-        return `https://docs.google.com/document/d/${match[1]}/preview`;
-    }
-    return null;
-}
-
-/**
  * Formats a date from 'YYYY-MM-DD' input to 'DD/MM/YYYY' display.
  * @param {string} inputDate The date string from a date input (YYYY-MM-DD).
  * @returns {string} The formatted date string (DD/MM/YYYY).
