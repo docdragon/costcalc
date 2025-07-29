@@ -192,6 +192,28 @@ export function initializeImageUploader(uploadedCallback, removedCallback) {
     });
 }
 
+export function setImagePreview(imageData) {
+    const previewImg = DOM.sidebarImagePreview;
+    const placeholder = DOM.sidebarImagePlaceholder;
+    const removeBtn = DOM.sidebarRemoveImageBtn;
+
+    if (!previewImg || !placeholder || !removeBtn) return;
+    
+    if (imageData && imageData.data && imageData.mimeType) {
+        const imageSrc = `data:${imageData.mimeType};base64,${imageData.data}`;
+        previewImg.src = imageSrc;
+        placeholder.classList.add('hidden');
+        previewImg.classList.remove('hidden');
+        removeBtn.classList.remove('hidden');
+    } else {
+        DOM.sidebarImageInput.value = ''; // Also clear the file input
+        previewImg.src = '';
+        previewImg.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+        removeBtn.classList.add('hidden');
+    }
+}
+
 
 // --- Tab Navigation ---
 export function initializeTabs() {
