@@ -1,5 +1,3 @@
-
-
 // script.js
 import { 
     db, auth, collection, onSnapshot, addDoc, doc, updateDoc, 
@@ -10,14 +8,16 @@ import {
 import { 
     openModal, closeModal, showConfirm, showToast, updateUIVisibility, 
     initializeTabs, initializeModals, 
-    initializeNumberInputFormatting, createPaginator, debounce, initializeMathInput
+    initializeNumberInputFormatting, createPaginator, debounce, initializeMathInput,
+    initializeImageUploader
 } from './ui.js';
 import { initializeQuickCalc, updateQuickCalcMaterials } from './quick-calc.js';
 import * as DOM from './dom.js';
 import { 
     initializeCalculator, updateCalculatorData,
     loadItemIntoForm, clearCalculatorInputs, getCalculatorStateForSave,
-    loadComponentsByProductType
+    loadComponentsByProductType,
+    setImage, clearImage
 } from './calculator.js';
 import { initializeConfigurationTab, stopConfigurationListeners } from './config-manager.js';
 import { parseNumber, h, formatDate, formatInputDateToDisplay } from './utils.js';
@@ -1016,9 +1016,17 @@ function renderItemDetailsToModal(itemId) {
                 item.reason ? h('p', { className: 'cost-item-reason' }, item.reason) : null
             )))
         : h('p', {}, 'Không có phân tích chi phí.');
+
+    const imagePreview = (inputs.image && inputs.image.data && inputs.image.mimeType)
+        ? h('div', { className: 'modal-image-preview' }, 
+            h('img', { src: `data:${inputs.image.mimeType};base64,${inputs.image.data}`, alt: 'Hình ảnh dự án' })
+          )
+        : null;
     
     DOM.viewItemContent.innerHTML = '';
-    DOM.viewItemContent.append(
+    
+    const modalContent = [
+        imagePreview,
         h('div', { className: 'final-price-recommendation' },
             h('div', { className: 'final-price-main' },
                 h('div', { className: 'final-price-label' }, 'Giá Bán Đề Xuất'),
@@ -1048,9 +1056,13 @@ function renderItemDetailsToModal(itemId) {
                  breakdownList
             )
         )
-    );
+    ].filter(Boolean);
+
+    modalContent.forEach(el => DOM.viewItemContent.appendChild(el));
+    
     openModal(DOM.viewItemModal);
 }
+
 
 function initializeSavedItemsManagement() {
     savedItemsPaginator = createPaginator({
@@ -1126,6 +1138,15 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeModals();
     initializeNumberInputFormatting('input[inputmode="decimal"]');
     initializeMathInput('input[inputmode="decimal"]');
+    
+    initializeImageUploader(
+        (imageData) => {
+            setImage(imageData);
+        },
+        () => {
+            clearImage();
+        }
+    );
     
     // Initialize all modules
     initializeCalculator();

@@ -1,6 +1,6 @@
 // calculator.js
 import * as DOM from './dom.js';
-import { showToast, initializeCombobox, debounce, createAccessoryManager } from './ui.js';
+import { showToast, initializeCombobox, debounce, createAccessoryManager, setImagePreview } from './ui.js';
 import { getSheetArea, getBoardThickness, parseNumber, h } from './utils.js';
 
 // --- Module-level state ---
@@ -14,6 +14,16 @@ let lastCalculationResult = null;
 let addedAccessories = [];
 let productComponents = [];
 let accessoryManager;
+let currentImage = null;
+
+
+// --- Image State Management ---
+export function setImage(imageData) {
+    currentImage = imageData;
+}
+export function clearImage() {
+    currentImage = null;
+}
 
 
 // --- Data Updaters ---
@@ -355,6 +365,8 @@ export function clearCalculatorInputs() {
     renderProductComponents();
 
     lastCalculationResult = null;
+    clearImage();
+    setImagePreview(null);
 
     if (DOM.mainMaterialWoodCombobox.setValue) DOM.mainMaterialWoodCombobox.setValue('');
     if (DOM.mainMaterialBackPanelCombobox.setValue) DOM.mainMaterialBackPanelCombobox.setValue('');
@@ -393,6 +405,11 @@ export function loadItemIntoForm(item) {
     if(accessoryManager) accessoryManager.setAccessories(addedAccessories);
     
     productComponents = inputs.components ? JSON.parse(JSON.stringify(inputs.components)) : [];
+
+    if (inputs.image) {
+        currentImage = inputs.image;
+        setImagePreview(currentImage);
+    }
     
     renderProductComponents();
     calculateAndDisplayFinalPrice();
@@ -422,7 +439,8 @@ export function getCalculatorStateForSave() {
             backPanelId: DOM.mainMaterialBackPanelCombobox.querySelector('.combobox-value').value,
             edgeMaterialId: DOM.edgeMaterialCombobox.querySelector('.combobox-value').value,
             accessories: addedAccessories,
-            components: productComponents
+            components: productComponents,
+            image: currentImage
         },
         finalPrices: lastCalculationResult,
     };
