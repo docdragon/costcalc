@@ -9,7 +9,8 @@ import {
     openModal, closeModal, showConfirm, showToast, updateUIVisibility, 
     initializeTabs, initializeModals, 
     initializeNumberInputFormatting, createPaginator, debounce, initializeMathInput,
-    initializeImageUploader
+    initializeImageUploader,
+    initializeThemeSwitcher
 } from './ui.js';
 import { initializeQuickCalc, updateQuickCalcMaterials } from './quick-calc.js';
 import * as DOM from './dom.js';
@@ -1138,6 +1139,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeModals();
     initializeNumberInputFormatting('input[inputmode="decimal"]');
     initializeMathInput('input[inputmode="decimal"]');
+    initializeThemeSwitcher();
     
     initializeImageUploader(
         (imageData) => {

@@ -712,3 +712,35 @@ export function initializeModals() {
         }
     });
 }
+
+// --- Theme Switcher ---
+export function initializeThemeSwitcher() {
+    const checkbox = document.getElementById('theme-toggle-checkbox');
+    if (!checkbox) return;
+
+    const setTheme = (theme) => {
+        if (theme === 'dark') {
+            document.body.classList.add('dark');
+            checkbox.checked = true;
+        } else {
+            document.body.classList.remove('dark');
+            checkbox.checked = false;
+        }
+        localStorage.setItem('theme', theme);
+    };
+
+    checkbox.addEventListener('change', () => {
+        setTheme(checkbox.checked ? 'dark' : 'light');
+    });
+
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    if (savedTheme) {
+        setTheme(savedTheme);
+    } else if (prefersDark) {
+        setTheme('dark');
+    } else {
+        setTheme('light');
+    }
+}
