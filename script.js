@@ -17,7 +17,7 @@ import {
     initializeCalculator, updateCalculatorData,
     loadItemIntoForm, clearCalculatorInputs, getCalculatorStateForSave,
     loadComponentsByProductType,
-    setImage, clearImage
+    setImage
 } from './calculator.js';
 import { initializeConfigurationTab, stopConfigurationListeners } from './config-manager.js';
 import { parseNumber, h, formatDate, formatInputDateToDisplay } from './utils.js';
@@ -1144,7 +1144,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setImage(imageData);
         },
         () => {
-            clearImage();
+            setImage(null);
         }
     );
     

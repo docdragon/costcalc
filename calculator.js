@@ -21,9 +21,6 @@ let currentImage = null;
 export function setImage(imageData) {
     currentImage = imageData;
 }
-export function clearImage() {
-    currentImage = null;
-}
 
 
 // --- Data Updaters ---
@@ -365,7 +362,7 @@ export function clearCalculatorInputs() {
     renderProductComponents();
 
     lastCalculationResult = null;
-    clearImage();
+    setImage(null);
     setImagePreview(null);
 
     if (DOM.mainMaterialWoodCombobox.setValue) DOM.mainMaterialWoodCombobox.setValue('');
