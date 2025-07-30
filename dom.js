@@ -198,4 +198,6 @@ export const toastContainer = document.getElementById('toast-container');
 export const inactiveUserOverlay = document.getElementById('inactive-user-overlay');
 export const inactiveOverlayTitle = document.getElementById('inactive-overlay-title');
 export const inactiveOverlayMessage = document.getElementById('inactive-overlay-message');
+export const inactiveOverlayPaymentInfo = document.getElementById('inactive-overlay-payment-info');
+export const inactiveOverlayTransferEmail = document.getElementById('inactive-overlay-transfer-email');
 export const inactiveOverlayLogoutBtn = document.getElementById('inactive-overlay-logout-btn');

@@ -611,12 +611,21 @@ function isUserActive() {
 function handleAppLock(isLocked) {
     if (isLocked) {
         const profile = appState.currentUserProfile;
+        // Hide payment info by default, show it only if expired
+        DOM.inactiveOverlayPaymentInfo.classList.add('hidden');
+
         if (profile.status === 'disabled') {
             DOM.inactiveOverlayTitle.textContent = 'Tài khoản đã bị vô hiệu hoá';
             DOM.inactiveOverlayMessage.textContent = 'Tài khoản của bạn đã bị khoá. Vui lòng liên hệ quản trị viên để được hỗ trợ.';
         } else { // Expired
             DOM.inactiveOverlayTitle.textContent = 'Tài khoản của bạn đã hết hạn';
-            DOM.inactiveOverlayMessage.textContent = 'Vui lòng liên hệ quản trị viên để gia hạn và tiếp tục sử dụng các tính năng của ứng dụng.';
+            DOM.inactiveOverlayMessage.textContent = 'Vui lòng quét mã QR bên dưới để gia hạn tài khoản và tiếp tục sử dụng.';
+            
+            // Show payment info and set email
+            DOM.inactiveOverlayPaymentInfo.classList.remove('hidden');
+            if (DOM.inactiveOverlayTransferEmail && profile.email) {
+                DOM.inactiveOverlayTransferEmail.textContent = profile.email;
+            }
         }
         DOM.inactiveUserOverlay.classList.remove('hidden');
     } else {
