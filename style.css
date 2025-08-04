@@ -1652,3 +1652,60 @@ input:checked + .theme-slider:before {
     margin-right: 0.5rem;
     color: var(--primary-color);
 }
+
+/* --- Sidebar Column Layout --- */
+.sidebar-column {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+/* --- YouTube Video Link --- */
+.youtube-link-wrapper {
+    display: block;
+    position: relative;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    cursor: pointer;
+}
+
+.youtube-link-wrapper:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.youtube-thumbnail {
+    width: 100%;
+    display: block;
+}
+
+.play-button-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.youtube-link-wrapper:hover .play-button-overlay {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.play-button-overlay .fa-youtube {
+    font-size: 4rem;
+    color: #ff0000;
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+    transition: transform 0.2s ease-in-out;
+}
+
+.youtube-link-wrapper:hover .play-button-overlay .fa-youtube {
+    transform: scale(1.1);
+}
