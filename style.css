@@ -993,8 +993,26 @@ body.dark .settings-intro {
 .login-prompt-view p { color: var(--text-light); margin-top: 0.5rem; }
 
 /* --- Footer --- */
-.footer { text-align: center; margin-top: 3rem; padding: 1.5rem 0; border-top: 1px solid var(--border-color); }
-.footer p { color: var(--text-light); font-size: 0.875rem; }
+.footer {
+    text-align: center;
+    margin-top: 3rem;
+    padding: 1.5rem 1rem;
+    border-top: 1px solid var(--border-color);
+}
+.footer p {
+    color: var(--text-light);
+    font-size: 0.875rem;
+    margin: 0.25rem 0;
+}
+.footer a {
+    color: var(--primary-color);
+    font-weight: 500;
+    text-decoration: none;
+    transition: text-decoration 0.2s;
+}
+.footer a:hover {
+    text-decoration: underline;
+}
 
 /* --- Utility --- */
 .hidden { display: none !important; }
@@ -1629,7 +1647,7 @@ input:checked + .theme-slider:before {
     color: var(--text-dark);
 }
 
-.payment-instructions p strong {
+.payment-instructions strong {
     color: var(--text-dark);
 }
 
@@ -1643,9 +1661,9 @@ input:checked + .theme-slider:before {
     user-select: all;
 }
 
-.payment-notice {
-    font-size: 0.85rem !important;
-    color: var(--text-light) !important;
+.payment-instructions .payment-notice {
+    font-size: 0.85rem;
+    color: var(--text-light);
     margin-top: 1rem;
 }
 .payment-notice i {
