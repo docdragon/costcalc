@@ -787,13 +787,42 @@ export function initializeThemeSwitcher() {
 
 // --- DevTools Guard ---
 export function initializeDevToolsGuard() {
-    if (!DOM.devtoolsLockOverlay || !DOM.devtoolsReloadBtn) return;
+    if (!DOM.devtoolsLockOverlay) return;
 
     let isLocked = false;
     const lockApp = () => {
         if (isLocked) return;
         isLocked = true;
-        DOM.devtoolsLockOverlay.classList.remove('hidden');
+        
+        // 1. Save the overlay's structure before we destroy everything.
+        const overlayHTML = DOM.devtoolsLockOverlay.outerHTML;
+
+        // 2. Destroy the entire body content, breaking the source view.
+        document.body.innerHTML = '';
+        // Optionally apply styles to prevent scrolling/interaction on the empty body
+        document.body.style.overflow = 'hidden';
+        document.body.style.margin = '0';
+        document.body.style.padding = '0';
+
+
+        // 3. Re-inject ONLY the overlay into the now-empty body.
+        document.body.innerHTML = overlayHTML;
+
+        // 4. Get new references to the recreated elements.
+        const newOverlay = document.getElementById('devtools-lock-overlay');
+        const newReloadBtn = document.getElementById('devtools-reload-btn');
+        
+        // 5. Make the new overlay visible.
+        if (newOverlay) {
+            newOverlay.classList.remove('hidden');
+        }
+        
+        // 6. Re-attach the event listener to the new button as the old one was destroyed.
+        if (newReloadBtn) {
+            newReloadBtn.addEventListener('click', () => {
+                window.location.reload();
+            });
+        }
     };
 
     // Check based on window dimension changes
@@ -827,11 +856,6 @@ export function initializeDevToolsGuard() {
     window.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         lockApp();
-    });
-
-    // Add functionality to the reload button
-    DOM.devtoolsReloadBtn.addEventListener('click', () => {
-        window.location.reload();
     });
 
     // Cleanup on unload to prevent memory leaks
