@@ -852,12 +852,6 @@ export function initializeDevToolsGuard() {
         }
     });
 
-    // Block right-click context menu
-    window.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        lockApp();
-    });
-
     // Cleanup on unload to prevent memory leaks
     window.addEventListener('beforeunload', () => {
         clearInterval(intervalId);
