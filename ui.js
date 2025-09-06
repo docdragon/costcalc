@@ -115,12 +115,6 @@ export function updateUIVisibility(isLoggedIn, user, userProfile) {
     
     const isAdmin = isLoggedIn && userProfile?.role === 'admin';
 
-    // Ensure all main content wrappers are structurally visible
-    // The overlay will handle blocking interaction for logged-out users
-    document.querySelectorAll('.calculator-form-content, .materials-form-content, .saved-items-content, .quick-calc-form-content, .component-names-content, .config-form-content').forEach(el => {
-        el.style.display = 'block';
-    });
-    
     // Show/hide content specifically for admins
     if (DOM.adminTab) {
         DOM.adminTab.querySelectorAll('.admin-content').forEach(el => {
