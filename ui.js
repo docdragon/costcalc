@@ -108,11 +108,17 @@ export function updateUIVisibility(isLoggedIn, user, userProfile) {
         DOM.userExpiryDisplay.classList.add('hidden');
     }
     
+    // Toggle the main content overlay based on login state
+    if (DOM.loginRequiredOverlay) {
+        DOM.loginRequiredOverlay.classList.toggle('hidden', isLoggedIn);
+    }
+    
     const isAdmin = isLoggedIn && userProfile?.role === 'admin';
 
-    // Show/hide content for general logged-in users
+    // Ensure all main content wrappers are structurally visible
+    // The overlay will handle blocking interaction for logged-out users
     document.querySelectorAll('.calculator-form-content, .materials-form-content, .saved-items-content, .quick-calc-form-content, .component-names-content, .config-form-content').forEach(el => {
-        el.style.display = isLoggedIn ? 'block' : 'none';
+        el.style.display = 'block';
     });
     
     // Show/hide content specifically for admins
@@ -121,12 +127,8 @@ export function updateUIVisibility(isLoggedIn, user, userProfile) {
             el.style.display = isAdmin ? 'block' : 'none';
         });
     }
-    
-    // Show/hide the entire prompt view (for logged-out users)
-    document.querySelectorAll('.login-prompt-view').forEach(el => {
-        el.style.display = isLoggedIn ? 'none' : 'block';
-    });
 
+    // Show/hide admin tab in sidebar
     if (DOM.adminTabBtn) {
         DOM.adminTabBtn.classList.toggle('hidden', !isAdmin);
     }
@@ -698,6 +700,9 @@ async function handleGoogleLogin() {
 
 export function initializeModals() {
     DOM.openLoginModalBtn.addEventListener('click', () => openModal(DOM.loginModal));
+    if (DOM.overlayLoginBtn) {
+        DOM.overlayLoginBtn.addEventListener('click', () => openModal(DOM.loginModal));
+    }
     document.querySelectorAll('.modal-close-btn, .modal-overlay').forEach(el => {
         el.addEventListener('click', (e) => { if (e.target === el) closeAllModals(); });
     });
