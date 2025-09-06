@@ -201,5 +201,3 @@ export const inactiveOverlayMessage = document.getElementById('inactive-overlay-
 export const inactiveOverlayPaymentInfo = document.getElementById('inactive-overlay-payment-info');
 export const inactiveOverlayTransferEmail = document.getElementById('inactive-overlay-transfer-email');
 export const inactiveOverlayLogoutBtn = document.getElementById('inactive-overlay-logout-btn');
-export const loginRequiredOverlay = document.getElementById('login-required-overlay');
-export const overlayLoginBtn = document.getElementById('overlay-login-btn');

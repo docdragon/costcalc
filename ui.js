@@ -108,11 +108,6 @@ export function updateUIVisibility(isLoggedIn, user, userProfile) {
         DOM.userExpiryDisplay.classList.add('hidden');
     }
     
-    // Toggle the main content overlay based on login state
-    if (DOM.loginRequiredOverlay) {
-        DOM.loginRequiredOverlay.classList.toggle('hidden', isLoggedIn);
-    }
-    
     const isAdmin = isLoggedIn && userProfile?.role === 'admin';
 
     // Show/hide content specifically for admins
@@ -694,9 +689,6 @@ async function handleGoogleLogin() {
 
 export function initializeModals() {
     DOM.openLoginModalBtn.addEventListener('click', () => openModal(DOM.loginModal));
-    if (DOM.overlayLoginBtn) {
-        DOM.overlayLoginBtn.addEventListener('click', () => openModal(DOM.loginModal));
-    }
     document.querySelectorAll('.modal-close-btn, .modal-overlay').forEach(el => {
         el.addEventListener('click', (e) => { if (e.target === el) closeAllModals(); });
     });
@@ -711,6 +703,55 @@ export function initializeModals() {
         }
     });
 }
+
+/**
+ * Prevents interaction with functional elements for logged-out users,
+ * prompting them to log in instead.
+ */
+export function initializeInteractionGuard() {
+    const mainContent = DOM.tabContent;
+    if (!mainContent) return;
+
+    // Define selectors for elements that require login
+    const protectedSelector = [
+        'input',
+        'textarea',
+        'select',
+        'button:not([data-tab]):not(.modal-close-btn):not(#confirm-cancel-btn)',
+        '.preview-canvas',
+        '.config-list-item',
+        '.remove-acc-btn',
+        '.remove-component-btn',
+        '.config-list-item-actions button'
+    ].join(', ');
+
+    const handleProtectedInteraction = (e) => {
+        // If user is logged in, do nothing.
+        if (auth.currentUser) {
+            return;
+        }
+
+        // Check if the interacted element (or its parent) is protected
+        if (e.target.closest(protectedSelector)) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            showToast('Vui lòng đăng nhập để sử dụng tính năng này.', 'info');
+            openModal(DOM.loginModal);
+
+            // Blur the element if it was focused to prevent the cursor from being "stuck"
+            if (e.target.matches('input, textarea, select')) {
+                e.target.blur();
+            }
+        }
+    };
+    
+    // `focusin` covers both clicks and tabbing for focusable elements
+    mainContent.addEventListener('focusin', handleProtectedInteraction, true);
+    // `mousedown` covers clicks on non-focusable elements (like custom divs or buttons)
+    mainContent.addEventListener('mousedown', handleProtectedInteraction, true);
+}
+
 
 // --- Theme Switcher ---
 export function initializeThemeSwitcher() {
