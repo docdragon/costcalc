@@ -784,3 +784,58 @@ export function initializeThemeSwitcher() {
         setTheme('light');
     }
 }
+
+// --- DevTools Guard ---
+export function initializeDevToolsGuard() {
+    if (!DOM.devtoolsLockOverlay || !DOM.devtoolsReloadBtn) return;
+
+    let isLocked = false;
+    const lockApp = () => {
+        if (isLocked) return;
+        isLocked = true;
+        DOM.devtoolsLockOverlay.classList.remove('hidden');
+    };
+
+    // Check based on window dimension changes
+    const threshold = 160;
+    const checkDevTools = () => {
+        if (
+            (window.outerWidth - window.innerWidth) > threshold ||
+            (window.outerHeight - window.innerHeight) > threshold
+        ) {
+            lockApp();
+        }
+    };
+
+    // Check periodically and on resize
+    const intervalId = setInterval(checkDevTools, 1000);
+    window.addEventListener('resize', checkDevTools);
+
+    // Block common keyboard shortcuts
+    window.addEventListener('keydown', (e) => {
+        if (
+            e.key === 'F12' ||
+            (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+            (e.ctrlKey && e.key === 'U')
+        ) {
+            e.preventDefault();
+            lockApp();
+        }
+    });
+
+    // Block right-click context menu
+    window.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        lockApp();
+    });
+
+    // Add functionality to the reload button
+    DOM.devtoolsReloadBtn.addEventListener('click', () => {
+        window.location.reload();
+    });
+
+    // Cleanup on unload to prevent memory leaks
+    window.addEventListener('beforeunload', () => {
+        clearInterval(intervalId);
+    });
+}

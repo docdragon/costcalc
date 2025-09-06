@@ -11,7 +11,8 @@ import {
     initializeNumberInputFormatting, createPaginator, debounce, initializeMathInput,
     initializeImageUploader,
     initializeThemeSwitcher,
-    initializeInteractionGuard
+    initializeInteractionGuard,
+    initializeDevToolsGuard
 } from './ui.js';
 import { initializeQuickCalc, updateQuickCalcMaterials } from './quick-calc.js';
 import * as DOM from './dom.js';
@@ -1148,6 +1149,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeTabs();
     initializeModals();
     initializeInteractionGuard();
+    initializeDevToolsGuard();
     initializeNumberInputFormatting('input[inputmode="decimal"]');
     initializeMathInput('input[inputmode="decimal"]');
     initializeThemeSwitcher();
