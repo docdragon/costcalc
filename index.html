@@ -64,6 +64,7 @@
         </nav>
 
         <main id="tab-content" class="main-content">
+
             <!-- Tab 1: Trình Báo Giá -->
             <div id="calculator-tab" role="tabpanel" aria-labelledby="tab-btn-calculator" class="tab-pane active">
                 <div class="grid-layout">
@@ -261,11 +262,6 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="login-prompt-view">
-                            <div class="icon-prompt"><i class="fas fa-lock"></i></div>
-                            <h3>Tính năng dành cho thành viên</h3>
-                            <p>Vui lòng đăng nhập để bắt đầu báo giá và lưu dự án của bạn.</p>
-                        </div>
                     </div>
                     <div class="sidebar-column">
                         <div class="card">
@@ -285,11 +281,6 @@
                                     </div>
                                 </div>
                             </div>
-                             <div class="login-prompt-view">
-                                <div class="icon-prompt"><i class="fas fa-info-circle"></i></div>
-                                <h3>Chào mừng bạn!</h3>
-                                <p>Đăng nhập để mở khóa tất cả tính năng.</p>
-                            </div>
                         </div>
                         <div class="card">
                             <h2 class="card-header">
@@ -303,11 +294,6 @@
                                         <i class="fab fa-youtube"></i>
                                     </div>
                                 </a>
-                            </div>
-                            <div class="login-prompt-view">
-                                <div class="icon-prompt"><i class="fab fa-youtube"></i></div>
-                                <h3>Video Hướng dẫn</h3>
-                                <p>Đăng nhập để xem các video hướng dẫn.</p>
                             </div>
                         </div>
                     </div>
@@ -419,11 +405,6 @@
                         </div>
 
                     </div>
-                    <div class="login-prompt-view">
-                        <div class="icon-prompt"><i class="fas fa-calculator"></i></div>
-                        <h3>Tính toán nhanh chóng</h3>
-                        <p>Vui lòng đăng nhập để sử dụng công cụ tính giá nhanh dựa trên kho vật tư của bạn.</p>
-                    </div>
                 </div>
             </div>
 
@@ -508,11 +489,6 @@
                             </div>
                         </div>
                     </div>
-                    <div class="login-prompt-view">
-                        <div class="icon-prompt"><i class="fas fa-boxes"></i></div>
-                        <h3>Quản lý vật tư của bạn</h3>
-                        <p>Vui lòng đăng nhập để thêm, sửa, xóa các loại vật tư cho xưởng của mình.</p>
-                    </div>
                 </div>
             </div>
 
@@ -575,11 +551,6 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                     <div class="login-prompt-view">
-                        <div class="icon-prompt"><i class="fas fa-cogs"></i></div>
-                        <h3>Cấu hình sản phẩm</h3>
-                        <p>Vui lòng đăng nhập để tạo và quản lý các mẫu sản phẩm của bạn.</p>
                     </div>
                 </div>
 
@@ -646,11 +617,6 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                     <div class="login-prompt-view">
-                        <div class="icon-prompt"><i class="fas fa-cubes"></i></div>
-                        <h3>Tạo cụm chi tiết</h3>
-                        <p>Vui lòng đăng nhập để quản lý các nhóm chi tiết có thể tái sử dụng.</p>
                     </div>
                 </div>
 
@@ -732,11 +698,6 @@
                             </div>
                         </div>
                     </div>
-                    <div class="login-prompt-view">
-                        <div class="icon-prompt"><i class="fas fa-list-alt"></i></div>
-                        <h3>Tùy chỉnh danh sách chi tiết</h3>
-                        <p>Vui lòng đăng nhập để quản lý danh sách tên chi tiết của bạn.</p>
-                    </div>
                 </div>
             </div>
 
@@ -778,11 +739,6 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="login-prompt-view">
-                        <div class="icon-prompt"><i class="fas fa-folder-open"></i></div>
-                        <h3>Xem lại dự án</h3>
-                        <p>Vui lòng đăng nhập để xem các dự án đã lưu của bạn.</p>
                     </div>
                 </div>
             </div>
@@ -977,6 +933,18 @@
                 <button id="confirm-cancel-btn" class="btn btn-secondary">Hủy</button>
                 <button id="confirm-ok-btn" class="btn btn-danger">Đồng ý</button>
             </div>
+        </div>
+    </div>
+
+    <!-- DevTools Lock Modal -->
+    <div id="devtools-lock-overlay" class="modal-overlay hidden">
+        <div class="modal-content" style="text-align: center;">
+            <i class="fas fa-ban" style="color: var(--warning-color); font-size: 3rem; margin-bottom: 1.5rem;"></i>
+            <h3 class="modal-title">Chức năng Bị Khoá</h3>
+            <p class="confirm-text" style="margin-bottom: 2rem;">
+                Vui lòng không sử dụng Developer Tools trên ứng dụng này. Hãy đóng các công cụ đó và tải lại trang để tiếp tục.
+            </p>
+            <button id="devtools-reload-btn" class="btn btn-primary">Tải lại Trang</button>
         </div>
     </div>
 

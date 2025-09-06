@@ -192,6 +192,8 @@ export const confirmModal = document.getElementById('confirm-modal');
 export const confirmMessage = document.getElementById('confirm-message');
 export const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
 export const confirmOkBtn = document.getElementById('confirm-ok-btn');
+export const devtoolsLockOverlay = document.getElementById('devtools-lock-overlay');
+export const devtoolsReloadBtn = document.getElementById('devtools-reload-btn');
 
 // --- Misc ---
 export const toastContainer = document.getElementById('toast-container');

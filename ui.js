@@ -110,23 +110,14 @@ export function updateUIVisibility(isLoggedIn, user, userProfile) {
     
     const isAdmin = isLoggedIn && userProfile?.role === 'admin';
 
-    // Show/hide content for general logged-in users
-    document.querySelectorAll('.calculator-form-content, .materials-form-content, .saved-items-content, .quick-calc-form-content, .component-names-content, .config-form-content').forEach(el => {
-        el.style.display = isLoggedIn ? 'block' : 'none';
-    });
-    
     // Show/hide content specifically for admins
     if (DOM.adminTab) {
         DOM.adminTab.querySelectorAll('.admin-content').forEach(el => {
             el.style.display = isAdmin ? 'block' : 'none';
         });
     }
-    
-    // Show/hide the entire prompt view (for logged-out users)
-    document.querySelectorAll('.login-prompt-view').forEach(el => {
-        el.style.display = isLoggedIn ? 'none' : 'block';
-    });
 
+    // Show/hide admin tab in sidebar
     if (DOM.adminTabBtn) {
         DOM.adminTabBtn.classList.toggle('hidden', !isAdmin);
     }
@@ -713,6 +704,55 @@ export function initializeModals() {
     });
 }
 
+/**
+ * Prevents interaction with functional elements for logged-out users,
+ * prompting them to log in instead.
+ */
+export function initializeInteractionGuard() {
+    const mainContent = DOM.tabContent;
+    if (!mainContent) return;
+
+    // Define selectors for elements that require login
+    const protectedSelector = [
+        'input',
+        'textarea',
+        'select',
+        'button:not([data-tab]):not(.modal-close-btn):not(#confirm-cancel-btn)',
+        '.preview-canvas',
+        '.config-list-item',
+        '.remove-acc-btn',
+        '.remove-component-btn',
+        '.config-list-item-actions button'
+    ].join(', ');
+
+    const handleProtectedInteraction = (e) => {
+        // If user is logged in, do nothing.
+        if (auth.currentUser) {
+            return;
+        }
+
+        // Check if the interacted element (or its parent) is protected
+        if (e.target.closest(protectedSelector)) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            showToast('Vui lòng đăng nhập để sử dụng tính năng này.', 'info');
+            openModal(DOM.loginModal);
+
+            // Blur the element if it was focused to prevent the cursor from being "stuck"
+            if (e.target.matches('input, textarea, select')) {
+                e.target.blur();
+            }
+        }
+    };
+    
+    // `focusin` covers both clicks and tabbing for focusable elements
+    mainContent.addEventListener('focusin', handleProtectedInteraction, true);
+    // `mousedown` covers clicks on non-focusable elements (like custom divs or buttons)
+    mainContent.addEventListener('mousedown', handleProtectedInteraction, true);
+}
+
+
 // --- Theme Switcher ---
 export function initializeThemeSwitcher() {
     const checkbox = document.getElementById('theme-toggle-checkbox');
@@ -743,4 +783,77 @@ export function initializeThemeSwitcher() {
     } else {
         setTheme('light');
     }
+}
+
+// --- DevTools Guard ---
+export function initializeDevToolsGuard() {
+    if (!DOM.devtoolsLockOverlay) return;
+
+    let isLocked = false;
+    const lockApp = () => {
+        if (isLocked) return;
+        isLocked = true;
+        
+        // 1. Save the overlay's structure before we destroy everything.
+        const overlayHTML = DOM.devtoolsLockOverlay.outerHTML;
+
+        // 2. Destroy the entire body content, breaking the source view.
+        document.body.innerHTML = '';
+        // Optionally apply styles to prevent scrolling/interaction on the empty body
+        document.body.style.overflow = 'hidden';
+        document.body.style.margin = '0';
+        document.body.style.padding = '0';
+
+
+        // 3. Re-inject ONLY the overlay into the now-empty body.
+        document.body.innerHTML = overlayHTML;
+
+        // 4. Get new references to the recreated elements.
+        const newOverlay = document.getElementById('devtools-lock-overlay');
+        const newReloadBtn = document.getElementById('devtools-reload-btn');
+        
+        // 5. Make the new overlay visible.
+        if (newOverlay) {
+            newOverlay.classList.remove('hidden');
+        }
+        
+        // 6. Re-attach the event listener to the new button as the old one was destroyed.
+        if (newReloadBtn) {
+            newReloadBtn.addEventListener('click', () => {
+                window.location.reload();
+            });
+        }
+    };
+
+    // Check based on window dimension changes
+    const threshold = 160;
+    const checkDevTools = () => {
+        if (
+            (window.outerWidth - window.innerWidth) > threshold ||
+            (window.outerHeight - window.innerHeight) > threshold
+        ) {
+            lockApp();
+        }
+    };
+
+    // Check periodically and on resize
+    const intervalId = setInterval(checkDevTools, 1000);
+    window.addEventListener('resize', checkDevTools);
+
+    // Block common keyboard shortcuts
+    window.addEventListener('keydown', (e) => {
+        if (
+            e.key === 'F12' ||
+            (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+            (e.ctrlKey && e.key === 'U')
+        ) {
+            e.preventDefault();
+            lockApp();
+        }
+    });
+
+    // Cleanup on unload to prevent memory leaks
+    window.addEventListener('beforeunload', () => {
+        clearInterval(intervalId);
+    });
 }

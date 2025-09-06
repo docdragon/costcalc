@@ -983,15 +983,6 @@ body.dark .settings-intro {
 .toast--error .toast-icon { color: var(--danger-color); }
 .toast--info .toast-icon { color: #17a2b8; }
 
-/* --- Login/Disabled Placeholders --- */
-.login-prompt-view, .calculator-form-content, .materials-form-content, .saved-items-content, .settings-form-content, .quick-calc-form-content, .component-names-content, .config-form-content, .admin-content {
-    display: none;
-}
-.login-prompt-view { text-align: center; padding: 2.5rem 0; }
-.icon-prompt { font-size: 2.25rem; color: var(--border-hover-color); margin-bottom: 1rem; }
-.login-prompt-view h3 { font-size: 1.25rem; font-weight: 600; color: var(--text-dark); }
-.login-prompt-view p { color: var(--text-light); margin-top: 0.5rem; }
-
 /* --- Footer --- */
 .footer {
     text-align: center;
