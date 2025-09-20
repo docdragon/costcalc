@@ -315,6 +315,7 @@ body.dark .remove-image-btn { background-color: var(--card-bg); color: var(--tex
     gap: 2rem;
     align-items: flex-start;
     padding: 1rem;
+    padding-bottom: 5rem; /* Add space for sticky header */
     width: 100%;
     box-sizing: border-box;
 }
@@ -406,6 +407,7 @@ body.dark .remove-image-btn { background-color: var(--card-bg); color: var(--tex
     }
     .dashboard-layout {
         padding: 0.5rem;
+        padding-bottom: 5rem;
     }
     .card {
         padding: 1rem;
