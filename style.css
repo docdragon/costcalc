@@ -315,6 +315,7 @@ body.dark .remove-image-btn { background-color: var(--card-bg); color: var(--tex
     gap: 2rem;
     align-items: flex-start;
     padding: 1rem;
+    padding-bottom: 5rem; /* Add space for sticky header */
     width: 100%;
     box-sizing: border-box;
 }
@@ -406,6 +407,7 @@ body.dark .remove-image-btn { background-color: var(--card-bg); color: var(--tex
     }
     .dashboard-layout {
         padding: 0.5rem;
+        padding-bottom: 5rem;
     }
     .card {
         padding: 1rem;
@@ -1717,4 +1719,37 @@ input:checked + .theme-slider:before {
 
 .youtube-link-wrapper:hover .play-button-overlay .fa-youtube {
     transform: scale(1.1);
+}
+
+/* --- Saved Projects Filter Restyling --- */
+#saved-tab .material-controls {
+    display: grid;
+    grid-template-columns: 1fr; /* Mobile first */
+    gap: 1rem;
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    align-items: end;
+}
+
+#saved-tab .material-controls .form-group {
+    margin: 0;
+}
+
+#saved-tab .material-controls .form-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
+}
+
+@media (min-width: 768px) {
+    #saved-tab .material-controls {
+        grid-template-columns: 1fr 1fr; /* Two columns on larger screens */
+        gap: 1rem 1.5rem;
+    }
+    
+    /* Make search span full width on grid */
+    #saved-tab .material-controls .form-group:first-child {
+        grid-column: 1 / -1;
+    }
 }

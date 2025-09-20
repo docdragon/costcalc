@@ -456,6 +456,13 @@
                                     <i class="fas fa-search"></i>
                                     <input type="text" id="material-filter-input" class="input-style" placeholder="Lọc theo tên hoặc ghi chú...">
                                 </div>
+                                <select id="material-type-filter" class="input-style">
+                                    <option value="">Lọc theo loại: Tất cả</option>
+                                    <option value="Ván">Ván</option>
+                                    <option value="Cạnh">Cạnh</option>
+                                    <option value="Phụ kiện">Phụ kiện</option>
+                                    <option value="Gia Công">Gia Công</option>
+                                </select>
                                 <select id="material-sort-select" class="input-style">
                                     <option value="name-asc">Sắp xếp: Tên A-Z</option>
                                     <option value="name-desc">Sắp xếp: Tên Z-A</option>
@@ -708,9 +715,30 @@
                     <h2 class="card-header">Các Dự án Đã Lưu</h2>
                     <div class="content-wrapper saved-items-content">
                         <div class="material-controls">
-                            <div class="filter-wrapper">
-                                <i class="fas fa-search"></i>
-                                <input type="text" id="saved-items-filter-input" class="input-style" placeholder="Lọc theo tên dự án, ghi chú, hoặc vật liệu...">
+                            <div class="form-group">
+                                <label for="saved-items-filter-input" class="form-label">Tìm theo tên / mô tả</label>
+                                <div class="filter-wrapper">
+                                    <i class="fas fa-search"></i>
+                                    <input type="text" id="saved-items-filter-input" class="input-style" placeholder="Nhập từ khóa...">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="saved-items-material-type-filter" class="form-label">Loại vật tư</label>
+                                <select id="saved-items-material-type-filter" class="input-style">
+                                    <option value="">Tất cả</option>
+                                    <option value="Ván">Ván</option>
+                                    <option value="Cạnh">Cạnh</option>
+                                    <option value="Phụ kiện">Phụ kiện</option>
+                                    <option value="Gia Công">Gia Công</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="saved-items-material-filter-combobox-input" class="form-label">Vật tư cụ thể</label>
+                                <div id="saved-items-material-filter-combobox" class="combobox-container">
+                                    <input type="text" id="saved-items-material-filter-combobox-input" class="input-style combobox-input" placeholder="Chọn để lọc...">
+                                    <input type="hidden" class="combobox-value">
+                                    <div class="combobox-options-wrapper"><ul class="combobox-options"></ul></div>
+                                </div>
                             </div>
                         </div>
                         <div class="table-container">
