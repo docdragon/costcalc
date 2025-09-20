@@ -91,6 +91,7 @@ export const qcEstimatedProfitValue = document.getElementById('qc-estimated-prof
 export const materialForm = document.getElementById('material-form');
 export const materialsTableBody = document.getElementById('materials-table-body');
 export const materialFilterInput = document.getElementById('material-filter-input');
+export const materialTypeFilter = document.getElementById('material-type-filter');
 export const materialSortSelect = document.getElementById('material-sort-select');
 export const paginationControls = document.getElementById('pagination-controls');
 export const pageInfo = document.getElementById('page-info');

@@ -758,6 +758,7 @@ function listenForMaterials() {
 function getFilteredAndSortedMaterials() {
     let materialsToProcess = [...appState.allLocalMaterials];
     const filterText = DOM.materialFilterInput.value.toLowerCase().trim();
+    const typeFilter = DOM.materialTypeFilter.value;
     const sortBy = DOM.materialSortSelect.value;
 
     if (filterText) {
@@ -765,6 +766,10 @@ function getFilteredAndSortedMaterials() {
             m.name.toLowerCase().includes(filterText) || 
             (m.notes && m.notes.toLowerCase().includes(filterText))
         );
+    }
+
+    if (typeFilter) {
+        materialsToProcess = materialsToProcess.filter(m => m.type === typeFilter);
     }
 
     switch (sortBy) {
@@ -818,6 +823,7 @@ function initializeMaterialsManagement() {
     });
 
     DOM.materialFilterInput.addEventListener('input', debounce(() => { materialsPaginator.reset(); displayMaterials(1); }, 300));
+    DOM.materialTypeFilter.addEventListener('change', () => { materialsPaginator.reset(); displayMaterials(1); });
     DOM.materialSortSelect.addEventListener('change', () => { materialsPaginator.reset(); displayMaterials(1); });
 
     DOM.materialForm.addEventListener('submit', async e => {
