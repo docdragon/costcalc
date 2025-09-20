@@ -7,7 +7,7 @@ import {
 
 import { 
     openModal, closeModal, showConfirm, showToast, updateUIVisibility, 
-    initializeTabs, initializeModals, 
+    initializeTabs, initializeModals, initializeCombobox,
     initializeNumberInputFormatting, createPaginator, debounce, initializeMathInput,
     initializeImageUploader,
     initializeThemeSwitcher,
@@ -915,6 +915,10 @@ function populateComboboxes() {
     if (DOM.mainMaterialBackPanelCombobox?.updateComboboxData) DOM.mainMaterialBackPanelCombobox.updateComboboxData(appState.localMaterials['Ván']);
     if (DOM.edgeMaterialCombobox?.updateComboboxData) DOM.edgeMaterialCombobox.updateComboboxData(appState.localMaterials['Cạnh']);
     if (DOM.addGroupCombobox?.updateComboboxData) DOM.addGroupCombobox.updateComboboxData(appState.localComponentGroups);
+    if (DOM.savedItemsMaterialFilterCombobox?.updateComboboxData) {
+        const sortedMaterials = [...appState.allLocalMaterials].sort((a,b) => a.name.localeCompare(b.name, 'vi'));
+        DOM.savedItemsMaterialFilterCombobox.updateComboboxData(sortedMaterials);
+    }
 }
 
 
@@ -930,30 +934,48 @@ function listenForSavedItems() {
 }
 
 function getFilteredSavedItems() {
-     let itemsToProcess = [...appState.localSavedItems];
+    let itemsToProcess = [...appState.localSavedItems];
     const filterText = DOM.savedItemsFilterInput ? DOM.savedItemsFilterInput.value.toLowerCase().trim() : '';
+    const materialTypeFilter = DOM.savedItemsMaterialTypeFilter ? DOM.savedItemsMaterialTypeFilter.value : '';
+    const specificMaterialFilterId = DOM.savedItemsMaterialFilterCombobox ? DOM.savedItemsMaterialFilterCombobox.querySelector('.combobox-value').value : '';
+
+    const getUsedMaterialIds = (item) => {
+        const inputs = item.inputs || {};
+        return new Set([
+            inputs.mainWoodId,
+            inputs.backPanelId,
+            inputs.edgeMaterialId,
+            ...(inputs.accessories || []).map(a => a.id),
+            ...(inputs.components || []).map(c => c.materialId)
+        ].filter(Boolean));
+    };
+
     if (filterText) {
         itemsToProcess = itemsToProcess.filter(item => {
             const inputs = item.inputs || {};
-            const name = (inputs.name || '').toLowerCase();
-            const description = (inputs.description || '').toLowerCase();
-            if (name.includes(filterText) || description.includes(filterText)) return true;
+            return (inputs.name || '').toLowerCase().includes(filterText) ||
+                   (inputs.description || '').toLowerCase().includes(filterText);
+        });
+    }
 
-            const usedMaterialIds = new Set([
-                inputs.mainWoodId, inputs.backPanelId, inputs.edgeMaterialId,
-                ...(inputs.accessories || []).map(a => a.id),
-                ...(inputs.components || []).map(c => c.materialId)
-            ].filter(Boolean));
-
-            return [...usedMaterialIds].some(id => {
+    if (materialTypeFilter) {
+        itemsToProcess = itemsToProcess.filter(item => {
+            const usedIds = getUsedMaterialIds(item);
+            if (usedIds.size === 0) return false;
+            return [...usedIds].some(id => {
                 const material = appState.allLocalMaterials.find(m => m.id === id);
-                return material && (
-                    (material.name || '').toLowerCase().includes(filterText) ||
-                    (material.notes || '').toLowerCase().includes(filterText)
-                );
+                return material && material.type === materialTypeFilter;
             });
         });
     }
+    
+    if (specificMaterialFilterId) {
+        itemsToProcess = itemsToProcess.filter(item => {
+            const usedIds = getUsedMaterialIds(item);
+            return usedIds.has(specificMaterialFilterId);
+        });
+    }
+
     itemsToProcess.sort((a, b) => (b.createdAt?.toMillis ? b.createdAt.toMillis() : 0) - (a.createdAt?.toMillis ? a.createdAt.toMillis() : 0));
     return itemsToProcess;
 }
@@ -1086,12 +1108,33 @@ function initializeSavedItemsManagement() {
         onPageChange: page => displaySavedItems(page)
     });
 
+    const debouncedFilter = debounce(() => {
+        savedItemsPaginator.reset();
+        displaySavedItems(1);
+    }, 300);
+
+    const immediateFilter = () => {
+        savedItemsPaginator.reset();
+        displaySavedItems(1);
+    };
+
     if (DOM.savedItemsFilterInput) {
-        DOM.savedItemsFilterInput.addEventListener('input', debounce(() => {
-            savedItemsPaginator.reset();
-            displaySavedItems(1);
-        }, 300));
+        DOM.savedItemsFilterInput.addEventListener('input', debouncedFilter);
     }
+
+    if (DOM.savedItemsMaterialTypeFilter) {
+        DOM.savedItemsMaterialTypeFilter.addEventListener('change', immediateFilter);
+    }
+    
+    if (DOM.savedItemsMaterialFilterCombobox) {
+        initializeCombobox(
+            DOM.savedItemsMaterialFilterCombobox,
+            [],
+            immediateFilter,
+            { placeholder: "Lọc theo vật tư cụ thể...", allowEmpty: true, emptyOptionText: "--- Tất cả vật tư ---" }
+        );
+    }
+
 
     DOM.savedItemsTableBody.addEventListener('click', async e => {
         const viewBtn = e.target.closest('.view-btn');

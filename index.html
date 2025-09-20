@@ -707,10 +707,22 @@
                  <div class="card">
                     <h2 class="card-header">Các Dự án Đã Lưu</h2>
                     <div class="content-wrapper saved-items-content">
-                        <div class="material-controls">
+                        <div class="material-controls" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); align-items: end;">
                             <div class="filter-wrapper">
                                 <i class="fas fa-search"></i>
-                                <input type="text" id="saved-items-filter-input" class="input-style" placeholder="Lọc theo tên dự án, ghi chú, hoặc vật liệu...">
+                                <input type="text" id="saved-items-filter-input" class="input-style" placeholder="Lọc theo tên hoặc mô tả...">
+                            </div>
+                            <select id="saved-items-material-type-filter" class="input-style">
+                                <option value="">Tất cả loại vật tư</option>
+                                <option value="Ván">Ván</option>
+                                <option value="Cạnh">Cạnh</option>
+                                <option value="Phụ kiện">Phụ kiện</option>
+                                <option value="Gia Công">Gia Công</option>
+                            </select>
+                            <div id="saved-items-material-filter-combobox" class="combobox-container">
+                                <input type="text" class="input-style combobox-input" placeholder="Lọc theo vật tư cụ thể...">
+                                <input type="hidden" class="combobox-value">
+                                <div class="combobox-options-wrapper"><ul class="combobox-options"></ul></div>
                             </div>
                         </div>
                         <div class="table-container">
