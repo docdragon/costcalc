@@ -18,7 +18,7 @@ let onImageRemovedCallback = null;
 export function openModal(modal) { modal.classList.remove('hidden'); }
 export function closeModal(modal) { modal.classList.add('hidden'); }
 export function closeAllModals() {
-    [DOM.loginModal, DOM.viewItemModal, DOM.confirmModal].forEach(modal => modal && closeModal(modal));
+    [DOM.loginModal, DOM.viewItemModal, DOM.confirmModal, DOM.shareInvitationModal].forEach(modal => modal && closeModal(modal));
 }
 
 // --- Custom Confirm Modal ---
