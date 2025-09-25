@@ -1,3 +1,4 @@
+
 // script.js
 import { 
     db, auth, collection, onSnapshot, addDoc, doc, updateDoc, 
@@ -1417,7 +1418,7 @@ function listenForMyShares() {
     }, (error) => {
         console.error("Error listening to my shares:", error);
         DOM.sharingWithList.innerHTML = '';
-        DOM.sharingWithList.appendChild(h('p', { className: 'form-text' }, 'Không thể tải danh sách chia sẻ do lỗi quyền truy cập.'));
+        DOM.sharingWithList.appendChild(h('p', { className: 'form-text' }, 'Lỗi quyền truy cập. Vui lòng kiểm tra Luật Bảo mật (Security Rules) trên Firebase của bạn.'));
     });
 }
 
@@ -1444,7 +1445,7 @@ function listenForSharedWithMe() {
     }, (error) => {
         console.error("Error listening to data shared with me:", error);
         DOM.sharedByList.innerHTML = '';
-        DOM.sharedByList.appendChild(h('p', { className: 'form-text' }, 'Không thể tải danh sách được chia sẻ do lỗi quyền truy cập.'));
+        DOM.sharedByList.appendChild(h('p', { className: 'form-text' }, 'Lỗi khi đọc dữ liệu được chia sẻ. Vui lòng kiểm tra Luật Bảo mật (Security Rules) trên Firebase.'));
         appState.sharedByUsers = [];
         updateDataSourceSelector();
     });
@@ -1567,7 +1568,7 @@ function initializeSharingManagement() {
 
         } catch (error) {
             if (error.code === 'permission-denied') {
-                showToast('Lỗi quyền truy cập. Vui lòng kiểm tra lại cài đặt Firestore.', 'error');
+                showToast('Không có quyền tạo lời mời. Vui lòng kiểm tra Luật Bảo mật (Security Rules) của bạn để cho phép ghi vào collection "shares".', 'error');
             } else {
                 showToast('Lỗi khi tạo lời mời. Vui lòng thử lại sau.', 'error');
             }
