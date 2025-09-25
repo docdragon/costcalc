@@ -55,6 +55,9 @@
             <a href="#" role="tab" id="tab-btn-saved" aria-selected="false" aria-controls="saved-tab" data-tab="saved" class="sidebar-link">
                 <i class="fas fa-folder-open fa-fw"></i><span>Dự Án</span>
             </a>
+            <a href="#" role="tab" id="tab-btn-share" aria-selected="false" aria-controls="share-tab" data-tab="share" class="sidebar-link">
+                <i class="fas fa-share-alt fa-fw"></i><span>Chia sẻ</span>
+            </a>
             <a href="#" role="tab" id="tab-btn-admin" aria-selected="false" aria-controls="admin-tab" data-tab="admin" class="sidebar-link hidden">
                 <i class="fas fa-user-shield fa-fw"></i><span>Admin</span>
             </a>
@@ -718,8 +721,11 @@
                         </div>
                     </div>
                 </div>
+            </div>
 
-                 <div class="card" style="margin-top: 2rem;">
+            <!-- Tab: Share -->
+            <div id="share-tab" role="tabpanel" aria-labelledby="tab-btn-share" class="tab-pane hidden">
+                <div class="card">
                     <h2 class="card-header">Mời Cộng tác viên & Chia sẻ Dữ liệu</h2>
                     <div class="content-wrapper config-form-content">
                         <div class="config-layout">
@@ -750,7 +756,6 @@
                     </div>
                 </div>
             </div>
-
 
             <!-- Tab 4: Dự án đã lưu -->
             <div id="saved-tab" role="tabpanel" aria-labelledby="tab-btn-saved" class="tab-pane hidden">
