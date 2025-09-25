@@ -1,5 +1,3 @@
-
-
 // script.js
 import { 
     db, auth, collection, onSnapshot, addDoc, doc, updateDoc, 
@@ -32,7 +30,6 @@ import { parseNumber, h, formatDate, formatInputDateToDisplay } from './utils.js
 const appState = {
     currentUserId: null,
     currentUserProfile: null,
-    activeDataSourceUid: null, // UID of the user whose data is currently being viewed
     
     // Collection Refs - these will now change based on activeDataSourceUid
     materialsCollectionRef: null,
@@ -41,8 +38,6 @@ const appState = {
     // Unsubscribe functions
     unsubscribeMaterials: null, 
     unsubscribeSavedItems: null,
-    unsubscribeMyShares: null,
-    unsubscribeSharedWithMe: null,
 
     // Local data stores
     localMaterials: { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [], 'Gia Công': [] },
@@ -51,7 +46,6 @@ const appState = {
     localComponentNames: [],
     localProductTypes: [],
     localComponentGroups: [],
-    sharedByUsers: [], // [{email, uid}]
     
     currentEditingItemId: null
 };
@@ -652,13 +646,9 @@ onAuthStateChanged(auth, async (user) => {
     // Stop all data listeners on auth state change to prevent data leaks
     if (appState.unsubscribeMaterials) appState.unsubscribeMaterials();
     if (appState.unsubscribeSavedItems) appState.unsubscribeSavedItems();
-    if (appState.unsubscribeMyShares) appState.unsubscribeMyShares();
-    if (appState.unsubscribeSharedWithMe) appState.unsubscribeSharedWithMe();
     stopConfigurationListeners();
     stopAdminListeners();
     stopUpdateLogListener();
-    appState.sharedByUsers = [];
-    updateDataSourceSelector();
 
     if (loggedIn) {
         appState.currentUserId = user.uid;
@@ -674,25 +664,18 @@ onAuthStateChanged(auth, async (user) => {
             showToast('Đã thêm dữ liệu mẫu cho bạn!', 'info');
         }
         
-        await switchDataSource(user.uid);
+        await initializeDataAccess(user.uid);
         
-        listenForMyShares();
-        listenForSharedWithMe();
         listenForUpdateLog();
-        initializeSharingManagement();
         
         if (appState.currentUserProfile?.role === 'admin') {
             initializeAdminTab();
             initializeAdminSettings();
         }
-        
-        // After user is fully initialized, check for a pending invitation
-        handleShareInvitation();
 
     } else {
         appState.currentUserId = null;
         appState.currentUserProfile = null;
-        appState.activeDataSourceUid = null;
         clearLocalData();
         updateCalculatorData({ userId: null });
         handleAppLock(false); // Hide overlay on logout
@@ -703,28 +686,12 @@ onAuthStateChanged(auth, async (user) => {
     setTimeout(() => DOM.initialLoader.style.display = 'none', 300);
 });
 
-async function switchDataSource(newUid) {
-    if (!newUid) return;
-
-    appState.activeDataSourceUid = newUid;
-
-    // Stop existing listeners
-    if (appState.unsubscribeMaterials) appState.unsubscribeMaterials();
-    if (appState.unsubscribeSavedItems) appState.unsubscribeSavedItems();
-    stopConfigurationListeners();
-    
-    clearLocalData();
-    await initializeDataAccess(newUid);
-    updateReadWriteState();
-}
-
 function initializeDataAccess(uid) {
     appState.materialsCollectionRef = collection(db, `users/${uid}/materials`);
     appState.savedItemsCollectionRef = collection(db, `users/${uid}/savedItems`);
 
     updateCalculatorData({ userId: uid });
     
-    const isReadOnly = uid !== appState.currentUserId;
     initializeConfigurationTab(uid, (updates) => {
         if (updates.componentNames) {
             appState.localComponentNames = updates.componentNames;
@@ -742,36 +709,9 @@ function initializeDataAccess(uid) {
                 DOM.addGroupCombobox.updateComboboxData(appState.localComponentGroups);
             }
         }
-    }, isReadOnly);
+    });
 
     listenForData();
-}
-
-function updateReadWriteState() {
-    const isReadOnly = appState.activeDataSourceUid !== appState.currentUserId;
-    const allTabs = [DOM.calculatorDataSourceContainer, DOM.materialsDataSourceContainer, DOM.configDataSourceContainer, DOM.savedDataSourceContainer];
-    
-    allTabs.forEach(tab => {
-        const parent = tab?.closest('.tab-pane');
-        if (parent) {
-            parent.classList.toggle('read-only-mode', isReadOnly);
-        }
-    });
-
-    // Explicitly disable elements that CSS can't easily handle
-    [
-        DOM.materialForm, DOM.productTypeForm, DOM.componentGroupForm, DOM.componentNameForm,
-        DOM.saveItemBtn, DOM.updateItemBtn, DOM.clearFormBtn, DOM.addCustomComponentBtn,
-        DOM.addGroupBtn, DOM.addAccessoryBtn, DOM.qcAddAccessoryBtn
-    ].forEach(el => {
-        if (el) {
-            if (el.tagName === 'FORM') {
-                el.querySelectorAll('input, select, button').forEach(input => input.disabled = isReadOnly);
-            } else {
-                el.disabled = isReadOnly;
-            }
-        }
-    });
 }
 
 
@@ -899,7 +839,7 @@ function initializeMaterialsManagement() {
 
     DOM.materialForm.addEventListener('submit', async e => {
         e.preventDefault();
-        if (!appState.currentUserId || appState.activeDataSourceUid !== appState.currentUserId) return;
+        if (!appState.currentUserId) return;
         
         const price = parseNumber(DOM.materialForm['material-price'].value);
         if (isNaN(price)) {
@@ -931,7 +871,6 @@ function initializeMaterialsManagement() {
     });
 
     DOM.materialsTableBody.addEventListener('click', async e => {
-        if (appState.activeDataSourceUid !== appState.currentUserId) return;
         const editBtn = e.target.closest('.edit-btn');
         const deleteBtn = e.target.closest('.delete-btn');
         if (editBtn) {
@@ -1220,15 +1159,6 @@ function initializeSavedItemsManagement() {
         const loadBtn = e.target.closest('.load-btn');
         const copyBtn = e.target.closest('.copy-btn');
     
-        if (appState.activeDataSourceUid !== appState.currentUserId) {
-            if (viewBtn) {
-                 renderItemDetailsToModal(viewBtn.dataset.id);
-            } else {
-                showToast('Bạn chỉ có thể xem chi tiết dự án được chia sẻ.', 'info');
-            }
-            return;
-        }
-
         if (loadBtn) {
             const itemToLoad = appState.localSavedItems.find(i => i.id === loadBtn.dataset.id);
             if (itemToLoad) {
@@ -1298,6 +1228,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeQuickCalc(appState.localMaterials, showToast);
     initializeMaterialsManagement();
     initializeSavedItemsManagement();
+    initializeImportExport();
 
     updateLogPaginator = createPaginator({
         controlsEl: DOM.updateLogPaginationControls,
@@ -1354,256 +1285,112 @@ document.addEventListener('DOMContentLoaded', () => {
     DOM.inactiveOverlayLogoutBtn.addEventListener('click', () => signOut(auth));
 });
 
-// --- Data Sharing ---
+// --- Data Import & Export ---
 
-function updateDataSourceSelector() {
-    const selectors = [
-        DOM.calculatorDataSourceSelector, DOM.materialsDataSourceSelector,
-        DOM.configDataSourceSelector, DOM.savedDataSourceSelector
-    ];
-    const containers = [
-        DOM.calculatorDataSourceContainer, DOM.materialsDataSourceContainer,
-        DOM.configDataSourceContainer, DOM.savedDataSourceContainer
-    ];
-
-    if (appState.sharedByUsers.length === 0) {
-        containers.forEach(c => c.classList.add('hidden'));
+function handleExportData() {
+    if (!appState.currentUserId) {
+        showToast('Vui lòng đăng nhập để xuất dữ liệu.', 'error');
         return;
     }
 
-    containers.forEach(c => c.classList.remove('hidden'));
-    selectors.forEach(selector => {
-        selector.innerHTML = '';
-        const myAccountOption = h('option', { value: appState.currentUserId }, 'Tài khoản của bạn');
-        selector.appendChild(myAccountOption);
+    const dataToExport = {
+        version: "1.0",
+        exportedAt: new Date().toISOString(),
+        data: {
+            materials: appState.allLocalMaterials.map(({ id, ...rest }) => rest), // remove id
+            componentNames: appState.localComponentNames.map(({ id, ...rest }) => rest),
+            productTypes: appState.localProductTypes.map(({ id, ...rest }) => rest),
+            componentGroups: appState.localComponentGroups.map(({ id, ...rest }) => rest)
+        }
+    };
 
-        appState.sharedByUsers.forEach(user => {
-            const sharedOption = h('option', { value: user.uid }, user.email);
-            selector.appendChild(sharedOption);
-        });
-        
-        selector.value = appState.activeDataSourceUid;
+    const jsonString = JSON.stringify(dataToExport, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const date = new Date().toISOString().slice(0, 10);
+    a.download = `costfur_data_${date}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Đã bắt đầu tải xuống file dữ liệu.', 'success');
+}
+
+async function clearUserCollection(collectionName) {
+    const collectionRef = collection(db, `users/${appState.currentUserId}/${collectionName}`);
+    const snapshot = await getDocs(collectionRef);
+    const deletePromises = [];
+    snapshot.forEach(docSnap => {
+        deletePromises.push(deleteDoc(docSnap.ref));
     });
+    await Promise.all(deletePromises);
 }
 
-function listenForMyShares() {
-    if (appState.unsubscribeMyShares) appState.unsubscribeMyShares();
-    const q = query(collection(db, 'shares'), where('sharerUid', '==', appState.currentUserId));
-    appState.unsubscribeMyShares = onSnapshot(q, (snapshot) => {
-        DOM.sharingWithList.innerHTML = '';
-        if (snapshot.empty) {
-            DOM.sharingWithList.appendChild(h('p', { className: 'form-text' }, 'Bạn chưa chia sẻ dữ liệu với ai.'));
-            return;
-        }
-        snapshot.docs.forEach(docSnap => {
-            const share = docSnap.data();
-            const status = share.status || 'pending'; // Default to pending
-            const statusText = status === 'accepted' ? 'Đã chấp nhận' : 'Đang chờ';
-            const statusClass = status === 'accepted' ? 'share-status-tag-accepted' : 'share-status-tag-pending';
-            
-            const itemEl = h('div', { className: 'config-list-item' },
-                h('div', {},
-                    h('span', {}, share.recipientEmail),
-                    h('span', { className: `share-status-tag ${statusClass}` }, statusText)
-                ),
-                h('div', { className: 'config-list-item-actions' },
-                    h('button', {
-                        className: 'delete-btn',
-                        dataset: { id: docSnap.id },
-                        title: 'Ngừng chia sẻ'
-                    }, h('i', { className: 'fas fa-trash' }))
-                )
-            );
-            DOM.sharingWithList.appendChild(itemEl);
-        });
-    }, (error) => {
-        console.error("Error listening to my shares:", error);
-        DOM.sharingWithList.innerHTML = '';
-        DOM.sharingWithList.appendChild(h('p', { className: 'form-text' }, 'Lỗi quyền truy cập. Vui lòng kiểm tra Luật Bảo mật (Security Rules) trên Firebase của bạn.'));
-    });
-}
-
-function listenForSharedWithMe() {
-    if (appState.unsubscribeSharedWithMe) appState.unsubscribeSharedWithMe();
-    // Query only by email to avoid needing a composite index. We will filter by status on the client.
-    const q = query(collection(db, 'shares'), where('recipientEmail', '==', appState.currentUserProfile.email));
-    appState.unsubscribeSharedWithMe = onSnapshot(q, (snapshot) => {
-        appState.sharedByUsers = snapshot.docs
-            .map(docSnap => docSnap.data()) // Get data from each doc
-            .filter(share => share.status === 'accepted') // Filter for accepted shares
-            .map(share => ({ uid: share.sharerUid, email: share.sharerEmail })); // Map to the desired format
-
-        DOM.sharedByList.innerHTML = '';
-        if (appState.sharedByUsers.length === 0) {
-             DOM.sharedByList.appendChild(h('p', { className: 'form-text' }, 'Chưa có ai chia sẻ dữ liệu với bạn.'));
-        } else {
-             appState.sharedByUsers.forEach(user => {
-                const itemEl = h('div', { className: 'config-list-item', style: 'cursor: default;' }, h('span', {}, user.email));
-                DOM.sharedByList.appendChild(itemEl);
-             });
-        }
-        updateDataSourceSelector();
-    }, (error) => {
-        console.error("Error listening to data shared with me:", error);
-        DOM.sharedByList.innerHTML = '';
-        DOM.sharedByList.appendChild(h('p', { className: 'form-text' }, 'Lỗi khi đọc dữ liệu được chia sẻ. Vui lòng kiểm tra Luật Bảo mật (Security Rules) trên Firebase.'));
-        appState.sharedByUsers = [];
-        updateDataSourceSelector();
-    });
-}
-
-async function acceptShareInvitation(shareId) {
-    if (!auth.currentUser) return; // Should be handled by handleShareInvitation, but good practice
-    
-    try {
-        const shareRef = doc(db, 'shares', shareId);
-        const shareSnap = await getDoc(shareRef);
-        
-        if (!shareSnap.exists()) {
-            throw new Error("Lời mời này không tồn tại hoặc đã bị thu hồi.");
-        }
-        
-        const shareData = shareSnap.data();
-        if (shareData.recipientEmail !== auth.currentUser.email) {
-            throw new Error("Bạn không có quyền chấp nhận lời mời này.");
-        }
-        
-        if (shareData.status !== 'accepted') {
-            await updateDoc(shareRef, {
-                status: 'accepted',
-                acceptedAt: serverTimestamp()
-            });
-        }
-        
-        showToast(`Bạn đã chấp nhận lời mời từ ${shareData.sharerEmail}. Đang tải dữ liệu...`, 'success');
-        // Automatically switch to the new data source
-        await switchDataSource(shareData.sharerUid);
-        // Update selectors to reflect the new state
-        [DOM.calculatorDataSourceSelector, DOM.materialsDataSourceSelector, DOM.configDataSourceSelector, DOM.savedDataSourceSelector].forEach(s => {
-            if(s) s.value = shareData.sharerUid;
-        });
-
-    } catch (error) {
-        showToast(error.message, 'error');
-        console.error("Error accepting share:", error);
-    }
-}
-
-
-function handleShareInvitation() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const shareId = urlParams.get('shareId');
-
-    if (!shareId) return;
-
-    // Clean the URL to prevent re-triggering on refresh
-    window.history.replaceState({}, document.title, window.location.pathname);
-
-    if (!auth.currentUser) {
-        // Not logged in, store for later and prompt login
-        sessionStorage.setItem('pendingShareId', shareId);
-        showToast('Vui lòng đăng nhập để chấp nhận lời mời.', 'info');
-        openModal(DOM.loginModal);
-    } else {
-        // Already logged in, process immediately
-        acceptShareInvitation(shareId);
-    }
-}
-
-function initializeSharingManagement() {
-    DOM.shareDataForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const submitBtn = DOM.shareDataForm.querySelector('button[type="submit"]');
-        const originalBtnContent = submitBtn.innerHTML;
-
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<div class="spinner-sm"></div> Đang xử lý...';
-
+async function handleImportData(file) {
+    const reader = new FileReader();
+    reader.onload = async (event) => {
         try {
-            const recipientEmail = DOM.shareRecipientEmailInput.value.trim().toLowerCase();
-            
-            if (!recipientEmail || recipientEmail === appState.currentUserProfile.email) {
-                showToast('Vui lòng nhập một email hợp lệ khác với email của bạn.', 'error');
+            const content = JSON.parse(event.target.result);
+            // Basic validation
+            if (!content.data || !content.data.materials || !content.data.componentNames) {
+                throw new Error("File không hợp lệ hoặc sai định dạng.");
+            }
+
+            const confirmed = await showConfirm(
+                "Bạn có chắc muốn nhập dữ liệu này? Hành động này sẽ XÓA và THAY THẾ TOÀN BỘ Vật tư và Cấu hình hiện tại của bạn. Hành động này không thể hoàn tác."
+            );
+
+            if (!confirmed) {
+                DOM.importDataInput.value = ''; // Reset input
                 return;
             }
-            
-            // Use a predictable ID to avoid queries and allow rules to parse it.
-            // Format: sharerUid::recipientEmail
-            const predictableId = `${appState.currentUserId}::${recipientEmail}`;
-            const shareRef = doc(db, 'shares', predictableId);
-            const docSnap = await getDoc(shareRef);
 
-            if (docSnap.exists()) {
-                showToast(`Bạn đã chia sẻ dữ liệu với ${recipientEmail} rồi.`, 'info');
-                DOM.shareDataForm.reset();
-            } else {
-                const newShareData = {
-                    sharerUid: appState.currentUserId,
-                    sharerEmail: appState.currentUserProfile.email,
-                    recipientEmail: recipientEmail,
-                    status: 'pending',
-                    createdAt: serverTimestamp()
-                };
+            showToast("Đang nhập dữ liệu... Vui lòng chờ.", "info");
 
-                await setDoc(shareRef, newShareData);
+            // 1. Clear existing data
+            await Promise.all([
+                clearUserCollection('materials'),
+                clearUserCollection('componentNames'),
+                clearUserCollection('productTypes'),
+                clearUserCollection('componentGroups'),
+            ]);
 
-                const invitationLink = `${window.location.origin}${window.location.pathname}?shareId=${predictableId}`;
-                
-                if (DOM.shareModalRecipientEmail) DOM.shareModalRecipientEmail.textContent = recipientEmail;
-                if (DOM.shareModalLink) DOM.shareModalLink.value = invitationLink;
+            // 2. Import new data
+            const { materials, componentNames, productTypes, componentGroups } = content.data;
 
-                if (DOM.shareCopyLinkBtn && DOM.shareModalLink) {
-                    DOM.shareCopyLinkBtn.onclick = () => {
-                        DOM.shareModalLink.select();
-                        navigator.clipboard.writeText(invitationLink).then(() => {
-                            showToast('Đã sao chép link mời!', 'success');
-                        }).catch(err => {
-                            showToast('Không thể sao chép link.', 'error');
-                            console.error('Copy failed', err);
-                        });
-                    };
-                }
+            const importPromises = [
+                ...materials.map(item => addDoc(collection(db, `users/${appState.currentUserId}/materials`), item)),
+                ...componentNames.map(item => addDoc(collection(db, `users/${appState.currentUserId}/componentNames`), item)),
+                ...productTypes.map(item => addDoc(collection(db, `users/${appState.currentUserId}/productTypes`), item)),
+                ...componentGroups.map(item => addDoc(collection(db, `users/${appState.currentUserId}/componentGroups`), item)),
+            ];
 
-                openModal(DOM.shareInvitationModal);
-                DOM.shareDataForm.reset();
-            }
+            await Promise.all(importPromises);
+
+            showToast("Nhập dữ liệu thành công!", "success");
 
         } catch (error) {
-            if (error.code === 'permission-denied') {
-                showToast('Không có quyền tạo lời mời. Vui lòng kiểm tra Luật Bảo mật (Security Rules) của bạn để cho phép ghi vào collection "shares".', 'error');
-            } else {
-                showToast('Lỗi khi tạo lời mời. Vui lòng thử lại sau.', 'error');
-            }
-            console.error("Error creating share invitation:", error);
+            console.error("Import error:", error);
+            showToast(`Lỗi khi nhập file: ${error.message}`, "error");
         } finally {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalBtnContent;
+             DOM.importDataInput.value = ''; // Reset input regardless of outcome
         }
-    });
+    };
+    reader.readAsText(file);
+}
 
-    DOM.sharingWithList.addEventListener('click', async (e) => {
-        const deleteBtn = e.target.closest('.delete-btn');
-        if (deleteBtn) {
-            const shareId = deleteBtn.dataset.id;
-            const confirmed = await showConfirm('Bạn có chắc muốn ngừng chia sẻ dữ liệu với người dùng này?');
-            if (confirmed) {
-                await deleteDoc(doc(db, 'shares', shareId));
-                showToast('Đã ngừng chia sẻ.', 'success');
-            }
-        }
-    });
-
-    // Event listener for all selectors
-    [DOM.calculatorDataSourceSelector, DOM.materialsDataSourceSelector, DOM.configDataSourceSelector, DOM.savedDataSourceSelector].forEach(selector => {
-        selector.addEventListener('change', (e) => {
-            const newUid = e.target.value;
-            if (newUid !== appState.activeDataSourceUid) {
-                switchDataSource(newUid);
-                // Sync other selectors
-                [DOM.calculatorDataSourceSelector, DOM.materialsDataSourceSelector, DOM.configDataSourceSelector, DOM.savedDataSourceSelector].forEach(s => {
-                    if (s !== selector) s.value = newUid;
-                });
+function initializeImportExport() {
+    if (DOM.exportDataBtn) {
+        DOM.exportDataBtn.addEventListener('click', handleExportData);
+    }
+    if (DOM.importDataBtn && DOM.importDataInput) {
+        DOM.importDataBtn.addEventListener('click', () => DOM.importDataInput.click());
+        DOM.importDataInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) {
+                handleImportData(e.target.files[0]);
             }
         });
-    });
+    }
 }

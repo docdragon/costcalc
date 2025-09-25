@@ -55,9 +55,6 @@
             <a href="#" role="tab" id="tab-btn-saved" aria-selected="false" aria-controls="saved-tab" data-tab="saved" class="sidebar-link">
                 <i class="fas fa-folder-open fa-fw"></i><span>Dự Án</span>
             </a>
-            <a href="#" role="tab" id="tab-btn-share" aria-selected="false" aria-controls="share-tab" data-tab="share" class="sidebar-link">
-                <i class="fas fa-share-alt fa-fw"></i><span>Chia sẻ</span>
-            </a>
             <a href="#" role="tab" id="tab-btn-admin" aria-selected="false" aria-controls="admin-tab" data-tab="admin" class="sidebar-link hidden">
                 <i class="fas fa-user-shield fa-fw"></i><span>Admin</span>
             </a>
@@ -70,10 +67,6 @@
 
             <!-- Tab 1: Trình Báo Giá -->
             <div id="calculator-tab" role="tabpanel" aria-labelledby="tab-btn-calculator" class="tab-pane active">
-                 <div id="calculator-data-source-selector-container" class="data-source-selector-container hidden">
-                    <label for="calculator-data-source-selector" class="form-label"><i class="fas fa-database"></i> Nguồn dữ liệu</label>
-                    <select id="calculator-data-source-selector" class="input-style"></select>
-                </div>
                 <div class="grid-layout">
                     <div class="card main-card">
                         <h2 class="card-header">Tạo Dự Án Mới</h2>
@@ -417,10 +410,6 @@
 
             <!-- Tab 2: Quản lý Vật tư -->
             <div id="materials-tab" role="tabpanel" aria-labelledby="tab-btn-materials" class="tab-pane hidden">
-                <div id="materials-data-source-selector-container" class="data-source-selector-container hidden">
-                    <label for="materials-data-source-selector" class="form-label"><i class="fas fa-database"></i> Nguồn dữ liệu</label>
-                    <select id="materials-data-source-selector" class="input-style"></select>
-                </div>
                 <div class="card">
                     <h2 class="card-header">Quản lý Kho Vật tư</h2>
                     <div class="content-wrapper materials-form-content">
@@ -512,10 +501,6 @@
 
             <!-- Tab: Configuration -->
             <div id="config-tab" role="tabpanel" aria-labelledby="tab-btn-config" class="tab-pane hidden">
-                <div id="config-data-source-selector-container" class="data-source-selector-container hidden">
-                    <label for="config-data-source-selector" class="form-label"><i class="fas fa-database"></i> Nguồn dữ liệu</label>
-                    <select id="config-data-source-selector" class="input-style"></select>
-                </div>
                 <div class="card">
                     <h2 class="card-header">Quản lý Loại Sản Phẩm</h2>
                     <div class="content-wrapper config-form-content">
@@ -721,37 +706,15 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Tab: Share -->
-            <div id="share-tab" role="tabpanel" aria-labelledby="tab-btn-share" class="tab-pane hidden">
-                <div class="card">
-                    <h2 class="card-header">Mời Cộng tác viên & Chia sẻ Dữ liệu</h2>
-                    <div class="content-wrapper config-form-content">
-                        <div class="config-layout">
-                            <div class="config-list-panel">
-                                <form id="share-data-form">
-                                    <div class="form-group" style="margin-top: 0;">
-                                        <label for="share-recipient-email" class="form-label">Gửi lời mời cộng tác qua Email</label>
-                                        <input type="email" id="share-recipient-email" class="input-style" placeholder="Nhập email của cộng tác viên..." required>
-                                        <small class="form-text">Cộng tác viên sẽ nhận được email mời với một link truy cập. Họ có thể xem toàn bộ Kho, Dự án và Cấu hình của bạn ở chế độ chỉ-đọc.</small>
-                                    </div>
-                                    <div class="button-group" style="justify-content: flex-start; margin-top: 1rem;">
-                                        <button type="submit" class="btn btn-primary"><i class="fas fa-share-alt mr-2"></i> Gửi Lời mời</button>
-                                    </div>
-                                </form>
-                                <hr class="form-divider">
-                                <h3 class="config-sub-header">Đang chia sẻ với:</h3>
-                                <div id="sharing-with-list" class="config-list">
-                                    <!-- JS renders list of users you are sharing with -->
-                                </div>
-                            </div>
-                            <div class="config-editor-panel" style="padding-top:0;">
-                                <h3 class="config-sub-header">Được chia sẻ bởi:</h3>
-                                <div id="shared-by-list" class="config-list">
-                                     <!-- JS renders list of users sharing with you -->
-                                </div>
-                            </div>
+                <div class="card" style="margin-top: 2rem;">
+                    <h2 class="card-header"><i class="fas fa-exchange-alt" style="margin-right: 0.75rem;"></i>Nhập & Xuất Dữ liệu</h2>
+                    <div class="content-wrapper">
+                        <p class="form-text" style="margin-top: 0; margin-bottom: 1.5rem;">Bạn có thể xuất toàn bộ dữ liệu (Vật tư, Cấu hình) ra file để lưu trữ hoặc chia sẻ cho người khác. Người nhận có thể nhập file này để sử dụng bộ dữ liệu của bạn.</p>
+                        <div class="button-group" style="justify-content: flex-start;">
+                            <button id="import-data-btn" class="btn btn-secondary"><i class="fas fa-upload"></i> Nhập Dữ liệu</button>
+                            <input type="file" id="import-data-input" class="hidden" accept=".json">
+                            <button id="export-data-btn" class="btn btn-primary"><i class="fas fa-download"></i> Xuất Dữ liệu</button>
                         </div>
                     </div>
                 </div>
@@ -759,10 +722,6 @@
 
             <!-- Tab 4: Dự án đã lưu -->
             <div id="saved-tab" role="tabpanel" aria-labelledby="tab-btn-saved" class="tab-pane hidden">
-                 <div id="saved-data-source-selector-container" class="data-source-selector-container hidden">
-                    <label for="saved-data-source-selector" class="form-label"><i class="fas fa-database"></i> Nguồn dữ liệu</label>
-                    <select id="saved-data-source-selector" class="input-style"></select>
-                </div>
                  <div class="card">
                     <h2 class="card-header">Các Dự án Đã Lưu</h2>
                     <div class="content-wrapper saved-items-content">
