@@ -67,6 +67,10 @@
 
             <!-- Tab 1: Trình Báo Giá -->
             <div id="calculator-tab" role="tabpanel" aria-labelledby="tab-btn-calculator" class="tab-pane active">
+                 <div id="calculator-data-source-selector-container" class="data-source-selector-container hidden">
+                    <label for="calculator-data-source-selector" class="form-label"><i class="fas fa-database"></i> Nguồn dữ liệu</label>
+                    <select id="calculator-data-source-selector" class="input-style"></select>
+                </div>
                 <div class="grid-layout">
                     <div class="card main-card">
                         <h2 class="card-header">Tạo Dự Án Mới</h2>
@@ -410,6 +414,10 @@
 
             <!-- Tab 2: Quản lý Vật tư -->
             <div id="materials-tab" role="tabpanel" aria-labelledby="tab-btn-materials" class="tab-pane hidden">
+                <div id="materials-data-source-selector-container" class="data-source-selector-container hidden">
+                    <label for="materials-data-source-selector" class="form-label"><i class="fas fa-database"></i> Nguồn dữ liệu</label>
+                    <select id="materials-data-source-selector" class="input-style"></select>
+                </div>
                 <div class="card">
                     <h2 class="card-header">Quản lý Kho Vật tư</h2>
                     <div class="content-wrapper materials-form-content">
@@ -501,6 +509,10 @@
 
             <!-- Tab: Configuration -->
             <div id="config-tab" role="tabpanel" aria-labelledby="tab-btn-config" class="tab-pane hidden">
+                <div id="config-data-source-selector-container" class="data-source-selector-container hidden">
+                    <label for="config-data-source-selector" class="form-label"><i class="fas fa-database"></i> Nguồn dữ liệu</label>
+                    <select id="config-data-source-selector" class="input-style"></select>
+                </div>
                 <div class="card">
                     <h2 class="card-header">Quản lý Loại Sản Phẩm</h2>
                     <div class="content-wrapper config-form-content">
@@ -706,11 +718,46 @@
                         </div>
                     </div>
                 </div>
+
+                 <div class="card" style="margin-top: 2rem;">
+                    <h2 class="card-header">Quản lý Chia sẻ Dữ liệu</h2>
+                    <div class="content-wrapper config-form-content">
+                        <div class="config-layout">
+                            <div class="config-list-panel">
+                                <form id="share-data-form">
+                                    <div class="form-group" style="margin-top: 0;">
+                                        <label for="share-recipient-email" class="form-label">Chia sẻ dữ liệu với người dùng khác</label>
+                                        <input type="email" id="share-recipient-email" class="input-style" placeholder="Nhập email người nhận..." required>
+                                        <small class="form-text">Người nhận sẽ có quyền xem toàn bộ Kho vật tư, Dự án và Cấu hình của bạn. Họ sẽ không thể chỉnh sửa.</small>
+                                    </div>
+                                    <div class="button-group" style="justify-content: flex-start; margin-top: 1rem;">
+                                        <button type="submit" class="btn btn-primary"><i class="fas fa-share-alt mr-2"></i> Chia sẻ</button>
+                                    </div>
+                                </form>
+                                <hr class="form-divider">
+                                <h3 class="config-sub-header">Đang chia sẻ với:</h3>
+                                <div id="sharing-with-list" class="config-list">
+                                    <!-- JS renders list of users you are sharing with -->
+                                </div>
+                            </div>
+                            <div class="config-editor-panel" style="padding-top:0;">
+                                <h3 class="config-sub-header">Được chia sẻ bởi:</h3>
+                                <div id="shared-by-list" class="config-list">
+                                     <!-- JS renders list of users sharing with you -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
 
             <!-- Tab 4: Dự án đã lưu -->
             <div id="saved-tab" role="tabpanel" aria-labelledby="tab-btn-saved" class="tab-pane hidden">
+                 <div id="saved-data-source-selector-container" class="data-source-selector-container hidden">
+                    <label for="saved-data-source-selector" class="form-label"><i class="fas fa-database"></i> Nguồn dữ liệu</label>
+                    <select id="saved-data-source-selector" class="input-style"></select>
+                </div>
                  <div class="card">
                     <h2 class="card-header">Các Dự án Đã Lưu</h2>
                     <div class="content-wrapper saved-items-content">

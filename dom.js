@@ -13,6 +13,17 @@ export const userExpiryDisplay = document.getElementById('user-expiry-display');
 export const tabs = document.getElementById('main-nav');
 export const tabContent = document.getElementById('tab-content');
 
+// --- Data Source Selectors ---
+export const calculatorDataSourceContainer = document.getElementById('calculator-data-source-selector-container');
+export const calculatorDataSourceSelector = document.getElementById('calculator-data-source-selector');
+export const materialsDataSourceContainer = document.getElementById('materials-data-source-selector-container');
+export const materialsDataSourceSelector = document.getElementById('materials-data-source-selector');
+export const configDataSourceContainer = document.getElementById('config-data-source-selector-container');
+export const configDataSourceSelector = document.getElementById('config-data-source-selector');
+export const savedDataSourceContainer = document.getElementById('saved-data-source-selector-container');
+export const savedDataSourceSelector = document.getElementById('saved-data-source-selector');
+
+
 // --- Main Calculator Tab ---
 // Product Info
 export const itemNameInput = document.getElementById('item-name');
@@ -139,6 +150,11 @@ export const cgComponentAddQtyInput = document.getElementById('cg-component-add-
 export const cgComponentAddBtn = document.getElementById('cg-component-add-btn');
 export const cgComponentsList = document.getElementById('cg-components-list');
 
+// Data Sharing Manager
+export const shareDataForm = document.getElementById('share-data-form');
+export const shareRecipientEmailInput = document.getElementById('share-recipient-email');
+export const sharingWithList = document.getElementById('sharing-with-list');
+export const sharedByList = document.getElementById('shared-by-list');
 
 // --- Saved Projects Tab ---
 export const savedItemsTableBody = document.getElementById('saved-items-table-body');

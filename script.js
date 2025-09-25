@@ -2,7 +2,7 @@
 import { 
     db, auth, collection, onSnapshot, addDoc, doc, updateDoc, 
     deleteDoc, serverTimestamp, getDocs, query, limit, onAuthStateChanged, 
-    signOut, setDoc, getDoc
+    signOut, setDoc, getDoc, where
 } from './firebase.js';
 
 import { 
@@ -30,11 +30,17 @@ import { parseNumber, h, formatDate, formatInputDateToDisplay } from './utils.js
 const appState = {
     currentUserId: null,
     currentUserProfile: null,
+    activeDataSourceUid: null, // UID of the user whose data is currently being viewed
+    
+    // Collection Refs - these will now change based on activeDataSourceUid
     materialsCollectionRef: null,
     savedItemsCollectionRef: null,
     
+    // Unsubscribe functions
     unsubscribeMaterials: null, 
     unsubscribeSavedItems: null,
+    unsubscribeMyShares: null,
+    unsubscribeSharedWithMe: null,
 
     // Local data stores
     localMaterials: { 'Ván': [], 'Cạnh': [], 'Phụ kiện': [], 'Gia Công': [] },
@@ -43,6 +49,7 @@ const appState = {
     localComponentNames: [],
     localProductTypes: [],
     localComponentGroups: [],
+    sharedByUsers: [], // [{email, uid}]
     
     currentEditingItemId: null
 };
@@ -643,9 +650,13 @@ onAuthStateChanged(auth, async (user) => {
     // Stop all data listeners on auth state change to prevent data leaks
     if (appState.unsubscribeMaterials) appState.unsubscribeMaterials();
     if (appState.unsubscribeSavedItems) appState.unsubscribeSavedItems();
+    if (appState.unsubscribeMyShares) appState.unsubscribeMyShares();
+    if (appState.unsubscribeSharedWithMe) appState.unsubscribeSharedWithMe();
     stopConfigurationListeners();
     stopAdminListeners();
     stopUpdateLogListener();
+    appState.sharedByUsers = [];
+    updateDataSourceSelector();
 
     if (loggedIn) {
         appState.currentUserId = user.uid;
@@ -656,47 +667,26 @@ onAuthStateChanged(auth, async (user) => {
         handleAppLock(!isUserActive());
 
         if (isNew) {
-            // This direct call to addSampleData avoids a premature read operation
-            // that caused a race condition with Firestore security rules.
             console.log("New user detected, seeding sample data.");
             await addSampleData(user.uid);
             showToast('Đã thêm dữ liệu mẫu cho bạn!', 'info');
         }
         
-        appState.materialsCollectionRef = collection(db, `users/${appState.currentUserId}/materials`);
-        appState.savedItemsCollectionRef = collection(db, `users/${appState.currentUserId}/savedItems`);
+        await switchDataSource(user.uid);
         
-        updateCalculatorData({ userId: appState.currentUserId });
+        listenForMyShares();
+        listenForSharedWithMe();
+        listenForUpdateLog();
+        initializeSharingManagement();
         
-        initializeConfigurationTab(appState.currentUserId, (updates) => {
-            if (updates.componentNames) {
-                appState.localComponentNames = updates.componentNames;
-                updateCalculatorData({ componentNames: appState.localComponentNames });
-            }
-            if (updates.productTypes) {
-                appState.localProductTypes = updates.productTypes;
-                updateCalculatorData({ productTypes: appState.localProductTypes });
-                populateProductTypeDropdown();
-            }
-            if (updates.componentGroups) {
-                appState.localComponentGroups = updates.componentGroups;
-                updateCalculatorData({ componentGroups: appState.localComponentGroups });
-                if (DOM.addGroupCombobox?.updateComboboxData) {
-                    DOM.addGroupCombobox.updateComboboxData(appState.localComponentGroups);
-                }
-            }
-        });
-
         if (appState.currentUserProfile?.role === 'admin') {
             initializeAdminTab();
             initializeAdminSettings();
         }
-        
-        listenForData();
-        listenForUpdateLog();
     } else {
         appState.currentUserId = null;
         appState.currentUserProfile = null;
+        appState.activeDataSourceUid = null;
         clearLocalData();
         updateCalculatorData({ userId: null });
         handleAppLock(false); // Hide overlay on logout
@@ -706,6 +696,78 @@ onAuthStateChanged(auth, async (user) => {
     DOM.initialLoader.style.opacity = '0';
     setTimeout(() => DOM.initialLoader.style.display = 'none', 300);
 });
+
+async function switchDataSource(newUid) {
+    if (!newUid) return;
+
+    appState.activeDataSourceUid = newUid;
+
+    // Stop existing listeners
+    if (appState.unsubscribeMaterials) appState.unsubscribeMaterials();
+    if (appState.unsubscribeSavedItems) appState.unsubscribeSavedItems();
+    stopConfigurationListeners();
+    
+    clearLocalData();
+    await initializeDataAccess(newUid);
+    updateReadWriteState();
+}
+
+function initializeDataAccess(uid) {
+    appState.materialsCollectionRef = collection(db, `users/${uid}/materials`);
+    appState.savedItemsCollectionRef = collection(db, `users/${uid}/savedItems`);
+
+    updateCalculatorData({ userId: uid });
+    
+    const isReadOnly = uid !== appState.currentUserId;
+    initializeConfigurationTab(uid, (updates) => {
+        if (updates.componentNames) {
+            appState.localComponentNames = updates.componentNames;
+            updateCalculatorData({ componentNames: appState.localComponentNames });
+        }
+        if (updates.productTypes) {
+            appState.localProductTypes = updates.productTypes;
+            updateCalculatorData({ productTypes: appState.localProductTypes });
+            populateProductTypeDropdown();
+        }
+        if (updates.componentGroups) {
+            appState.localComponentGroups = updates.componentGroups;
+            updateCalculatorData({ componentGroups: appState.localComponentGroups });
+            if (DOM.addGroupCombobox?.updateComboboxData) {
+                DOM.addGroupCombobox.updateComboboxData(appState.localComponentGroups);
+            }
+        }
+    }, isReadOnly);
+
+    listenForData();
+}
+
+function updateReadWriteState() {
+    const isReadOnly = appState.activeDataSourceUid !== appState.currentUserId;
+    const allTabs = [DOM.calculatorDataSourceContainer, DOM.materialsDataSourceContainer, DOM.configDataSourceContainer, DOM.savedDataSourceContainer];
+    
+    allTabs.forEach(tab => {
+        const parent = tab?.closest('.tab-pane');
+        if (parent) {
+            parent.classList.toggle('read-only-mode', isReadOnly);
+        }
+    });
+
+    // Explicitly disable elements that CSS can't easily handle
+    [
+        DOM.materialForm, DOM.productTypeForm, DOM.componentGroupForm, DOM.componentNameForm,
+        DOM.saveItemBtn, DOM.updateItemBtn, DOM.clearFormBtn, DOM.addCustomComponentBtn,
+        DOM.addGroupBtn, DOM.addAccessoryBtn, DOM.qcAddAccessoryBtn
+    ].forEach(el => {
+        if (el) {
+            if (el.tagName === 'FORM') {
+                el.querySelectorAll('input, select, button').forEach(input => input.disabled = isReadOnly);
+            } else {
+                el.disabled = isReadOnly;
+            }
+        }
+    });
+}
+
 
 function listenForData() {
     listenForMaterials();
@@ -723,6 +785,9 @@ function clearLocalData() {
     displaySavedItems();
     populateComboboxes();
     updateQuickCalcMaterials(appState.localMaterials);
+    if(appState.currentEditingItemId) {
+        clearCalculatorInputs();
+    }
 }
 
 DOM.logoutBtn.addEventListener('click', () => signOut(auth));
@@ -828,7 +893,7 @@ function initializeMaterialsManagement() {
 
     DOM.materialForm.addEventListener('submit', async e => {
         e.preventDefault();
-        if (!appState.currentUserId) return;
+        if (!appState.currentUserId || appState.activeDataSourceUid !== appState.currentUserId) return;
         
         const price = parseNumber(DOM.materialForm['material-price'].value);
         if (isNaN(price)) {
@@ -860,6 +925,7 @@ function initializeMaterialsManagement() {
     });
 
     DOM.materialsTableBody.addEventListener('click', async e => {
+        if (appState.activeDataSourceUid !== appState.currentUserId) return;
         const editBtn = e.target.closest('.edit-btn');
         const deleteBtn = e.target.closest('.delete-btn');
         if (editBtn) {
@@ -1148,6 +1214,15 @@ function initializeSavedItemsManagement() {
         const loadBtn = e.target.closest('.load-btn');
         const copyBtn = e.target.closest('.copy-btn');
     
+        if (appState.activeDataSourceUid !== appState.currentUserId) {
+            if (viewBtn) {
+                 renderItemDetailsToModal(viewBtn.dataset.id);
+            } else {
+                showToast('Bạn chỉ có thể xem chi tiết dự án được chia sẻ.', 'info');
+            }
+            return;
+        }
+
         if (loadBtn) {
             const itemToLoad = appState.localSavedItems.find(i => i.id === loadBtn.dataset.id);
             if (itemToLoad) {
@@ -1272,3 +1347,143 @@ document.addEventListener('DOMContentLoaded', () => {
 
     DOM.inactiveOverlayLogoutBtn.addEventListener('click', () => signOut(auth));
 });
+
+// --- Data Sharing ---
+
+function updateDataSourceSelector() {
+    const selectors = [
+        DOM.calculatorDataSourceSelector, DOM.materialsDataSourceSelector,
+        DOM.configDataSourceSelector, DOM.savedDataSourceSelector
+    ];
+    const containers = [
+        DOM.calculatorDataSourceContainer, DOM.materialsDataSourceContainer,
+        DOM.configDataSourceContainer, DOM.savedDataSourceContainer
+    ];
+
+    if (appState.sharedByUsers.length === 0) {
+        containers.forEach(c => c.classList.add('hidden'));
+        return;
+    }
+
+    containers.forEach(c => c.classList.remove('hidden'));
+    selectors.forEach(selector => {
+        selector.innerHTML = '';
+        const myAccountOption = h('option', { value: appState.currentUserId }, 'Tài khoản của bạn');
+        selector.appendChild(myAccountOption);
+
+        appState.sharedByUsers.forEach(user => {
+            const sharedOption = h('option', { value: user.uid }, user.email);
+            selector.appendChild(sharedOption);
+        });
+        
+        selector.value = appState.activeDataSourceUid;
+    });
+}
+
+function listenForMyShares() {
+    if (appState.unsubscribeMyShares) appState.unsubscribeMyShares();
+    const q = query(collection(db, 'shares'), where('sharerUid', '==', appState.currentUserId));
+    appState.unsubscribeMyShares = onSnapshot(q, (snapshot) => {
+        DOM.sharingWithList.innerHTML = '';
+        if (snapshot.empty) {
+            DOM.sharingWithList.appendChild(h('p', { className: 'form-text' }, 'Bạn chưa chia sẻ dữ liệu với ai.'));
+            return;
+        }
+        snapshot.docs.forEach(docSnap => {
+            const share = docSnap.data();
+            const itemEl = h('div', { className: 'config-list-item' },
+                h('span', {}, share.recipientEmail),
+                h('div', { className: 'config-list-item-actions' },
+                    h('button', {
+                        className: 'delete-btn',
+                        dataset: { id: docSnap.id },
+                        title: 'Ngừng chia sẻ'
+                    }, h('i', { className: 'fas fa-trash' }))
+                )
+            );
+            DOM.sharingWithList.appendChild(itemEl);
+        });
+    });
+}
+
+function listenForSharedWithMe() {
+    if (appState.unsubscribeSharedWithMe) appState.unsubscribeSharedWithMe();
+    const q = query(collection(db, 'shares'), where('recipientEmail', '==', appState.currentUserProfile.email));
+    appState.unsubscribeSharedWithMe = onSnapshot(q, (snapshot) => {
+        appState.sharedByUsers = snapshot.docs.map(docSnap => {
+            const share = docSnap.data();
+            return { uid: share.sharerUid, email: share.sharerEmail };
+        });
+
+        DOM.sharedByList.innerHTML = '';
+        if (appState.sharedByUsers.length === 0) {
+             DOM.sharedByList.appendChild(h('p', { className: 'form-text' }, 'Chưa có ai chia sẻ dữ liệu với bạn.'));
+        } else {
+             appState.sharedByUsers.forEach(user => {
+                const itemEl = h('div', { className: 'config-list-item', style: 'cursor: default;' }, h('span', {}, user.email));
+                DOM.sharedByList.appendChild(itemEl);
+             });
+        }
+        updateDataSourceSelector();
+    });
+}
+
+function initializeSharingManagement() {
+    DOM.shareDataForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const recipientEmail = DOM.shareRecipientEmailInput.value.trim().toLowerCase();
+        if (!recipientEmail || recipientEmail === appState.currentUserProfile.email) {
+            showToast('Vui lòng nhập một email hợp lệ khác với email của bạn.', 'error');
+            return;
+        }
+
+        const sharesRef = collection(db, 'shares');
+        // Check if already shared
+        const q = query(sharesRef, where('sharerUid', '==', appState.currentUserId), where('recipientEmail', '==', recipientEmail));
+        const existingShares = await getDocs(q);
+        if (!existingShares.empty) {
+            showToast(`Bạn đã chia sẻ dữ liệu với ${recipientEmail} rồi.`, 'info');
+            return;
+        }
+
+        try {
+            await addDoc(sharesRef, {
+                sharerUid: appState.currentUserId,
+                sharerEmail: appState.currentUserProfile.email,
+                recipientEmail: recipientEmail,
+                createdAt: serverTimestamp()
+            });
+            showToast(`Đã chia sẻ dữ liệu thành công với ${recipientEmail}!`, 'success');
+            DOM.shareDataForm.reset();
+        } catch (error) {
+            showToast('Lỗi khi chia sẻ dữ liệu.', 'error');
+            console.error(error);
+        }
+    });
+
+    DOM.sharingWithList.addEventListener('click', async (e) => {
+        const deleteBtn = e.target.closest('.delete-btn');
+        if (deleteBtn) {
+            const shareId = deleteBtn.dataset.id;
+            const confirmed = await showConfirm('Bạn có chắc muốn ngừng chia sẻ dữ liệu với người dùng này?');
+            if (confirmed) {
+                await deleteDoc(doc(db, 'shares', shareId));
+                showToast('Đã ngừng chia sẻ.', 'success');
+            }
+        }
+    });
+
+    // Event listener for all selectors
+    [DOM.calculatorDataSourceSelector, DOM.materialsDataSourceSelector, DOM.configDataSourceSelector, DOM.savedDataSourceSelector].forEach(selector => {
+        selector.addEventListener('change', (e) => {
+            const newUid = e.target.value;
+            if (newUid !== appState.activeDataSourceUid) {
+                switchDataSource(newUid);
+                // Sync other selectors
+                [DOM.calculatorDataSourceSelector, DOM.materialsDataSourceSelector, DOM.configDataSourceSelector, DOM.savedDataSourceSelector].forEach(s => {
+                    if (s !== selector) s.value = newUid;
+                });
+            }
+        });
+    });
+}

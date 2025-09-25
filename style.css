@@ -1243,11 +1243,15 @@ body.dark .config-list-item-actions button:hover {
     color: var(--text-dark);
 }
 
-.config-list-item-actions .delete-pt-btn:hover,
-.config-list-item-actions .delete-cg-btn:hover {
+.config-list-item-actions .delete-btn:hover {
     background-color: #fee2e2;
     color: var(--danger-color);
 }
+body.dark .config-list-item-actions .delete-btn:hover {
+    background-color: rgba(127, 29, 29, 0.5);
+}
+
+
 .config-sub-header {
     font-size: 1rem;
     font-weight: 600;
@@ -1752,4 +1756,49 @@ input:checked + .theme-slider:before {
     #saved-tab .material-controls .form-group:first-child {
         grid-column: 1 / -1;
     }
+}
+
+/* --- Data Source Selector --- */
+.data-source-selector-container {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    padding: 1rem 1.5rem;
+    border-radius: 0.75rem;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+.data-source-selector-container .form-label {
+    margin-bottom: 0;
+    flex-shrink: 0;
+}
+.data-source-selector-container .form-label i {
+    margin-right: 0.5rem;
+    color: var(--primary-color);
+}
+.data-source-selector-container .input-style {
+    max-width: 300px;
+}
+
+/* --- Read Only Mode --- */
+.read-only-mode form,
+.read-only-mode .main-actions-group,
+.read-only-mode .accessory-adder,
+.read-only-mode #add-custom-component-btn {
+    opacity: 0.6;
+    pointer-events: none;
+}
+.read-only-mode .table-wrapper {
+    pointer-events: auto; /* Allow scrolling */
+}
+.read-only-mode .component-table input,
+.read-only-mode .component-table .combobox-input {
+    background-color: var(--app-bg);
+}
+.read-only-mode .remove-component-btn {
+    visibility: hidden;
+}
+.read-only-mode td[data-label="Thao tác"] button:not(.view-btn) {
+    display: none;
 }
