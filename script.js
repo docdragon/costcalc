@@ -1500,30 +1500,36 @@ function handleShareInvitation() {
 function initializeSharingManagement() {
     DOM.shareDataForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const recipientEmail = DOM.shareRecipientEmailInput.value.trim().toLowerCase();
-        if (!recipientEmail || recipientEmail === appState.currentUserProfile.email) {
-            showToast('Vui lòng nhập một email hợp lệ khác với email của bạn.', 'error');
-            return;
-        }
-
-        const sharesRef = collection(db, 'shares');
-        const q = query(sharesRef, where('sharerUid', '==', appState.currentUserId), where('recipientEmail', '==', recipientEmail));
-        const existingShares = await getDocs(q);
-        if (!existingShares.empty) {
-            showToast(`Bạn đã chia sẻ dữ liệu với ${recipientEmail} rồi.`, 'info');
-            return;
-        }
+        const submitBtn = DOM.shareDataForm.querySelector('button[type="submit"]');
+        const originalBtnContent = submitBtn.innerHTML;
 
         try {
+            const recipientEmail = DOM.shareRecipientEmailInput.value.trim().toLowerCase();
+            if (!recipientEmail || recipientEmail === appState.currentUserProfile.email) {
+                showToast('Vui lòng nhập một email hợp lệ khác với email của bạn.', 'error');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<div class="spinner-sm"></div> Đang xử lý...';
+
+            const sharesRef = collection(db, 'shares');
+            const q = query(sharesRef, where('sharerUid', '==', appState.currentUserId), where('recipientEmail', '==', recipientEmail));
+            const existingShares = await getDocs(q);
+
+            if (!existingShares.empty) {
+                showToast(`Bạn đã chia sẻ dữ liệu với ${recipientEmail} rồi.`, 'info');
+                return;
+            }
+
             const newShareRef = await addDoc(sharesRef, {
                 sharerUid: appState.currentUserId,
                 sharerEmail: appState.currentUserProfile.email,
                 recipientEmail: recipientEmail,
-                status: 'pending', // New status field
+                status: 'pending',
                 createdAt: serverTimestamp()
             });
 
-            // Prepare and show the invitation modal
             const invitationLink = `${window.location.origin}${window.location.pathname}?shareId=${newShareRef.id}`;
             const subject = `Lời mời cộng tác trên CostFur từ ${appState.currentUserProfile.displayName || appState.currentUserProfile.email}`;
             const body = `Chào bạn,\n\nBạn đã được mời cộng tác trên ứng dụng CostFur bởi ${appState.currentUserProfile.email}.\n\nNhấp vào link sau để chấp nhận lời mời và xem dữ liệu được chia sẻ:\n${invitationLink}\n\nTrân trọng,\nĐội ngũ CostFur.`;
@@ -1537,9 +1543,13 @@ function initializeSharingManagement() {
 
             openModal(DOM.shareInvitationModal);
             DOM.shareDataForm.reset();
+            
         } catch (error) {
-            showToast('Lỗi khi tạo lời mời.', 'error');
-            console.error(error);
+            showToast('Lỗi khi tạo lời mời. Vui lòng kiểm tra lại quyền truy cập hoặc thử lại sau.', 'error');
+            console.error("Error creating share invitation:", error);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnContent;
         }
     });
 
