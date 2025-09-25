@@ -1414,6 +1414,10 @@ function listenForMyShares() {
             );
             DOM.sharingWithList.appendChild(itemEl);
         });
+    }, (error) => {
+        console.error("Error listening to my shares:", error);
+        DOM.sharingWithList.innerHTML = '';
+        DOM.sharingWithList.appendChild(h('p', { className: 'form-text' }, 'Không thể tải danh sách chia sẻ do lỗi quyền truy cập.'));
     });
 }
 
@@ -1435,6 +1439,12 @@ function listenForSharedWithMe() {
                 DOM.sharedByList.appendChild(itemEl);
              });
         }
+        updateDataSourceSelector();
+    }, (error) => {
+        console.error("Error listening to data shared with me:", error);
+        DOM.sharedByList.innerHTML = '';
+        DOM.sharedByList.appendChild(h('p', { className: 'form-text' }, 'Không thể tải danh sách được chia sẻ do lỗi quyền truy cập.'));
+        appState.sharedByUsers = [];
         updateDataSourceSelector();
     });
 }
