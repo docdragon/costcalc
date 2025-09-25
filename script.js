@@ -1423,12 +1423,13 @@ function listenForMyShares() {
 
 function listenForSharedWithMe() {
     if (appState.unsubscribeSharedWithMe) appState.unsubscribeSharedWithMe();
-    const q = query(collection(db, 'shares'), where('recipientEmail', '==', appState.currentUserProfile.email), where('status', '==', 'accepted'));
+    // Query only by email to avoid needing a composite index. We will filter by status on the client.
+    const q = query(collection(db, 'shares'), where('recipientEmail', '==', appState.currentUserProfile.email));
     appState.unsubscribeSharedWithMe = onSnapshot(q, (snapshot) => {
-        appState.sharedByUsers = snapshot.docs.map(docSnap => {
-            const share = docSnap.data();
-            return { uid: share.sharerUid, email: share.sharerEmail };
-        });
+        appState.sharedByUsers = snapshot.docs
+            .map(docSnap => docSnap.data()) // Get data from each doc
+            .filter(share => share.status === 'accepted') // Filter for accepted shares
+            .map(share => ({ uid: share.sharerUid, email: share.sharerEmail })); // Map to the desired format
 
         DOM.sharedByList.innerHTML = '';
         if (appState.sharedByUsers.length === 0) {
@@ -1565,7 +1566,11 @@ function initializeSharingManagement() {
             }
 
         } catch (error) {
-            showToast('Lỗi khi tạo lời mời. Vui lòng thử lại sau.', 'error');
+            if (error.code === 'permission-denied') {
+                showToast('Lỗi quyền truy cập. Vui lòng kiểm tra lại cài đặt Firestore.', 'error');
+            } else {
+                showToast('Lỗi khi tạo lời mời. Vui lòng thử lại sau.', 'error');
+            }
             console.error("Error creating share invitation:", error);
         } finally {
             submitBtn.disabled = false;
