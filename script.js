@@ -1,4 +1,5 @@
 
+
 // script.js
 import { 
     db, auth, collection, onSnapshot, addDoc, doc, updateDoc, 
@@ -1526,8 +1527,9 @@ function initializeSharingManagement() {
                 return;
             }
             
-            // Use a predictable ID to avoid queries
-            const predictableId = `${appState.currentUserId}_${btoa(recipientEmail)}`;
+            // Use a predictable ID to avoid queries and allow rules to parse it.
+            // Format: sharerUid::recipientEmail
+            const predictableId = `${appState.currentUserId}::${recipientEmail}`;
             const shareRef = doc(db, 'shares', predictableId);
             const docSnap = await getDoc(shareRef);
 
