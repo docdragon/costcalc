@@ -214,6 +214,13 @@ export const confirmOkBtn = document.getElementById('confirm-ok-btn');
 export const devtoolsLockOverlay = document.getElementById('devtools-lock-overlay');
 export const devtoolsReloadBtn = document.getElementById('devtools-reload-btn');
 
+// Share Invitation Modal
+export const shareInvitationModal = document.getElementById('share-invitation-modal');
+export const shareModalRecipient = document.getElementById('share-modal-recipient');
+export const shareModalSubject = document.getElementById('share-modal-subject');
+export const shareModalBody = document.getElementById('share-modal-body');
+export const shareModalOpenEmailBtn = document.getElementById('share-modal-open-email-btn');
+
 // --- Misc ---
 export const toastContainer = document.getElementById('toast-container');
 export const inactiveUserOverlay = document.getElementById('inactive-user-overlay');

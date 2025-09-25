@@ -909,6 +909,11 @@ body.dark .google-btn:hover { background-color: var(--border-hover-color); }
 .modal-details-col .result-box > h3.result-box-header {
     margin-top: 0;
 }
+.modal-input-readonly {
+    background-color: var(--app-bg) !important;
+    cursor: text;
+    user-select: all;
+}
 
 
 /* --- Settings Form --- */
@@ -1801,4 +1806,33 @@ input:checked + .theme-slider:before {
 }
 .read-only-mode td[data-label="Thao tác"] button:not(.view-btn) {
     display: none;
+}
+
+/* --- Share Status Tag --- */
+.share-status-tag {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    margin-left: 0.5rem;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+
+.share-status-tag-pending {
+    background-color: #fef9c3; /* yellow-100 */
+    color: #854d0e; /* yellow-800 */
+}
+body.dark .share-status-tag-pending {
+    background-color: #78350f;
+    color: #fef3c7;
+}
+
+.share-status-tag-accepted {
+    background-color: #dcfce7; /* green-100 */
+    color: #166534; /* green-800 */
+}
+body.dark .share-status-tag-accepted {
+    background-color: #052e16;
+    color: #bbf7d0;
 }

@@ -683,6 +683,10 @@ onAuthStateChanged(auth, async (user) => {
             initializeAdminTab();
             initializeAdminSettings();
         }
+        
+        // After user is fully initialized, check for a pending invitation
+        handleShareInvitation();
+
     } else {
         appState.currentUserId = null;
         appState.currentUserProfile = null;
@@ -1391,8 +1395,15 @@ function listenForMyShares() {
         }
         snapshot.docs.forEach(docSnap => {
             const share = docSnap.data();
+            const status = share.status || 'pending'; // Default to pending
+            const statusText = status === 'accepted' ? 'Đã chấp nhận' : 'Đang chờ';
+            const statusClass = status === 'accepted' ? 'share-status-tag-accepted' : 'share-status-tag-pending';
+            
             const itemEl = h('div', { className: 'config-list-item' },
-                h('span', {}, share.recipientEmail),
+                h('div', {},
+                    h('span', {}, share.recipientEmail),
+                    h('span', { className: `share-status-tag ${statusClass}` }, statusText)
+                ),
                 h('div', { className: 'config-list-item-actions' },
                     h('button', {
                         className: 'delete-btn',
@@ -1408,7 +1419,7 @@ function listenForMyShares() {
 
 function listenForSharedWithMe() {
     if (appState.unsubscribeSharedWithMe) appState.unsubscribeSharedWithMe();
-    const q = query(collection(db, 'shares'), where('recipientEmail', '==', appState.currentUserProfile.email));
+    const q = query(collection(db, 'shares'), where('recipientEmail', '==', appState.currentUserProfile.email), where('status', '==', 'accepted'));
     appState.unsubscribeSharedWithMe = onSnapshot(q, (snapshot) => {
         appState.sharedByUsers = snapshot.docs.map(docSnap => {
             const share = docSnap.data();
@@ -1428,6 +1439,64 @@ function listenForSharedWithMe() {
     });
 }
 
+async function acceptShareInvitation(shareId) {
+    if (!auth.currentUser) return; // Should be handled by handleShareInvitation, but good practice
+    
+    try {
+        const shareRef = doc(db, 'shares', shareId);
+        const shareSnap = await getDoc(shareRef);
+        
+        if (!shareSnap.exists()) {
+            throw new Error("Lời mời này không tồn tại hoặc đã bị thu hồi.");
+        }
+        
+        const shareData = shareSnap.data();
+        if (shareData.recipientEmail !== auth.currentUser.email) {
+            throw new Error("Bạn không có quyền chấp nhận lời mời này.");
+        }
+        
+        if (shareData.status !== 'accepted') {
+            await updateDoc(shareRef, {
+                status: 'accepted',
+                acceptedAt: serverTimestamp()
+            });
+        }
+        
+        showToast(`Bạn đã chấp nhận lời mời từ ${shareData.sharerEmail}. Đang tải dữ liệu...`, 'success');
+        // Automatically switch to the new data source
+        await switchDataSource(shareData.sharerUid);
+        // Update selectors to reflect the new state
+        [DOM.calculatorDataSourceSelector, DOM.materialsDataSourceSelector, DOM.configDataSourceSelector, DOM.savedDataSourceSelector].forEach(s => {
+            if(s) s.value = shareData.sharerUid;
+        });
+
+    } catch (error) {
+        showToast(error.message, 'error');
+        console.error("Error accepting share:", error);
+    }
+}
+
+
+function handleShareInvitation() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const shareId = urlParams.get('shareId');
+
+    if (!shareId) return;
+
+    // Clean the URL to prevent re-triggering on refresh
+    window.history.replaceState({}, document.title, window.location.pathname);
+
+    if (!auth.currentUser) {
+        // Not logged in, store for later and prompt login
+        sessionStorage.setItem('pendingShareId', shareId);
+        showToast('Vui lòng đăng nhập để chấp nhận lời mời.', 'info');
+        openModal(DOM.loginModal);
+    } else {
+        // Already logged in, process immediately
+        acceptShareInvitation(shareId);
+    }
+}
+
 function initializeSharingManagement() {
     DOM.shareDataForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1438,7 +1507,6 @@ function initializeSharingManagement() {
         }
 
         const sharesRef = collection(db, 'shares');
-        // Check if already shared
         const q = query(sharesRef, where('sharerUid', '==', appState.currentUserId), where('recipientEmail', '==', recipientEmail));
         const existingShares = await getDocs(q);
         if (!existingShares.empty) {
@@ -1447,16 +1515,30 @@ function initializeSharingManagement() {
         }
 
         try {
-            await addDoc(sharesRef, {
+            const newShareRef = await addDoc(sharesRef, {
                 sharerUid: appState.currentUserId,
                 sharerEmail: appState.currentUserProfile.email,
                 recipientEmail: recipientEmail,
+                status: 'pending', // New status field
                 createdAt: serverTimestamp()
             });
-            showToast(`Đã chia sẻ dữ liệu thành công với ${recipientEmail}!`, 'success');
+
+            // Prepare and show the invitation modal
+            const invitationLink = `${window.location.origin}${window.location.pathname}?shareId=${newShareRef.id}`;
+            const subject = `Lời mời cộng tác trên CostFur từ ${appState.currentUserProfile.displayName || appState.currentUserProfile.email}`;
+            const body = `Chào bạn,\n\nBạn đã được mời cộng tác trên ứng dụng CostFur bởi ${appState.currentUserProfile.email}.\n\nNhấp vào link sau để chấp nhận lời mời và xem dữ liệu được chia sẻ:\n${invitationLink}\n\nTrân trọng,\nĐội ngũ CostFur.`;
+
+            DOM.shareModalRecipient.value = recipientEmail;
+            DOM.shareModalSubject.value = subject;
+            DOM.shareModalBody.value = body;
+
+            const mailtoLink = `mailto:${recipientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            DOM.shareModalOpenEmailBtn.href = mailtoLink;
+
+            openModal(DOM.shareInvitationModal);
             DOM.shareDataForm.reset();
         } catch (error) {
-            showToast('Lỗi khi chia sẻ dữ liệu.', 'error');
+            showToast('Lỗi khi tạo lời mời.', 'error');
             console.error(error);
         }
     });

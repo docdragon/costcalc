@@ -720,18 +720,18 @@
                 </div>
 
                  <div class="card" style="margin-top: 2rem;">
-                    <h2 class="card-header">Quản lý Chia sẻ Dữ liệu</h2>
+                    <h2 class="card-header">Mời Cộng tác viên & Chia sẻ Dữ liệu</h2>
                     <div class="content-wrapper config-form-content">
                         <div class="config-layout">
                             <div class="config-list-panel">
                                 <form id="share-data-form">
                                     <div class="form-group" style="margin-top: 0;">
-                                        <label for="share-recipient-email" class="form-label">Chia sẻ dữ liệu với người dùng khác</label>
-                                        <input type="email" id="share-recipient-email" class="input-style" placeholder="Nhập email người nhận..." required>
-                                        <small class="form-text">Người nhận sẽ có quyền xem toàn bộ Kho vật tư, Dự án và Cấu hình của bạn. Họ sẽ không thể chỉnh sửa.</small>
+                                        <label for="share-recipient-email" class="form-label">Gửi lời mời cộng tác qua Email</label>
+                                        <input type="email" id="share-recipient-email" class="input-style" placeholder="Nhập email của cộng tác viên..." required>
+                                        <small class="form-text">Cộng tác viên sẽ nhận được email mời với một link truy cập. Họ có thể xem toàn bộ Kho, Dự án và Cấu hình của bạn ở chế độ chỉ-đọc.</small>
                                     </div>
                                     <div class="button-group" style="justify-content: flex-start; margin-top: 1rem;">
-                                        <button type="submit" class="btn btn-primary"><i class="fas fa-share-alt mr-2"></i> Chia sẻ</button>
+                                        <button type="submit" class="btn btn-primary"><i class="fas fa-share-alt mr-2"></i> Gửi Lời mời</button>
                                     </div>
                                 </form>
                                 <hr class="form-divider">
@@ -1010,6 +1010,32 @@
             </div>
         </div>
     </div>
+    
+    <div id="share-invitation-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="share-invitation-title">
+        <div class="modal-content">
+            <button class="modal-close-btn" aria-label="Đóng modal">&times;</button>
+            <h3 id="share-invitation-title" class="modal-title" style="text-align: left; margin-bottom: 0.5rem;">Gửi Lời mời Cộng tác</h3>
+            <p class="confirm-text" style="margin-bottom: 1.5rem;">Sao chép nội dung dưới đây và gửi email cho cộng tác viên của bạn. Hoặc, nhấp vào nút bên dưới để mở ứng dụng email mặc định.</p>
+
+            <div class="form-group" style="margin-top: 0;">
+                <label for="share-modal-recipient" class="form-label">Người nhận</label>
+                <input type="text" id="share-modal-recipient" class="input-style modal-input-readonly" readonly>
+            </div>
+            <div class="form-group">
+                <label for="share-modal-subject" class="form-label">Tiêu đề</label>
+                <input type="text" id="share-modal-subject" class="input-style modal-input-readonly" readonly>
+            </div>
+            <div class="form-group">
+                <label for="share-modal-body" class="form-label">Nội dung (Link mời ở cuối)</label>
+                <textarea id="share-modal-body" class="input-style modal-input-readonly" readonly rows="6"></textarea>
+            </div>
+            
+            <div class="confirm-actions" style="margin-top: 1.5rem;">
+                <a id="share-modal-open-email-btn" href="#" class="btn btn-primary" target="_blank"><i class="fas fa-envelope"></i> Mở ứng dụng Email</a>
+            </div>
+        </div>
+    </div>
+
 
     <!-- DevTools Lock Modal -->
     <div id="devtools-lock-overlay" class="modal-overlay hidden">
