@@ -1277,7 +1277,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeTabs();
     initializeModals();
     initializeInteractionGuard();
-    initializeDevToolsGuard();
+    initializeDevToolsGuard(() => appState.currentUserProfile?.role === 'admin');
     initializeNumberInputFormatting('input[inputmode="decimal"]');
     initializeMathInput('input[inputmode="decimal"]');
     initializeThemeSwitcher();

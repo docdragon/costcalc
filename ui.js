@@ -786,11 +786,14 @@ export function initializeThemeSwitcher() {
 }
 
 // --- DevTools Guard ---
-export function initializeDevToolsGuard() {
+export function initializeDevToolsGuard(isAdminCheck) {
     if (!DOM.devtoolsLockOverlay) return;
 
     let isLocked = false;
     const lockApp = () => {
+        if (typeof isAdminCheck === 'function' && isAdminCheck()) {
+            return; // Don't lock for admins
+        }
         if (isLocked) return;
         isLocked = true;
         
@@ -828,6 +831,9 @@ export function initializeDevToolsGuard() {
     // Check based on window dimension changes
     const threshold = 160;
     const checkDevTools = () => {
+        if (typeof isAdminCheck === 'function' && isAdminCheck()) {
+            return;
+        }
         if (
             (window.outerWidth - window.innerWidth) > threshold ||
             (window.outerHeight - window.innerHeight) > threshold
@@ -842,6 +848,9 @@ export function initializeDevToolsGuard() {
 
     // Block common keyboard shortcuts
     window.addEventListener('keydown', (e) => {
+        if (typeof isAdminCheck === 'function' && isAdminCheck()) {
+            return;
+        }
         if (
             e.key === 'F12' ||
             (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
