@@ -1546,9 +1546,6 @@ function initializeSharingManagement() {
                     DOM.shareModalSubject.value = subject;
                     DOM.shareModalBody.value = body;
 
-                    const mailtoLink = `mailto:${recipientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-                    DOM.shareModalOpenEmailBtn.href = mailtoLink;
-
                     openModal(DOM.shareInvitationModal);
                     DOM.shareDataForm.reset();
                 }
