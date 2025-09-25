@@ -1019,20 +1019,16 @@
     <div id="share-invitation-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="share-invitation-title">
         <div class="modal-content">
             <button class="modal-close-btn" aria-label="Đóng modal">&times;</button>
-            <h3 id="share-invitation-title" class="modal-title" style="text-align: left; margin-bottom: 0.5rem;">Gửi Lời mời Cộng tác</h3>
-            <p class="confirm-text" style="margin-bottom: 1.5rem;">Sao chép nội dung dưới đây và gửi email cho cộng tác viên của bạn.</p>
-
+            <h3 id="share-invitation-title" class="modal-title" style="text-align: left; margin-bottom: 0.5rem;">
+                <i class="fas fa-paper-plane" style="color: var(--primary-color);"></i> Lời mời đã được tạo
+            </h3>
+            <p class="confirm-text" style="margin-bottom: 1.5rem;">Sao chép và gửi link mời dưới đây cho <strong id="share-modal-recipient-email" style="color: var(--text-dark);"></strong> để họ có thể xem dữ liệu của bạn.</p>
             <div class="form-group" style="margin-top: 0;">
-                <label for="share-modal-recipient" class="form-label">Người nhận</label>
-                <input type="text" id="share-modal-recipient" class="input-style modal-input-readonly" readonly>
-            </div>
-            <div class="form-group">
-                <label for="share-modal-subject" class="form-label">Tiêu đề</label>
-                <input type="text" id="share-modal-subject" class="input-style modal-input-readonly" readonly>
-            </div>
-            <div class="form-group">
-                <label for="share-modal-body" class="form-label">Nội dung (Link mời ở cuối)</label>
-                <textarea id="share-modal-body" class="input-style modal-input-readonly" readonly rows="6"></textarea>
+                <label for="share-modal-link" class="form-label">Link mời duy nhất</label>
+                <div class="share-link-wrapper">
+                    <input type="text" id="share-modal-link" class="input-style modal-input-readonly" readonly>
+                    <button id="share-copy-link-btn" class="btn btn-secondary" title="Sao chép link"><i class="fas fa-copy"></i></button>
+                </div>
             </div>
         </div>
     </div>

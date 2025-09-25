@@ -1521,37 +1521,51 @@ function initializeSharingManagement() {
             
             if (!recipientEmail || recipientEmail === appState.currentUserProfile.email) {
                 showToast('Vui lòng nhập một email hợp lệ khác với email của bạn.', 'error');
-            } else {
-                const sharesRef = collection(db, 'shares');
-                const q = query(sharesRef, where('sharerUid', '==', appState.currentUserId), where('recipientEmail', '==', recipientEmail));
-                const existingShares = await getDocs(q);
-
-                if (!existingShares.empty) {
-                    showToast(`Bạn đã chia sẻ dữ liệu với ${recipientEmail} rồi.`, 'info');
-                    DOM.shareDataForm.reset();
-                } else {
-                    const newShareRef = await addDoc(sharesRef, {
-                        sharerUid: appState.currentUserId,
-                        sharerEmail: appState.currentUserProfile.email,
-                        recipientEmail: recipientEmail,
-                        status: 'pending',
-                        createdAt: serverTimestamp()
-                    });
-
-                    const invitationLink = `${window.location.origin}${window.location.pathname}?shareId=${newShareRef.id}`;
-                    const subject = `Lời mời cộng tác trên CostFur từ ${appState.currentUserProfile.displayName || appState.currentUserProfile.email}`;
-                    const body = `Chào bạn,\n\nBạn đã được mời cộng tác trên ứng dụng CostFur bởi ${appState.currentUserProfile.email}.\n\nNhấp vào link sau để chấp nhận lời mời và xem dữ liệu được chia sẻ:\n${invitationLink}\n\nTrân trọng,\nĐội ngũ CostFur.`;
-
-                    DOM.shareModalRecipient.value = recipientEmail;
-                    DOM.shareModalSubject.value = subject;
-                    DOM.shareModalBody.value = body;
-
-                    openModal(DOM.shareInvitationModal);
-                    DOM.shareDataForm.reset();
-                }
+                return;
             }
+            
+            // Use a predictable ID to avoid queries
+            const predictableId = `${appState.currentUserId}_${btoa(recipientEmail)}`;
+            const shareRef = doc(db, 'shares', predictableId);
+            const docSnap = await getDoc(shareRef);
+
+            if (docSnap.exists()) {
+                showToast(`Bạn đã chia sẻ dữ liệu với ${recipientEmail} rồi.`, 'info');
+                DOM.shareDataForm.reset();
+            } else {
+                const newShareData = {
+                    sharerUid: appState.currentUserId,
+                    sharerEmail: appState.currentUserProfile.email,
+                    recipientEmail: recipientEmail,
+                    status: 'pending',
+                    createdAt: serverTimestamp()
+                };
+
+                await setDoc(shareRef, newShareData);
+
+                const invitationLink = `${window.location.origin}${window.location.pathname}?shareId=${predictableId}`;
+                
+                if (DOM.shareModalRecipientEmail) DOM.shareModalRecipientEmail.textContent = recipientEmail;
+                if (DOM.shareModalLink) DOM.shareModalLink.value = invitationLink;
+
+                if (DOM.shareCopyLinkBtn && DOM.shareModalLink) {
+                    DOM.shareCopyLinkBtn.onclick = () => {
+                        DOM.shareModalLink.select();
+                        navigator.clipboard.writeText(invitationLink).then(() => {
+                            showToast('Đã sao chép link mời!', 'success');
+                        }).catch(err => {
+                            showToast('Không thể sao chép link.', 'error');
+                            console.error('Copy failed', err);
+                        });
+                    };
+                }
+
+                openModal(DOM.shareInvitationModal);
+                DOM.shareDataForm.reset();
+            }
+
         } catch (error) {
-            showToast('Lỗi khi tạo lời mời. Vui lòng kiểm tra lại quyền truy cập hoặc thử lại sau.', 'error');
+            showToast('Lỗi khi tạo lời mời. Vui lòng thử lại sau.', 'error');
             console.error("Error creating share invitation:", error);
         } finally {
             submitBtn.disabled = false;
